@@ -13,6 +13,14 @@ namespace LiveCaptionsTranslator.Core.Asr
         /// <summary>A finalized segment that will no longer change.</summary>
         void OnFinal(string text);
 
+        /// <summary>
+        /// Non-fatal status text the host may surface to the user (reconnects, restarts, ...).
+        /// An empty string clears the previous notice.
+        /// </summary>
+        void OnNotice(string message)
+        {
+        }
+
         /// <summary>A recoverable or fatal failure inside the provider.</summary>
         void OnError(Exception error);
     }

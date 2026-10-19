@@ -26,8 +26,10 @@
 	     the Core library and the test project. Keep them out of this compilation. -->
 	<ItemGroup>
 		<Compile Remove="src\Core\**" />
+		<Compile Remove="src\Platform.Windows\**" />
 		<Compile Remove="tests\**" />
 		<None Remove="src\Core\**" />
+		<None Remove="src\Platform.Windows\**" />
 		<None Remove="tests\**" />
 	</ItemGroup>
 
@@ -37,10 +39,12 @@
 		<Using Include="LiveCaptionsTranslator.Core.Audio" />
 		<Using Include="LiveCaptionsTranslator.Core.Asr" />
 		<Using Include="LiveCaptionsTranslator.Core.Translation" />
+		<Using Include="LiveCaptionsTranslator.Platform.Windows" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="src\Core\LiveCaptionsTranslator.Core.csproj" />
+		<ProjectReference Include="src\Platform.Windows\LiveCaptionsTranslator.Platform.Windows.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

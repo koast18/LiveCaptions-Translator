@@ -34,21 +34,22 @@ namespace LiveCaptionsTranslator
 
         private void LiveCaptionsButton_click(object sender, RoutedEventArgs e)
         {
-            if (Translator.Window == null)
+            var window = Translator.LiveCaptions?.Window;
+            if (window == null)
                 return;
 
             var button = sender as Wpf.Ui.Controls.Button;
             var text = ButtonText.Text;
 
-            bool isHide = Translator.Window.Current.BoundingRectangle == Rect.Empty;
+            bool isHide = window.Current.BoundingRectangle == Rect.Empty;
             if (isHide)
             {
-                LiveCaptionsHandler.RestoreLiveCaptions(Translator.Window);
+                LiveCaptionsHandler.RestoreLiveCaptions(window);
                 ButtonText.Text = "Hide";
             }
             else
             {
-                LiveCaptionsHandler.HideLiveCaptions(Translator.Window);
+                LiveCaptionsHandler.HideLiveCaptions(window);
                 ButtonText.Text = "Show";
             }
         }
