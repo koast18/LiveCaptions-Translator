@@ -101,7 +101,8 @@ public class IflytekIatProviderTests
     [Fact]
     public void Provider_reports_the_contract_the_host_relies_on()
     {
-        var provider = new IflytekIatProvider();
+        // Through the interface: LanguageIsHostControlled is a default member.
+        IAsrProvider provider = new IflytekIatProvider();
 
         Assert.Equal("iflytek-iat", provider.Id);
         Assert.True(provider.RequiresAudioSource);
