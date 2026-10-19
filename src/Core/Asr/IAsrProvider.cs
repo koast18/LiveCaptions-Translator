@@ -1,3 +1,5 @@
+using LiveCaptionsTranslator.Core.Audio;
+
 namespace LiveCaptionsTranslator.Core.Asr
 {
     /// <summary>Receives incremental recognition output from an <see cref="IAsrProvider"/>.</summary>
