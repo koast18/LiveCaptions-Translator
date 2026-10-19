@@ -26,6 +26,11 @@ jobs:
       - name: Build
         run: dotnet build LiveCaptionsTranslator.sln -c Release --no-restore
 
+      - name: Test
+        run: >
+          dotnet test tests/LiveCaptionsTranslator.Core.Tests/LiveCaptionsTranslator.Core.Tests.csproj
+          -c Release --logger "console;verbosity=normal"
+
       - name: Publish (win-x64, framework-dependent)
         run: >
           dotnet publish LiveCaptionsTranslator.csproj

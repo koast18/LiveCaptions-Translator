@@ -22,6 +22,27 @@
 		<Platforms>AnyCPU;ARM64</Platforms>
 	</PropertyGroup>
 
+	<!-- The app project sits at the repository root, so its default globs would also pick up
+	     the Core library and the test project. Keep them out of this compilation. -->
+	<ItemGroup>
+		<Compile Remove="src\Core\**" />
+		<Compile Remove="tests\**" />
+		<None Remove="src\Core\**" />
+		<None Remove="tests\**" />
+	</ItemGroup>
+
+	<!-- Text helpers live in the UI-independent Core library; make them visible everywhere. -->
+	<ItemGroup>
+		<Using Include="LiveCaptionsTranslator.Core.Text" />
+		<Using Include="LiveCaptionsTranslator.Core.Audio" />
+		<Using Include="LiveCaptionsTranslator.Core.Asr" />
+		<Using Include="LiveCaptionsTranslator.Core.Translation" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="src\Core\LiveCaptionsTranslator.Core.csproj" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<ApplicationDefinition Include="src\App.xaml">
 			<Generator>MSBuild:Compile</Generator>

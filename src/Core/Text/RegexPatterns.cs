@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace LiveCaptionsTranslator.utils
+namespace LiveCaptionsTranslator.Core.Text
 {
     public static partial class RegexPatterns
     {

@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace LiveCaptionsTranslator.utils
+namespace LiveCaptionsTranslator.Core.Text
 {
     public static class TextUtil
     {
