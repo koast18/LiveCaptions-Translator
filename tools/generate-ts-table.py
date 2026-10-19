@@ -76,7 +76,7 @@ def main() -> None:
 
     lines = [packed[i : i + 76] for i in range(0, len(packed), 76)]
     body = "\n".join(
-        '            "%s"%s' % (line, ";" if index == len(lines) - 1 else "")
+        '            "%s"%s' % (line, ";" if index == len(lines) - 1 else " +")
         for index, line in enumerate(lines)
     )
 
