@@ -336,21 +336,30 @@
                 Margin="0,8,0,0"
                 Orientation="Horizontal"
                 Visibility="Collapsed">
+                <TextBlock
+                    Margin="2.5,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="12.5"
+                    Text="api_key" />
                 <TextBox
                     x:Name="IflytekApiKeyBox"
-                    Width="220"
+                    Width="200"
                     Height="30"
+                    Margin="8,0,0,0"
                     Padding="8,4,8,4"
+                    FontSize="12.5" />
+                <TextBlock
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center"
                     FontSize="12.5"
-                    PlaceholderText="iFlytek api_key" />
+                    Text="api_secret" />
                 <TextBox
                     x:Name="IflytekApiSecretBox"
-                    Width="220"
+                    Width="200"
                     Height="30"
-                    Margin="10,0,0,0"
+                    Margin="8,0,0,0"
                     Padding="8,4,8,4"
-                    FontSize="12.5"
-                    PlaceholderText="iFlytek api_secret" />
+                    FontSize="12.5" />
                 <ui:Button
                     x:Name="AsrApplyButton"
                     Height="30"
