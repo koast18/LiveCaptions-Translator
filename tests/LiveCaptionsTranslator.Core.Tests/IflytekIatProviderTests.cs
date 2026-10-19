@@ -118,15 +118,17 @@ public class IflytekIatProviderTests
         var provider = new IflytekIatProvider();
 
         var verified = provider.SupportedLanguages.Where(language => language.Verified).ToList();
+        var unverified = provider.SupportedLanguages.Where(language => !language.Verified).ToList();
 
         Assert.Single(verified);
         Assert.Equal("zh_cn", verified[0].Id);
         Assert.Equal("mandarin", verified[0].Accent);
 
         // Everything else is merely accepted by the endpoint; the README says the same.
+        Assert.Equal(provider.SupportedLanguages.Count - 1, unverified.Count);
         Assert.All(
-            provider.SupportedLanguages.Where(language => !language.Verified),
-            language => Assert.NotEqual("mandarin", language.Accent));
+            unverified,
+            language => Assert.False(language.Id == "zh_cn" && language.Accent == "mandarin"));
     }
 
     [Fact]
