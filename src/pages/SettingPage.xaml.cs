@@ -65,7 +65,7 @@ namespace LiveCaptionsTranslator
 
             foreach (string id in Translator.TranslationProviders.Ids)
             {
-                var checkBox = new CheckBox
+                var checkBox = new System.Windows.Controls.CheckBox
                 {
                     Content = id,
                     Tag = id,
@@ -86,7 +86,7 @@ namespace LiveCaptionsTranslator
                 return;
 
             Translator.Setting.ProxyApiNames = ProxyTargetsPanel.Children
-                .OfType<CheckBox>()
+                .OfType<System.Windows.Controls.CheckBox>()
                 .Where(box => box.IsChecked == true && box.Tag is string)
                 .Select(box => (string)box.Tag!)
                 .ToList();
@@ -120,7 +120,7 @@ namespace LiveCaptionsTranslator
             Translator.Setting.IflytekMtApiKey = IflytekMtApiKeyBox.Text.Trim();
             Translator.Setting.IflytekMtApiSecret = IflytekMtApiSecretBox.Text.Trim();
 
-            IflytekMtApplyButton.Content = new TextBlock { Text = "Saved" };
+            IflytekMtApplyButton.Content = new System.Windows.Controls.TextBlock { Text = "Saved" };
         }
 
         private IReadOnlyList<AsrLanguage> asrLanguages = Array.Empty<AsrLanguage>();
