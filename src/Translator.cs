@@ -26,6 +26,9 @@ namespace LiveCaptionsTranslator
         /// <summary>Every translation engine this build knows about.</summary>
         public static TranslationProviderRegistry TranslationProviders { get; } = new();
 
+        /// <summary>Every audio input this build knows about.</summary>
+        public static AudioSourceRegistry AudioSources { get; } = new();
+
         /// <summary>The backend currently feeding captions into the translation pipeline.</summary>
         public static IAsrProvider? ActiveAsrProvider { get; private set; }
 
@@ -50,6 +53,7 @@ namespace LiveCaptionsTranslator
 
             ProviderCatalog.RegisterAll(AsrProviders);
             TranslationProviderCatalog.RegisterAll(TranslationProviders);
+            AudioSourceCatalog.RegisterAll(AudioSources);
 
             ActivateProvider(setting.AsrProviderName);
         }
@@ -112,8 +116,8 @@ namespace LiveCaptionsTranslator
             if (provider.RequiresAudioSource)
             {
                 string sourceId = setting?.AudioSourceName ?? AudioSourceCatalog.LoopbackId;
-                if (!AudioSourceCatalog.TryCreate(sourceId, out audioSource))
-                    AudioSourceCatalog.TryCreate(AudioSourceCatalog.LoopbackId, out audioSource);
+                if (!AudioSources.TryCreate(sourceId, out audioSource))
+                    AudioSources.TryCreate(AudioSourceCatalog.LoopbackId, out audioSource);
             }
 
             try

@@ -15,6 +15,15 @@ namespace LiveCaptionsTranslator.Platform.Windows
 
         public static IReadOnlyList<string> Ids { get; } = new[] { LoopbackId, MicrophoneId };
 
+        /// <summary>Registers every built-in audio source on <paramref name="registry"/>.</summary>
+        public static void RegisterAll(AudioSourceRegistry registry)
+        {
+            ArgumentNullException.ThrowIfNull(registry);
+
+            registry.Register(LoopbackId, () => new WasapiLoopbackAudioSource());
+            registry.Register(MicrophoneId, () => new WasapiMicrophoneAudioSource());
+        }
+
         public static IAudioSource Create(string id) => id switch
         {
             LoopbackId => new WasapiLoopbackAudioSource(),

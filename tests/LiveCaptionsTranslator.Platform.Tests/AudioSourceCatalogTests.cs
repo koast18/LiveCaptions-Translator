@@ -11,6 +11,17 @@ public class AudioSourceCatalogTests
         Assert.Equal(new[] { "wasapi-loopback", "wasapi-microphone" }, AudioSourceCatalog.Ids);
     }
 
+    [Fact]
+    public void Catalog_registers_both_sources_on_a_registry()
+    {
+        var registry = new AudioSourceRegistry();
+        AudioSourceCatalog.RegisterAll(registry);
+
+        Assert.Equal(new[] { "wasapi-loopback", "wasapi-microphone" }, registry.Ids);
+        Assert.Equal("wasapi-loopback", registry.Create("wasapi-loopback").Id);
+        Assert.Equal("wasapi-microphone", registry.Create("wasapi-microphone").Id);
+    }
+
     [Theory]
     [InlineData("wasapi-loopback", "系统声音（WASAPI 环回）")]
     [InlineData("wasapi-microphone", "麦克风")]
