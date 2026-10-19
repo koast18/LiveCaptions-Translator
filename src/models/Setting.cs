@@ -35,6 +35,11 @@ namespace LiveCaptionsTranslator.models
         private string iflytekHost;
         private string iflytekPath;
         private string iflytekAppId;
+        private string httpProxy;
+        private List<string> proxyApiNames;
+        private string iflytekMtAppId;
+        private string iflytekMtApiKey;
+        private string iflytekMtApiSecret;
 
         private MainWindowState mainWindowState;
         private OverlayWindowState overlayWindowState;
@@ -226,6 +231,82 @@ namespace LiveCaptionsTranslator.models
             [IflytekSettingKeys.AppId] = iflytekAppId,
         };
 
+        /// <summary>
+        /// Proxy used by the engines listed in <see cref="ProxyApiNames"/>, e.g.
+        /// <c>http://127.0.0.1:7897</c> or <c>socks5://127.0.0.1:1080</c>. Empty means the
+        /// machine's own proxy settings apply, which is the upstream behaviour.
+        /// </summary>
+        public string HttpProxy
+        {
+            get => httpProxy;
+            set
+            {
+                httpProxy = value;
+                OnPropertyChanged("HttpProxy");
+            }
+        }
+
+        /// <summary>
+        /// Engines that must go through <see cref="HttpProxy"/>. Google, OpenAI, OpenRouter and
+        /// DeepL are preselected because they are unreachable from mainland China; Baidu, Youdao,
+        /// iFlytek and self-hosted engines stay direct.
+        /// </summary>
+        public List<string> ProxyApiNames
+        {
+            get => proxyApiNames;
+            set
+            {
+                proxyApiNames = value;
+                OnPropertyChanged("ProxyApiNames");
+            }
+        }
+
+        /// <summary>Whether <paramref name="apiName"/> should be routed through the proxy.</summary>
+        public bool UsesProxy(string? apiName) =>
+            !string.IsNullOrWhiteSpace(httpProxy) &&
+            apiName is not null &&
+            proxyApiNames.Contains(apiName, StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>iFlytek 开放平台 APPID for machine translation (not the IAT <c>100IME</c> one).</summary>
+        public string IflytekMtAppId
+        {
+            get => iflytekMtAppId;
+            set
+            {
+                iflytekMtAppId = value;
+                OnPropertyChanged("IflytekMtAppId");
+            }
+        }
+
+        public string IflytekMtApiKey
+        {
+            get => iflytekMtApiKey;
+            set
+            {
+                iflytekMtApiKey = value;
+                OnPropertyChanged("IflytekMtApiKey");
+            }
+        }
+
+        public string IflytekMtApiSecret
+        {
+            get => iflytekMtApiSecret;
+            set
+            {
+                iflytekMtApiSecret = value;
+                OnPropertyChanged("IflytekMtApiSecret");
+            }
+        }
+
+        /// <summary>Machine-translation credentials, kept apart from the IAT ones.</summary>
+        [JsonIgnore]
+        public IReadOnlyDictionary<string, string> IflytekMtSettings => new Dictionary<string, string>
+        {
+            [IflytekSettingKeys.ApiKey] = iflytekMtApiKey,
+            [IflytekSettingKeys.ApiSecret] = iflytekMtApiSecret,
+            [IflytekSettingKeys.AppId] = iflytekMtAppId,
+        };
+
         public MainWindowState MainWindow
         {
             get => mainWindowState;
@@ -279,6 +360,14 @@ namespace LiveCaptionsTranslator.models
                 ? configs[key][configIndices[key]]
                 : new TranslateAPIConfig();
 
+        /// <summary>
+        /// Every translation engine the app can select: the upstream ones plus the providers that
+        /// only exist behind the registry.
+        /// </summary>
+        [JsonIgnore]
+        private static IEnumerable<string> TranslationEngineIds =>
+            TranslateAPI.TRANSLATE_FUNCTIONS.Keys.Append(IflytekMtProvider.ProviderId);
+
         public Setting()
         {
             apiName = "Google";
@@ -293,6 +382,19 @@ namespace LiveCaptionsTranslator.models
             iflytekHost = IflytekCredentials.DefaultHost;
             iflytekPath = IflytekCredentials.DefaultPath;
             iflytekAppId = IflytekCredentials.DefaultAppId;
+
+            httpProxy = string.Empty;
+            iflytekMtAppId = string.Empty;
+            iflytekMtApiKey = string.Empty;
+            iflytekMtApiSecret = string.Empty;
+            proxyApiNames =
+            [
+                "Google",
+                "Google2",
+                "OpenAI",
+                "OpenRouter",
+                "DeepL",
+            ];
 
             prompt = "As an professional simultaneous interpreter with specialized knowledge in the all fields, " +
                      "you can provide a fluent and precise oral translation for any sentence, even if the sentence is incomplete. " +
@@ -331,7 +433,8 @@ namespace LiveCaptionsTranslator.models
                 { "Youdao", [new YoudaoConfig()] },
                 { "Baidu", [new BaiduConfig()] },
                 { "MTranServer", [new MTranServerConfig()] },
-                { "LibreTranslate", [new LibreTranslateConfig()] }
+                { "LibreTranslate", [new LibreTranslateConfig()] },
+                { IflytekMtProvider.ProviderId, [new TranslateAPIConfig()] }
             };
             configIndices = new Dictionary<string, int>
             {
@@ -345,7 +448,8 @@ namespace LiveCaptionsTranslator.models
                 { "Youdao", 0 },
                 { "Baidu", 0 },
                 { "MTranServer", 0 },
-                { "LibreTranslate", 0 }
+                { "LibreTranslate", 0 },
+                { IflytekMtProvider.ProviderId, 0 }
             };
         }
 
@@ -385,7 +489,7 @@ namespace LiveCaptionsTranslator.models
                 setting = new Setting();
 
             // Ensure all required API configs are present
-            foreach (string key in TranslateAPI.TRANSLATE_FUNCTIONS.Keys)
+            foreach (string key in TranslationEngineIds)
             {
                 if (setting.Configs.ContainsKey(key))
                     continue;
@@ -397,7 +501,7 @@ namespace LiveCaptionsTranslator.models
             }
 
             // Ensure ConfigIndices has all keys (for upgrades from older setting.json)
-            foreach (string key in TranslateAPI.TRANSLATE_FUNCTIONS.Keys)
+            foreach (string key in TranslationEngineIds)
             {
                 if (!setting.ConfigIndices.ContainsKey(key))
                     setting.ConfigIndices[key] = 0;

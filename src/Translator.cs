@@ -4,6 +4,7 @@ using System.Text;
 
 using LiveCaptionsTranslator.apis;
 using LiveCaptionsTranslator.models;
+using LiveCaptionsTranslator.translation;
 using LiveCaptionsTranslator.utils;
 
 namespace LiveCaptionsTranslator
@@ -21,6 +22,9 @@ namespace LiveCaptionsTranslator
 
         /// <summary>Every ASR backend this build knows about.</summary>
         public static AsrProviderRegistry AsrProviders { get; } = new();
+
+        /// <summary>Every translation engine this build knows about.</summary>
+        public static TranslationProviderRegistry TranslationProviders { get; } = new();
 
         /// <summary>The backend currently feeding captions into the translation pipeline.</summary>
         public static IAsrProvider? ActiveAsrProvider { get; private set; }
@@ -45,9 +49,17 @@ namespace LiveCaptionsTranslator
             setting = Setting.Load();
 
             ProviderCatalog.RegisterAll(AsrProviders);
+            TranslationProviderCatalog.RegisterAll(TranslationProviders);
 
             ActivateProvider(setting.AsrProviderName);
         }
+
+        /// <summary>
+        /// The language the active ASR provider is really recognising, or <c>null</c> when the
+        /// provider decides for itself. Used to decide whether a sentence needs translating.
+        /// </summary>
+        public static string? SourceLanguageHint =>
+            ActiveAsrProvider?.LanguageIsHostControlled == true ? setting?.AsrLanguage : null;
 
         /// <summary>Starts the active ASR provider; captions then flow through <see cref="HandleCaptionText"/>.</summary>
         public static Task StartAsync() => StartActiveProviderAsync();
@@ -337,6 +349,11 @@ namespace LiveCaptionsTranslator
 
             try
             {
+                // Chinese recognition is answered locally: no API call, Simplified output only.
+                var plan = TranslationPolicy.Plan(text, SourceLanguageHint, Setting.TargetLanguage);
+                if (!plan.Translate)
+                    return (plan.Text, isChoke);
+
                 var sw = Setting.MainWindow.LatencyShow ? Stopwatch.StartNew() : null;
 
                 if (Setting.ContextAware && !TranslateAPI.IsLLMBased)

@@ -1,4 +1,4 @@
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Text.Json;
 using LiveCaptionsTranslator.utils;
 
@@ -9,10 +9,11 @@ namespace LiveCaptionsTranslator.apis
     /// </summary>
     public static class ModelsApiService
     {
-        private static readonly HttpClient client = new HttpClient()
-        {
-            Timeout = TimeSpan.FromSeconds(10)
-        };
+        private static HttpClient Client => HttpClients.Resolve(
+            Translator.Setting?.UsesProxy(Translator.Setting?.ApiName) ?? false,
+            Translator.Setting?.HttpProxy,
+            TimeSpan.FromSeconds(8),
+            "ModelsApiService");
 
         /// <summary>
         /// APIs que soportan obtener modelos desde un endpoint.
@@ -50,7 +51,7 @@ namespace LiveCaptionsTranslator.apis
 
             try
             {
-                var response = await client.GetAsync(endpoint, token);
+                var response = await Client.GetAsync(endpoint, token);
                 if (!response.IsSuccessStatusCode)
                     return new List<ModelInfo>();
 

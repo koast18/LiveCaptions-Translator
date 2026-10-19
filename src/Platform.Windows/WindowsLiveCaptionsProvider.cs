@@ -52,6 +52,12 @@ namespace LiveCaptionsTranslator.Platform.Windows
 
         public bool RequiresAudioSource => false;
 
+        /// <summary>
+        /// False: the language is picked inside Windows Live Captions itself, so the host cannot
+        /// claim to know what is being recognised.
+        /// </summary>
+        public bool LanguageIsHostControlled => false;
+
         public IReadOnlyList<AsrLanguage> SupportedLanguages => Languages;
 
         /// <summary>UI Automation handle of <c>LiveCaptions.exe</c> while it is running.</summary>

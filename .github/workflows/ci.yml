@@ -36,6 +36,11 @@ jobs:
           dotnet test tests/LiveCaptionsTranslator.Platform.Tests/LiveCaptionsTranslator.Platform.Tests.csproj
           -c Release --logger "console;verbosity=normal"
 
+      - name: Test (App)
+        run: >
+          dotnet test tests/LiveCaptionsTranslator.App.Tests/LiveCaptionsTranslator.App.Tests.csproj
+          -c Release --logger "console;verbosity=normal"
+
       - name: Publish (win-x64, framework-dependent)
         run: >
           dotnet publish LiveCaptionsTranslator.csproj

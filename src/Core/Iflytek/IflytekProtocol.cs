@@ -112,7 +112,7 @@ namespace LiveCaptionsTranslator.Core.Iflytek
         /// Minimal JSON string literal. Matches the reference client, which serialises with
         /// <c>ensure_ascii=False</c>: non-ASCII characters are written literally.
         /// </summary>
-        private static string Quote(string value)
+        internal static string Quote(string value)
         {
             var builder = new StringBuilder(value.Length + 2);
             builder.Append('"');

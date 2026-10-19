@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -40,15 +40,49 @@ namespace LiveCaptionsTranslator.apis
             "Google", "Google2"
         };
 
-        public static Func<string, CancellationToken, Task<string>> TranslateFunction =>
-            TRANSLATE_FUNCTIONS[Translator.Setting.ApiName];
-        public static bool IsLLMBased => LLM_BASED_APIS.Contains(Translator.Setting.ApiName);
+        public static Func<string, CancellationToken, Task<string>> TranslateFunction
+        {
+            get
+            {
+                string apiName = Translator.Setting.ApiName;
+
+                if (TRANSLATE_FUNCTIONS.TryGetValue(apiName, out var legacy))
+                    return legacy;
+
+                // Engines that live behind the provider registry (e.g. 讯飞机器翻译).
+                if (Translator.TranslationProviders.TryCreate(apiName, out var provider) && provider is not null)
+                {
+                    return (text, token) => provider.TranslateAsync(
+                        new TranslationRequest
+                        {
+                            Text = text,
+                            TargetLanguage = Translator.Setting.TargetLanguage,
+                            SourceLanguage = Translator.SourceLanguageHint,
+                            PromptTemplate = Translator.Setting.Prompt,
+                        },
+                        token);
+                }
+
+                throw new KeyNotFoundException($"Unknown translation engine '{apiName}'.");
+            }
+        }
+
+        public static bool IsLLMBased =>
+            LLM_BASED_APIS.Contains(Translator.Setting.ApiName) ||
+            (Translator.TranslationProviders.TryCreate(Translator.Setting.ApiName, out var provider) &&
+             provider?.IsLlmBased == true);
         public static string Prompt => Translator.Setting.Prompt;
 
-        private static readonly HttpClient client = new HttpClient()
-        {
-            Timeout = TimeSpan.FromSeconds(8)
-        };
+        /// <summary>
+        /// The client for the engine currently selected in the settings. Engines the user marked
+        /// as needing a proxy go through the configured proxy, the rest go direct; each engine
+        /// gets its own instance because the request defaults below are mutated per call.
+        /// </summary>
+        private static HttpClient Client => HttpClients.Resolve(
+            Translator.Setting?.UsesProxy(Translator.Setting?.ApiName) ?? false,
+            Translator.Setting?.HttpProxy,
+            TimeSpan.FromSeconds(8),
+            Translator.Setting?.ApiName);
         private static int openai_fallback_index = 0;
 
         public static async Task<string> OpenAI(string text, CancellationToken token = default)
@@ -79,8 +113,8 @@ namespace LiveCaptionsTranslator.apis
                 }
             }
 
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {config.ApiKey}");
+            Client.DefaultRequestHeaders.Clear();
+            Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {config.ApiKey}");
 
             HttpResponseMessage response;
             try
@@ -92,7 +126,7 @@ namespace LiveCaptionsTranslator.apis
                     string jsonContent = JsonSerializer.Serialize(requestData, requestData.GetType());
                     var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-                    response = await client.PostAsync(TextUtil.NormalizeUrl(config.ApiUrl), content, token);
+                    response = await Client.PostAsync(TextUtil.NormalizeUrl(config.ApiUrl), content, token);
                     if (response.StatusCode != HttpStatusCode.BadRequest &&
                         response.StatusCode != HttpStatusCode.UnprocessableEntity)
                         break;
@@ -162,12 +196,12 @@ namespace LiveCaptionsTranslator.apis
             requestData.keep_alive = config.keep_alive;
             string jsonContent = JsonSerializer.Serialize(requestData, requestData.GetType());
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-            client.DefaultRequestHeaders.Clear();
+            Client.DefaultRequestHeaders.Clear();
 
             HttpResponseMessage response;
             try
             {
-                response = await client.PostAsync(apiUrl, content, token);
+                response = await Client.PostAsync(apiUrl, content, token);
             }
             catch (OperationCanceledException ex)
             {
@@ -228,12 +262,12 @@ namespace LiveCaptionsTranslator.apis
 
             string jsonContent = JsonSerializer.Serialize(requestData);
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-            client.DefaultRequestHeaders.Clear();
+            Client.DefaultRequestHeaders.Clear();
 
             HttpResponseMessage response;
             try
             {
-                response = await client.PostAsync(apiUrl, content, token);
+                response = await Client.PostAsync(apiUrl, content, token);
             }
             catch (OperationCanceledException ex)
             {
@@ -311,13 +345,13 @@ namespace LiveCaptionsTranslator.apis
 
             string jsonContent = JsonSerializer.Serialize(requestData, requestData.GetType());
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {config?.ApiKey}");
+            Client.DefaultRequestHeaders.Clear();
+            Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {config?.ApiKey}");
 
             HttpResponseMessage response;
             try
             {
-                response = await client.PostAsync(apiUrl, content, token);
+                response = await Client.PostAsync(apiUrl, content, token);
             }
             catch (OperationCanceledException ex)
             {
@@ -358,7 +392,7 @@ namespace LiveCaptionsTranslator.apis
             HttpResponseMessage response;
             try
             {
-                response = await client.GetAsync(url, token);
+                response = await Client.GetAsync(url, token);
             }
             catch (OperationCanceledException ex)
             {
@@ -404,7 +438,7 @@ namespace LiveCaptionsTranslator.apis
             HttpResponseMessage response;
             try
             {
-                response = await client.SendAsync(request, token);
+                response = await Client.SendAsync(request, token);
             }
             catch (OperationCanceledException ex)
             {
@@ -453,13 +487,13 @@ namespace LiveCaptionsTranslator.apis
             string jsonContent = JsonSerializer.Serialize(requestData);
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Add("Authorization", $"DeepL-Auth-Key {config?.ApiKey}");
+            Client.DefaultRequestHeaders.Clear();
+            Client.DefaultRequestHeaders.Add("Authorization", $"DeepL-Auth-Key {config?.ApiKey}");
 
             HttpResponseMessage response;
             try
             {
-                response = await client.PostAsync(apiUrl, content, token);
+                response = await Client.PostAsync(apiUrl, content, token);
             }
             catch (OperationCanceledException ex)
             {
@@ -512,12 +546,12 @@ namespace LiveCaptionsTranslator.apis
             };
 
             var content = new FormUrlEncodedContent(parameters);
-            client.DefaultRequestHeaders.Clear();
+            Client.DefaultRequestHeaders.Clear();
 
             HttpResponseMessage response;
             try
             {
-                response = await client.PostAsync(config.ApiUrl, content, token);
+                response = await Client.PostAsync(config.ApiUrl, content, token);
             }
             catch (OperationCanceledException ex)
             {
@@ -565,13 +599,13 @@ namespace LiveCaptionsTranslator.apis
             string jsonContent = JsonSerializer.Serialize(requestData);
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {config?.ApiKey}");
+            Client.DefaultRequestHeaders.Clear();
+            Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {config?.ApiKey}");
 
             HttpResponseMessage response;
             try
             {
-                response = await client.PostAsync(apiUrl, content, token);
+                response = await Client.PostAsync(apiUrl, content, token);
             }
             catch (OperationCanceledException ex)
             {
@@ -617,12 +651,12 @@ namespace LiveCaptionsTranslator.apis
             };
 
             var content = new FormUrlEncodedContent(parameters);
-            client.DefaultRequestHeaders.Clear();
+            Client.DefaultRequestHeaders.Clear();
 
             HttpResponseMessage response;
             try
             {
-                response = await client.PostAsync(config.ApiUrl, content, token);
+                response = await Client.PostAsync(config.ApiUrl, content, token);
             }
             catch (OperationCanceledException ex)
             {
@@ -671,12 +705,12 @@ namespace LiveCaptionsTranslator.apis
             string jsonContent = JsonSerializer.Serialize(requestData);
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            client.DefaultRequestHeaders.Clear();
+            Client.DefaultRequestHeaders.Clear();
 
             HttpResponseMessage response;
             try
             {
-                response = await client.PostAsync(apiUrl, content, token);
+                response = await Client.PostAsync(apiUrl, content, token);
             }
             catch (OperationCanceledException ex)
             {

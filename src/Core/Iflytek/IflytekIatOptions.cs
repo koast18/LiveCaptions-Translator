@@ -3,10 +3,10 @@ using LiveCaptionsTranslator.Core.Audio;
 
 namespace LiveCaptionsTranslator.Core.Iflytek
 {
-    /// <summary>Thrown when the service answers with a non-zero <c>code</c>.</summary>
-    public sealed class IflytekIatException : Exception
+    /// <summary>Thrown when an iFlytek endpoint answers with a non-zero <c>code</c>.</summary>
+    public class IflytekApiException : Exception
     {
-        public IflytekIatException(int code, string message)
+        public IflytekApiException(int code, string message)
             : base($"[{code}] {message}")
         {
             Code = code;
@@ -16,6 +16,15 @@ namespace LiveCaptionsTranslator.Core.Iflytek
         public int Code { get; }
 
         public new string Message { get; }
+    }
+
+    /// <summary>Thrown by the speech-recognition endpoint.</summary>
+    public sealed class IflytekIatException : IflytekApiException
+    {
+        public IflytekIatException(int code, string message)
+            : base(code, message)
+        {
+        }
     }
 
     /// <summary>Well-known keys a host puts into <see cref="AsrOptions.Settings"/> for this provider.</summary>

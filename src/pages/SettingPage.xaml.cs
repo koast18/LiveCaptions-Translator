@@ -26,11 +26,101 @@ namespace LiveCaptionsTranslator
                 CheckForFirstUse();
             };
 
-            TranslateAPIBox.ItemsSource = Translator.Setting?.Configs.Keys;
+            TranslateAPIBox.ItemsSource = Translator.TranslationProviders.Ids;
             TranslateAPIBox.SelectedIndex = 0;
 
             LoadAPISetting();
             LoadAsrSettings();
+            LoadNetworkSettings();
+        }
+
+        private bool loadingNetworkSettings;
+
+        private void LoadNetworkSettings()
+        {
+            loadingNetworkSettings = true;
+            try
+            {
+                ProxyBox.Text = Translator.Setting?.HttpProxy ?? string.Empty;
+                ProxyHintText.Text = string.IsNullOrWhiteSpace(ProxyBox.Text)
+                    ? "留空 = 跟随系统代理（与上游一致）"
+                    : $"已启用：{ProxyBox.Text.Trim()}";
+
+                IflytekMtAppIdBox.Text = Translator.Setting?.IflytekMtAppId ?? string.Empty;
+                IflytekMtApiKeyBox.Text = Translator.Setting?.IflytekMtApiKey ?? string.Empty;
+                IflytekMtApiSecretBox.Text = Translator.Setting?.IflytekMtApiSecret ?? string.Empty;
+
+                BuildProxyTargets();
+            }
+            finally
+            {
+                loadingNetworkSettings = false;
+            }
+        }
+
+        /// <summary>One checkbox per translation engine, so the user picks who goes through the proxy.</summary>
+        private void BuildProxyTargets()
+        {
+            ProxyTargetsPanel.Children.Clear();
+
+            foreach (string id in Translator.TranslationProviders.Ids)
+            {
+                var checkBox = new CheckBox
+                {
+                    Content = id,
+                    Tag = id,
+                    Margin = new Thickness(0, 0, 12, 0),
+                    FontSize = 12,
+                    IsChecked = Translator.Setting?.UsesProxy(id) ?? false,
+                };
+
+                checkBox.Checked += ProxyTarget_Changed;
+                checkBox.Unchecked += ProxyTarget_Changed;
+                ProxyTargetsPanel.Children.Add(checkBox);
+            }
+        }
+
+        private void ProxyTarget_Changed(object sender, RoutedEventArgs e)
+        {
+            if (loadingNetworkSettings || Translator.Setting is null)
+                return;
+
+            Translator.Setting.ProxyApiNames = ProxyTargetsPanel.Children
+                .OfType<CheckBox>()
+                .Where(box => box.IsChecked == true && box.Tag is string)
+                .Select(box => (string)box.Tag!)
+                .ToList();
+        }
+
+        private void ProxyBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (Translator.Setting is null)
+                return;
+
+            string value = ProxyBox.Text.Trim();
+
+            if (!HttpClients.TryValidateProxy(value, out string? error))
+            {
+                ProxyHintText.Text = error;
+                return;
+            }
+
+            Translator.Setting.HttpProxy = value;
+            ProxyHintText.Text = string.IsNullOrWhiteSpace(value)
+                ? "留空 = 跟随系统代理（与上游一致）"
+                : $"已启用：{value}";
+        }
+
+        private void IflytekMtApplyButton_click(object sender, RoutedEventArgs e)
+        {
+            if (Translator.Setting is null)
+                return;
+
+            Translator.Setting.IflytekMtAppId = IflytekMtAppIdBox.Text.Trim();
+            Translator.Setting.IflytekMtApiKey = IflytekMtApiKeyBox.Text.Trim();
+            Translator.Setting.IflytekMtApiSecret = IflytekMtApiSecretBox.Text.Trim();
+
+            IflytekMtApplyButton.Content = new TextBlock { Text = "Saved" };
         }
 
         private IReadOnlyList<AsrLanguage> asrLanguages = Array.Empty<AsrLanguage>();

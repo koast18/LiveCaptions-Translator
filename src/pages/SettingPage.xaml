@@ -21,6 +21,8 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Column="0" Orientation="Vertical">
@@ -375,6 +377,91 @@
                 FontSize="11.5"
                 Opacity="0.7"
                 TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!--  Proxy. Google / OpenAI / OpenRouter / DeepL are unreachable from some networks,
+              so the user picks one proxy URL and ticks the engines that must use it.  -->
+        <StackPanel
+            Grid.Row="2"
+            Grid.ColumnSpan="5"
+            Margin="15,15,0,0"
+            Orientation="Vertical">
+            <TextBlock Margin="2.5,0,0,5" Text="Network / Proxy" />
+            <StackPanel Orientation="Horizontal">
+                <TextBox
+                    x:Name="ProxyBox"
+                    Width="260"
+                    Height="30"
+                    Padding="8,4,8,4"
+                    FontSize="12.5"
+                    LostFocus="ProxyBox_LostFocus" />
+                <TextBlock
+                    x:Name="ProxyHintText"
+                    Margin="10,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="11.5"
+                    Opacity="0.7" />
+            </StackPanel>
+            <WrapPanel
+                x:Name="ProxyTargetsPanel"
+                Margin="0,8,0,0"
+                Orientation="Horizontal" />
+        </StackPanel>
+
+        <!--  iFlytek machine translation needs its own 开放平台 account; the anonymous IAT
+              credentials do not work here, so the fields stay empty until the user fills them.  -->
+        <StackPanel
+            Grid.Row="3"
+            Grid.ColumnSpan="5"
+            Margin="15,15,0,0"
+            Orientation="Vertical">
+            <TextBlock Margin="2.5,0,0,5" Text="iFlytek Machine Translation" />
+            <StackPanel Orientation="Horizontal">
+                <TextBlock
+                    Margin="2.5,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="12.5"
+                    Text="app_id" />
+                <TextBox
+                    x:Name="IflytekMtAppIdBox"
+                    Width="160"
+                    Height="30"
+                    Margin="8,0,0,0"
+                    Padding="8,4,8,4"
+                    FontSize="12.5" />
+                <TextBlock
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="12.5"
+                    Text="api_key" />
+                <TextBox
+                    x:Name="IflytekMtApiKeyBox"
+                    Width="180"
+                    Height="30"
+                    Margin="8,0,0,0"
+                    Padding="8,4,8,4"
+                    FontSize="12.5" />
+                <TextBlock
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="12.5"
+                    Text="api_secret" />
+                <TextBox
+                    x:Name="IflytekMtApiSecretBox"
+                    Width="180"
+                    Height="30"
+                    Margin="8,0,0,0"
+                    Padding="8,4,8,4"
+                    FontSize="12.5" />
+                <ui:Button
+                    x:Name="IflytekMtApplyButton"
+                    Height="30"
+                    Margin="10,0,0,0"
+                    Padding="11,4,11,4"
+                    Click="IflytekMtApplyButton_click">
+                    <TextBlock Text="Apply" />
+                </ui:Button>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </Page>

@@ -57,6 +57,14 @@ namespace LiveCaptionsTranslator.Core.Asr
         /// <summary>Whether the host must supply an <see cref="IAudioSource"/> before starting.</summary>
         bool RequiresAudioSource { get; }
 
+        /// <summary>
+        /// Whether <see cref="AsrOptions.LanguageId"/> really determines what gets recognised.
+        /// <c>true</c> when the host picks the language (iFlytek IAT); <c>false</c> when the source
+        /// decides for itself, e.g. Windows Live Captions, where the user chooses the language in
+        /// the OS and this app cannot know which one is active.
+        /// </summary>
+        bool LanguageIsHostControlled => true;
+
         /// <summary>Languages this provider can be asked to recognise.</summary>
         IReadOnlyList<AsrLanguage> SupportedLanguages { get; }
 
