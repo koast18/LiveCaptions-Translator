@@ -26,6 +26,16 @@ namespace LiveCaptionsTranslator.models
         private string prompt;
         private string? ignoredUpdateVersion;
 
+        private string asrProviderName;
+        private string asrLanguage;
+        private string? asrAccent;
+        private string audioSourceName;
+        private string iflytekApiKey;
+        private string iflytekApiSecret;
+        private string iflytekHost;
+        private string iflytekPath;
+        private string iflytekAppId;
+
         private MainWindowState mainWindowState;
         private OverlayWindowState overlayWindowState;
         private Dictionary<string, string> windowBounds;
@@ -108,6 +118,114 @@ namespace LiveCaptionsTranslator.models
             }
         }
 
+        /// <summary>Id of the speech-recognition backend feeding the caption pipeline.</summary>
+        public string AsrProviderName
+        {
+            get => asrProviderName;
+            set
+            {
+                asrProviderName = value;
+                OnPropertyChanged("AsrProviderName");
+            }
+        }
+
+        /// <summary>Language id passed to the active ASR provider, e.g. <c>zh_cn</c>.</summary>
+        public string AsrLanguage
+        {
+            get => asrLanguage;
+            set
+            {
+                asrLanguage = value;
+                OnPropertyChanged("AsrLanguage");
+            }
+        }
+
+        /// <summary>Accent/dialect selector passed to the active ASR provider.</summary>
+        public string? AsrAccent
+        {
+            get => asrAccent;
+            set
+            {
+                asrAccent = value;
+                OnPropertyChanged("AsrAccent");
+            }
+        }
+
+        /// <summary>Audio input used by providers that recognise audio themselves.</summary>
+        public string AudioSourceName
+        {
+            get => audioSourceName;
+            set
+            {
+                audioSourceName = value;
+                OnPropertyChanged("AudioSourceName");
+            }
+        }
+
+        public string IflytekApiKey
+        {
+            get => iflytekApiKey;
+            set
+            {
+                iflytekApiKey = value;
+                OnPropertyChanged("IflytekApiKey");
+            }
+        }
+
+        public string IflytekApiSecret
+        {
+            get => iflytekApiSecret;
+            set
+            {
+                iflytekApiSecret = value;
+                OnPropertyChanged("IflytekApiSecret");
+            }
+        }
+
+        public string IflytekHost
+        {
+            get => iflytekHost;
+            set
+            {
+                iflytekHost = value;
+                OnPropertyChanged("IflytekHost");
+            }
+        }
+
+        public string IflytekPath
+        {
+            get => iflytekPath;
+            set
+            {
+                iflytekPath = value;
+                OnPropertyChanged("IflytekPath");
+            }
+        }
+
+        public string IflytekAppId
+        {
+            get => iflytekAppId;
+            set
+            {
+                iflytekAppId = value;
+                OnPropertyChanged("IflytekAppId");
+            }
+        }
+
+        /// <summary>
+        /// Provider-specific values handed to <c>IAsrProvider.StartAsync</c>. Providers read
+        /// only the keys they know, so this bag can grow without touching the host.
+        /// </summary>
+        [JsonIgnore]
+        public IReadOnlyDictionary<string, string> AsrProviderSettings => new Dictionary<string, string>
+        {
+            [IflytekSettingKeys.ApiKey] = iflytekApiKey,
+            [IflytekSettingKeys.ApiSecret] = iflytekApiSecret,
+            [IflytekSettingKeys.Host] = iflytekHost,
+            [IflytekSettingKeys.Path] = iflytekPath,
+            [IflytekSettingKeys.AppId] = iflytekAppId,
+        };
+
         public MainWindowState MainWindow
         {
             get => mainWindowState;
@@ -165,6 +283,17 @@ namespace LiveCaptionsTranslator.models
         {
             apiName = "Google";
             targetLanguage = "zh-CN";
+
+            asrProviderName = WindowsLiveCaptionsProvider.ProviderId;
+            asrLanguage = IflytekBusiness.Default.Language!;
+            asrAccent = IflytekBusiness.Default.Accent;
+            audioSourceName = AudioSourceCatalog.LoopbackId;
+            iflytekApiKey = IflytekCredentials.DefaultApiKey;
+            iflytekApiSecret = IflytekCredentials.DefaultApiSecret;
+            iflytekHost = IflytekCredentials.DefaultHost;
+            iflytekPath = IflytekCredentials.DefaultPath;
+            iflytekAppId = IflytekCredentials.DefaultAppId;
+
             prompt = "As an professional simultaneous interpreter with specialized knowledge in the all fields, " +
                      "you can provide a fluent and precise oral translation for any sentence, even if the sentence is incomplete. " +
                      "Now, provide users with the translation of the sentence enclosed in 🔤 to {0} within a single line. " +

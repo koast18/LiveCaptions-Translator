@@ -34,9 +34,10 @@ namespace LiveCaptionsTranslator.Core.Asr
 
         private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(200);
 
-        private readonly IflytekIatOptions options;
+        private readonly IflytekIatOptions? configuredOptions;
         private readonly Func<IIflytekTransport> transportFactory;
 
+        private IflytekIatOptions settings = new();
         private Channel<byte[]>? queue;
         private CancellationTokenSource? cancellation;
         private Task? worker;
@@ -47,7 +48,7 @@ namespace LiveCaptionsTranslator.Core.Asr
             IflytekIatOptions? options = null,
             Func<IIflytekTransport>? transportFactory = null)
         {
-            this.options = options ?? new IflytekIatOptions();
+            configuredOptions = options;
             this.transportFactory = transportFactory ?? (() => new WebSocketIflytekTransport());
         }
 
@@ -68,6 +69,10 @@ namespace LiveCaptionsTranslator.Core.Asr
 
             if (context.AudioSource is null)
                 throw new InvalidOperationException("iflytek-iat needs an audio source to recognise from.");
+
+            // An explicitly configured provider (tests) keeps its options; otherwise the
+            // language, accent and credentials come from the host settings.
+            settings = configuredOptions ?? IflytekIatOptions.FromAsrOptions(context.Options);
 
             audioSource = context.AudioSource;
             queue = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(512)
@@ -101,7 +106,7 @@ namespace LiveCaptionsTranslator.Core.Asr
 
             if (running is not null)
             {
-                if (await Task.WhenAny(running, Task.Delay(options.GracefulStopTimeout)) != running)
+                if (await Task.WhenAny(running, Task.Delay(settings.GracefulStopTimeout)) != running)
                     await CancelAsync(cancellation);
 
                 try
@@ -134,7 +139,7 @@ namespace LiveCaptionsTranslator.Core.Asr
 
             while (!token.IsCancellationRequested)
             {
-                var session = new IflytekIatSession(options, transportFactory());
+                var session = new IflytekIatSession(settings, transportFactory());
                 using var sessionCts = CancellationTokenSource.CreateLinkedTokenSource(token);
                 Task<bool>? pump = null;
                 bool inputEnded = false;
@@ -146,7 +151,7 @@ namespace LiveCaptionsTranslator.Core.Asr
                     await session.OpenAsync(sessionCts.Token);
                     SessionsOpened++;
 
-                    if (options.PadWithLeadingSilence && committed.Length == 0)
+                    if (settings.PadWithLeadingSilence && committed.Length == 0)
                         await session.SendLeadingSilenceAsync(sessionCts.Token);
 
                     pump = session.PumpAsync(
@@ -158,7 +163,7 @@ namespace LiveCaptionsTranslator.Core.Asr
                     if (inputEnded)
                     {
                         // The input is over: give the service a moment to flush its last results.
-                        finished = await TryDrainAsync(pump, options.GracefulStopTimeout);
+                        finished = await TryDrainAsync(pump, settings.GracefulStopTimeout);
 
                         if (finished)
                             context.Sink.OnFinal(committed + session.Transcript.Text);
@@ -204,7 +209,7 @@ namespace LiveCaptionsTranslator.Core.Asr
                 // Keep whatever was recognised so the transcript does not restart on reconnect.
                 committed.Append(session.Transcript.Text);
 
-                if (failures > options.MaxReconnectAttempts)
+                if (failures > settings.MaxReconnectAttempts)
                 {
                     context.Sink.OnError(new IflytekIatException(
                         -1, $"重连 {failures} 次仍未成功，已停止讯飞识别"));
@@ -212,11 +217,11 @@ namespace LiveCaptionsTranslator.Core.Asr
                 }
 
                 context.Sink.OnNotice(
-                    $"[WARNING] 讯飞连接已断开，正在重连（{failures}/{options.MaxReconnectAttempts}）…");
+                    $"[WARNING] 讯飞连接已断开，正在重连（{failures}/{settings.MaxReconnectAttempts}）…");
 
                 try
                 {
-                    await Task.Delay(options.ReconnectDelay, token);
+                    await Task.Delay(settings.ReconnectDelay, token);
                 }
                 catch (OperationCanceledException)
                 {

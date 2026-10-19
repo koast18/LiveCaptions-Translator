@@ -44,26 +44,102 @@ namespace LiveCaptionsTranslator
             caption = Caption.GetInstance();
             setting = Setting.Load();
 
-            RegisterProviders();
+            ProviderCatalog.RegisterAll(AsrProviders);
 
-            ActiveAsrProvider = AsrProviders.Create(WindowsLiveCaptionsProvider.ProviderId);
-            LiveCaptions = ActiveAsrProvider as WindowsLiveCaptionsProvider;
+            ActivateProvider(setting.AsrProviderName);
         }
 
-        /// <summary>Populates <see cref="AsrProviders"/> with every built-in backend.</summary>
-        private static void RegisterProviders() => ProviderCatalog.RegisterAll(AsrProviders);
-
         /// <summary>Starts the active ASR provider; captions then flow through <see cref="HandleCaptionText"/>.</summary>
-        public static async Task StartAsync()
+        public static Task StartAsync() => StartActiveProviderAsync();
+
+        /// <summary>
+        /// Switches the ASR backend and restarts the caption pipeline on it. Providers that
+        /// recognise audio themselves get the configured <see cref="IAudioSource"/> attached.
+        /// </summary>
+        public static async Task SwitchAsrProviderAsync(string providerId)
         {
-            if (ActiveAsrProvider == null)
+            if (string.IsNullOrWhiteSpace(providerId) || !AsrProviders.IsRegistered(providerId))
                 return;
 
-            await ActiveAsrProvider.StartAsync(new AsrContext
+            if (ActiveAsrProvider?.Id == providerId)
+                return;
+
+            await StopActiveProviderAsync();
+            ActivateProvider(providerId);
+            await StartActiveProviderAsync();
+        }
+
+        /// <summary>Restarts the active provider, e.g. after its language or credentials changed.</summary>
+        public static async Task RestartAsrProviderAsync()
+        {
+            await StopActiveProviderAsync();
+            await StartActiveProviderAsync();
+        }
+
+        /// <summary>Creates the provider instance for <paramref name="providerId"/>, falling back to Live Captions.</summary>
+        private static void ActivateProvider(string? providerId)
+        {
+            string id = !string.IsNullOrWhiteSpace(providerId) && AsrProviders.IsRegistered(providerId!)
+                ? providerId!
+                : WindowsLiveCaptionsProvider.ProviderId;
+
+            ActiveAsrProvider = AsrProviders.Create(id);
+            LiveCaptions = ActiveAsrProvider as WindowsLiveCaptionsProvider;
+
+            if (setting != null)
+                setting.AsrProviderName = id;
+        }
+
+        private static async Task StartActiveProviderAsync()
+        {
+            var provider = ActiveAsrProvider;
+            if (provider == null)
+                return;
+
+            IAudioSource? audioSource = null;
+            if (provider.RequiresAudioSource)
             {
-                Sink = new CaptionSink(),
-                Options = new AsrOptions(),
-            });
+                string sourceId = setting?.AudioSourceName ?? AudioSourceCatalog.LoopbackId;
+                if (!AudioSourceCatalog.TryCreate(sourceId, out audioSource))
+                    AudioSourceCatalog.TryCreate(AudioSourceCatalog.LoopbackId, out audioSource);
+            }
+
+            try
+            {
+                await provider.StartAsync(new AsrContext
+                {
+                    Sink = new CaptionSink(),
+                    Options = new AsrOptions
+                    {
+                        LanguageId = setting?.AsrLanguage ?? IflytekBusiness.Default.Language!,
+                        Accent = setting?.AsrAccent,
+                        Settings = setting?.AsrProviderSettings ?? new Dictionary<string, string>(),
+                    },
+                    AudioSource = audioSource,
+                });
+            }
+            catch (Exception exception)
+            {
+                if (Caption != null)
+                    Caption.DisplayTranslatedCaption =
+                        $"[ERROR] {provider.DisplayName} 启动失败：{exception.Message}";
+            }
+        }
+
+        private static async Task StopActiveProviderAsync()
+        {
+            var provider = ActiveAsrProvider;
+            if (provider == null)
+                return;
+
+            try
+            {
+                await provider.StopAsync();
+            }
+            catch (Exception)
+            {
+                // The provider is being replaced; a failing stop must not block the switch.
+            }
         }
 
         /// <summary>Stops the active ASR provider. Used on application exit.</summary>

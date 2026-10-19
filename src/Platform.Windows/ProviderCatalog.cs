@@ -1,4 +1,5 @@
 using LiveCaptionsTranslator.Core.Asr;
+using LiveCaptionsTranslator.Core.Iflytek;
 
 namespace LiveCaptionsTranslator.Platform.Windows
 {
@@ -16,6 +17,10 @@ namespace LiveCaptionsTranslator.Platform.Windows
             registry.Register(
                 WindowsLiveCaptionsProvider.ProviderId,
                 () => new WindowsLiveCaptionsProvider());
+
+            registry.Register(
+                IflytekIatProvider.ProviderId,
+                () => new IflytekIatProvider());
         }
     }
 }

@@ -30,6 +30,140 @@ namespace LiveCaptionsTranslator
             TranslateAPIBox.SelectedIndex = 0;
 
             LoadAPISetting();
+            LoadAsrSettings();
+        }
+
+        private IReadOnlyList<AsrLanguage> asrLanguages = Array.Empty<AsrLanguage>();
+        private bool loadingAsrSettings;
+
+        private void LoadAsrSettings()
+        {
+            loadingAsrSettings = true;
+            try
+            {
+                AsrProviderBox.ItemsSource = Translator.AsrProviders.Ids;
+                AsrProviderBox.SelectedItem = Translator.ActiveAsrProvider?.Id
+                    ?? WindowsLiveCaptionsProvider.ProviderId;
+
+                AudioSourceBox.ItemsSource = AudioSourceCatalog.Ids;
+                AudioSourceBox.SelectedItem = Translator.Setting?.AudioSourceName ?? AudioSourceCatalog.LoopbackId;
+
+                IflytekApiKeyBox.Text = Translator.Setting?.IflytekApiKey ?? string.Empty;
+                IflytekApiSecretBox.Text = Translator.Setting?.IflytekApiSecret ?? string.Empty;
+
+                RefreshAsrLanguageBox();
+            }
+            finally
+            {
+                loadingAsrSettings = false;
+            }
+        }
+
+        private void RefreshAsrLanguageBox()
+        {
+            var provider = CreateSelectedProvider();
+            asrLanguages = provider?.SupportedLanguages ?? Array.Empty<AsrLanguage>();
+
+            AsrLanguageBox.ItemsSource = asrLanguages
+                .Select(language => language.Accent is null
+                    ? language.DisplayName
+                    : $"{language.DisplayName} ({language.Accent})")
+                .ToList();
+
+            string? languageId = Translator.Setting?.AsrLanguage;
+            string? accent = Translator.Setting?.AsrAccent;
+            int index = -1;
+
+            for (int i = 0; i < asrLanguages.Count; i++)
+            {
+                if (asrLanguages[i].Id != languageId)
+                    continue;
+
+                if (accent is not null && asrLanguages[i].Accent is not null && asrLanguages[i].Accent != accent)
+                    continue;
+
+                index = i;
+                break;
+            }
+
+            AsrLanguageBox.SelectedIndex = index >= 0 ? index : (asrLanguages.Count > 0 ? 0 : -1);
+
+            bool needsAudio = provider?.RequiresAudioSource ?? false;
+            AudioSourceBox.IsEnabled = needsAudio;
+            AudioSourceBox.Opacity = needsAudio ? 1.0 : 0.5;
+
+            IflytekCredentialPanel.Visibility = provider?.Id == IflytekIatProvider.ProviderId
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            AsrHintText.Text = provider switch
+            {
+                null => string.Empty,
+                { Id: WindowsLiveCaptionsProvider.ProviderId } =>
+                    "Windows Live Captions does the capture and recognition; choose the source language inside Live Captions itself.",
+                { Id: IflytekIatProvider.ProviderId } =>
+                    "Streams the selected audio source to iFlytek. Only zh_cn has been exercised so far - the other languages are accepted by the endpoint but not verified against a real speech sample.",
+                _ => string.Empty,
+            };
+        }
+
+        private IAsrProvider? CreateSelectedProvider() =>
+            AsrProviderBox.SelectedItem is string id && Translator.AsrProviders.TryCreate(id, out var provider)
+                ? provider
+                : null;
+
+        private async void AsrProviderBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (loadingAsrSettings || AsrProviderBox.SelectedItem is not string id)
+                return;
+
+            loadingAsrSettings = true;
+            try
+            {
+                RefreshAsrLanguageBox();
+            }
+            finally
+            {
+                loadingAsrSettings = false;
+            }
+
+            await Translator.SwitchAsrProviderAsync(id);
+        }
+
+        private async void AsrLanguageBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (loadingAsrSettings)
+                return;
+
+            int index = AsrLanguageBox.SelectedIndex;
+            if (index < 0 || index >= asrLanguages.Count || Translator.Setting is null)
+                return;
+
+            Translator.Setting.AsrLanguage = asrLanguages[index].Id;
+            Translator.Setting.AsrAccent = asrLanguages[index].Accent;
+
+            await Translator.RestartAsrProviderAsync();
+        }
+
+        private async void AudioSourceBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (loadingAsrSettings || AudioSourceBox.SelectedItem is not string sourceId || Translator.Setting is null)
+                return;
+
+            Translator.Setting.AudioSourceName = sourceId;
+
+            await Translator.RestartAsrProviderAsync();
+        }
+
+        private async void AsrApplyButton_click(object sender, RoutedEventArgs e)
+        {
+            if (Translator.Setting is null)
+                return;
+
+            Translator.Setting.IflytekApiKey = IflytekApiKeyBox.Text.Trim();
+            Translator.Setting.IflytekApiSecret = IflytekApiSecretBox.Text.Trim();
+
+            await Translator.RestartAsrProviderAsync();
         }
 
         private void LiveCaptionsButton_click(object sender, RoutedEventArgs e)

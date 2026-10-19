@@ -18,6 +18,10 @@
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
         <StackPanel Grid.Column="0" Orientation="Vertical">
             <StackPanel Margin="15,0,0,0" Orientation="Vertical">
@@ -292,6 +296,76 @@
                     </ui:Flyout>
                 </StackPanel>
             </StackPanel>
+        </StackPanel>
+
+        <!--  Speech recognition backend. Spans every column so it reads as one row below the
+              existing settings and does not disturb the upstream three-column layout.  -->
+        <StackPanel
+            Grid.Row="1"
+            Grid.ColumnSpan="5"
+            Margin="15,15,0,0"
+            Orientation="Vertical">
+            <TextBlock Margin="2.5,0,0,5" Text="Speech Recognition" />
+            <StackPanel Orientation="Horizontal">
+                <ComboBox
+                    x:Name="AsrProviderBox"
+                    Width="170"
+                    Height="30"
+                    Padding="10,4,10,7"
+                    FontSize="13.3"
+                    SelectionChanged="AsrProviderBox_SelectionChanged" />
+                <ComboBox
+                    x:Name="AsrLanguageBox"
+                    Width="190"
+                    Height="30"
+                    Margin="10,0,0,0"
+                    Padding="10,4,10,7"
+                    FontSize="13.3"
+                    SelectionChanged="AsrLanguageBox_SelectionChanged" />
+                <ComboBox
+                    x:Name="AudioSourceBox"
+                    Width="190"
+                    Height="30"
+                    Margin="10,0,0,0"
+                    Padding="10,4,10,7"
+                    FontSize="13.3"
+                    SelectionChanged="AudioSourceBox_SelectionChanged" />
+            </StackPanel>
+            <StackPanel
+                x:Name="IflytekCredentialPanel"
+                Margin="0,8,0,0"
+                Orientation="Horizontal"
+                Visibility="Collapsed">
+                <TextBox
+                    x:Name="IflytekApiKeyBox"
+                    Width="220"
+                    Height="30"
+                    Padding="8,4,8,4"
+                    FontSize="12.5"
+                    PlaceholderText="iFlytek api_key" />
+                <TextBox
+                    x:Name="IflytekApiSecretBox"
+                    Width="220"
+                    Height="30"
+                    Margin="10,0,0,0"
+                    Padding="8,4,8,4"
+                    FontSize="12.5"
+                    PlaceholderText="iFlytek api_secret" />
+                <ui:Button
+                    x:Name="AsrApplyButton"
+                    Height="30"
+                    Margin="10,0,0,0"
+                    Padding="11,4,11,4"
+                    Click="AsrApplyButton_click">
+                    <TextBlock Text="Apply" />
+                </ui:Button>
+            </StackPanel>
+            <TextBlock
+                x:Name="AsrHintText"
+                Margin="2.5,6,0,0"
+                FontSize="11.5"
+                Opacity="0.7"
+                TextWrapping="Wrap" />
         </StackPanel>
     </Grid>
 </Page>

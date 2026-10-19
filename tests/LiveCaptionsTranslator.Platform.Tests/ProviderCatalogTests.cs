@@ -22,6 +22,25 @@ public class ProviderCatalogTests
     }
 
     [Fact]
+    public void Catalog_registers_both_asr_backends()
+    {
+        var registry = BuildRegistry();
+
+        Assert.Equal(new[] { "windows-livecaptions", "iflytek-iat" }, registry.Ids);
+        Assert.True(registry.IsRegistered("iflytek-iat"));
+    }
+
+    [Fact]
+    public void The_two_backends_have_the_expected_shape()
+    {
+        var registry = BuildRegistry();
+
+        // Live Captions reads the OS caption window; iFlytek needs captured audio.
+        Assert.False(registry.Create("windows-livecaptions").RequiresAudioSource);
+        Assert.True(registry.Create("iflytek-iat").RequiresAudioSource);
+    }
+
+    [Fact]
     public void Windows_livecaptions_provider_reports_its_contract()
     {
         var provider = BuildRegistry().Create(WindowsLiveCaptionsProvider.ProviderId);
