@@ -64,7 +64,7 @@ namespace LiveCaptionsTranslator.Core.Iflytek
                 firstFrameSent = true;
             }
 
-            await SendFrameAsync(2, [], cancellationToken);
+            await SendFrameAsync(2, Array.Empty<byte>(), cancellationToken);
         }
 
         /// <summary>
@@ -115,7 +115,7 @@ namespace LiveCaptionsTranslator.Core.Iflytek
 
         private async Task SendFrameAsync(
             int status,
-            ReadOnlySpan<byte> audio,
+            byte[] audio,
             CancellationToken cancellationToken)
         {
             string frame = IflytekProtocol.BuildFrame(status, audio, options.Credentials, options.Business);
