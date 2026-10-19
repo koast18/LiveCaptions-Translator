@@ -41,6 +41,23 @@ public class ProviderCatalogTests
     }
 
     [Fact]
+    public void Verified_language_state_survives_the_catalog()
+    {
+        var registry = BuildRegistry();
+
+        // Only the language covered by the CI integration sample is verified, and that flag has
+        // to reach the settings UI through the registry.
+        var iflytek = registry.Create("iflytek-iat");
+        Assert.Contains(iflytek.SupportedLanguages, language => language.Verified && language.Id == "zh_cn");
+        Assert.True(iflytek.LanguageIsHostControlled);
+
+        // Live Captions picks its own language in the OS, so nothing can be verified from here.
+        var liveCaptions = registry.Create("windows-livecaptions");
+        Assert.All(liveCaptions.SupportedLanguages, language => Assert.False(language.Verified));
+        Assert.False(liveCaptions.LanguageIsHostControlled);
+    }
+
+    [Fact]
     public void Windows_livecaptions_provider_reports_its_contract()
     {
         var provider = BuildRegistry().Create(WindowsLiveCaptionsProvider.ProviderId);

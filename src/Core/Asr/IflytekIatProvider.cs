@@ -19,13 +19,14 @@ namespace LiveCaptionsTranslator.Core.Asr
         public const string ProviderId = "iflytek-iat";
 
         /// <summary>
-        /// Language/accent pairs the service accepted when probed. None of them are marked as
-        /// verified: the endpoint answers <c>code 0</c> for every value it is handed, so only a
-        /// real speech sample can prove that a language is actually recognised.
+        /// Language/accent pairs offered to the user. The endpoint answers <c>code 0</c> for every
+        /// value it is handed, so a language is only marked <c>Verified</c> once a real speech
+        /// sample has been recognised through it - see the language table in the README.
         /// </summary>
         private static readonly AsrLanguage[] Languages =
         {
-            new("zh_cn", "中文（普通话）", "mandarin"),
+            // Verified by tests/fixtures/iflytek-zh-cn-16k.wav in the CI integration job.
+            new("zh_cn", "中文（普通话）", "mandarin", Verified: true),
             new("zh_cn", "中文（粤语）", "cantonese"),
             new("en_us", "English (US)", "mandarin"),
             new("ja", "日本語", "mandarin"),

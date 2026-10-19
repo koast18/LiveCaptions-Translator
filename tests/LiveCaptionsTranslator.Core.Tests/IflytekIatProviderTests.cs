@@ -107,8 +107,25 @@ public class IflytekIatProviderTests
         Assert.True(provider.RequiresAudioSource);
         Assert.NotEmpty(provider.SupportedLanguages);
 
-        // Nothing is verified yet: the endpoint accepts every language value it is given.
-        Assert.All(provider.SupportedLanguages, language => Assert.False(language.Verified));
+        // The host picks the language here, unlike Windows Live Captions.
+        Assert.True(provider.LanguageIsHostControlled);
+    }
+
+    [Fact]
+    public void Only_the_language_covered_by_the_integration_sample_is_marked_verified()
+    {
+        var provider = new IflytekIatProvider();
+
+        var verified = provider.SupportedLanguages.Where(language => language.Verified).ToList();
+
+        Assert.Single(verified);
+        Assert.Equal("zh_cn", verified[0].Id);
+        Assert.Equal("mandarin", verified[0].Accent);
+
+        // Everything else is merely accepted by the endpoint; the README says the same.
+        Assert.All(
+            provider.SupportedLanguages.Where(language => !language.Verified),
+            language => Assert.NotEqual("mandarin", language.Accent));
     }
 
     [Fact]
