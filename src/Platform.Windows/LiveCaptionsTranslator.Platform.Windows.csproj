@@ -17,4 +17,9 @@
 		<ProjectReference Include="..\Core\LiveCaptionsTranslator.Core.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<!-- WASAPI loopback / microphone capture. -->
+		<PackageReference Include="NAudio" Version="2.2.1" />
+	</ItemGroup>
+
 </Project>
