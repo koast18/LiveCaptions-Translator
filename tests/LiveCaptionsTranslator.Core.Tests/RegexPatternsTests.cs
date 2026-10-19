@@ -1,4 +1,4 @@
-using LiveCaptionsTranslator.Core.Text;
+﻿using LiveCaptionsTranslator.Core.Text;
 
 namespace LiveCaptionsTranslator.Core.Tests;
 
@@ -50,6 +50,6 @@ public class RegexPatternsTests
     public void NoticePrefix_matches_bracketed_prefix()
     {
         Assert.Equal("[INFO] ", RegexPatterns.NoticePrefix().Match("[INFO] hello").Value);
-        Assert.False(RegexPatterns.NoticePrefix().IsMatch("hello"));
+        Assert.DoesNotMatch(RegexPatterns.NoticePrefix(), "hello");
     }
 }

@@ -1,4 +1,4 @@
-using LiveCaptionsTranslator.Core.Iflytek;
+﻿using LiveCaptionsTranslator.Core.Iflytek;
 
 namespace LiveCaptionsTranslator.Core.Tests;
 
@@ -16,11 +16,11 @@ public class IflytekSignatureTests
     [Fact]
     public void Credentials_defaults_match_the_reference_client()
     {
-        Assert.Equal(Golden.String("apiKey"), IflytekCredentials.DefaultApiKey);
-        Assert.Equal(Golden.String("apiSecret"), IflytekCredentials.DefaultApiSecret);
-        Assert.Equal(Golden.String("host"), IflytekCredentials.DefaultHost);
-        Assert.Equal(Golden.String("path"), IflytekCredentials.DefaultPath);
-        Assert.Equal(Golden.String("appId"), IflytekCredentials.DefaultAppId);
+        Assert.Equal(IflytekCredentials.DefaultApiKey, Golden.String("apiKey"));
+        Assert.Equal(IflytekCredentials.DefaultApiSecret, Golden.String("apiSecret"));
+        Assert.Equal(IflytekCredentials.DefaultHost, Golden.String("host"));
+        Assert.Equal(IflytekCredentials.DefaultPath, Golden.String("path"));
+        Assert.Equal(IflytekCredentials.DefaultAppId, Golden.String("appId"));
     }
 
     [Fact]

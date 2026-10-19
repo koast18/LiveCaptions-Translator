@@ -139,6 +139,7 @@ namespace LiveCaptionsTranslator.Core.Asr
                 Task<bool>? pump = null;
                 bool inputEnded = false;
                 bool finished = false;
+                bool failed = false;
 
                 try
                 {
@@ -147,8 +148,6 @@ namespace LiveCaptionsTranslator.Core.Asr
 
                     if (options.PadWithLeadingSilence && committed.Length == 0)
                         await session.SendLeadingSilenceAsync(sessionCts.Token);
-
-                    failures = 0;
 
                     pump = session.PumpAsync(
                         text => PublishPartial(context.Sink, committed, text),
@@ -171,6 +170,7 @@ namespace LiveCaptionsTranslator.Core.Asr
                 }
                 catch (Exception exception)
                 {
+                    failed = true;
                     failures++;
                     context.Sink.OnNotice($"[WARNING] 讯飞连接异常：{exception.Message}");
                 }
@@ -192,6 +192,10 @@ namespace LiveCaptionsTranslator.Core.Asr
 
                     await session.DisposeAsync();
                 }
+
+                // A session that actually streamed audio proves the link works again.
+                if (!failed && session.SentFrames > 0)
+                    failures = 0;
 
                 // `inputEnded` means the host is shutting the provider down, not a dropped link.
                 if (token.IsCancellationRequested || inputEnded)

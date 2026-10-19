@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 
 using LiveCaptionsTranslator.Core.Asr;
@@ -51,6 +51,13 @@ public class IflytekIatProviderTests
         {
             lock (transports)
                 return transports[index];
+        }
+
+        /// <summary>Index-safe accessor, for use inside <see cref="WaitUntil"/> conditions.</summary>
+        public int SentCount(int index = 0)
+        {
+            lock (transports)
+                return index < transports.Count ? transports[index].Sent.Count : 0;
         }
 
         public int TransportCount
@@ -123,7 +130,7 @@ public class IflytekIatProviderTests
         await harness.StartAsync();
 
         harness.Audio.EmitChunk();
-        await WaitUntil(() => harness.Transport().Sent.Count >= 1);
+        await WaitUntil(() => harness.SentCount() >= 1);
 
         var transport = harness.Transport();
         Assert.NotNull(transport.Url);
@@ -155,7 +162,7 @@ public class IflytekIatProviderTests
         await harness.StartAsync();
 
         // 200 ms of silence at 16 kHz mono PCM16 is 6400 bytes, i.e. five 40 ms frames.
-        await WaitUntil(() => harness.Transport().Sent.Count >= 5);
+        await WaitUntil(() => harness.SentCount() >= 5);
 
         var sent = harness.Transport().Sent.Take(5).ToList();
 
@@ -174,7 +181,7 @@ public class IflytekIatProviderTests
         await harness.StartAsync();
 
         harness.Audio.EmitChunk();
-        await WaitUntil(() => harness.Transport().Sent.Count >= 1);
+        await WaitUntil(() => harness.SentCount() >= 1);
 
         harness.Transport().Enqueue(PartialJson);
         await WaitUntil(() => harness.Sink.Partials.Count >= 1);
@@ -195,7 +202,7 @@ public class IflytekIatProviderTests
         await harness.StartAsync();
 
         harness.Audio.EmitChunk();
-        await WaitUntil(() => harness.Transport(0).Sent.Count >= 1);
+        await WaitUntil(() => harness.SentCount(0) >= 1);
 
         harness.Transport(0).Drop();
 
@@ -205,7 +212,7 @@ public class IflytekIatProviderTests
 
         // The new session starts from scratch but must still receive audio.
         harness.Audio.EmitChunk();
-        await WaitUntil(() => harness.Transport(1).Sent.Count >= 1);
+        await WaitUntil(() => harness.SentCount(1) >= 1);
         Assert.Equal(0, StatusOf(harness.Transport(1).Sent[0]));
 
         await harness.Provider.StopAsync();
@@ -218,7 +225,7 @@ public class IflytekIatProviderTests
         await harness.StartAsync();
 
         harness.Audio.EmitChunk();
-        await WaitUntil(() => harness.Transport(0).Sent.Count >= 1);
+        await WaitUntil(() => harness.SentCount(0) >= 1);
 
         harness.Transport(0).Enqueue(PartialJson);
         await WaitUntil(() => harness.Sink.Partials.Count >= 1);
@@ -227,7 +234,7 @@ public class IflytekIatProviderTests
         await WaitUntil(() => harness.TransportCount >= 2);
 
         harness.Audio.EmitChunk();
-        await WaitUntil(() => harness.Transport(1).Sent.Count >= 1);
+        await WaitUntil(() => harness.SentCount(1) >= 1);
 
         harness.Transport(1).Enqueue(PartialJson);
         await WaitUntil(() => harness.Sink.Partials.Count >= 2);
@@ -285,7 +292,7 @@ public class IflytekIatProviderTests
         await harness.StartAsync();
 
         harness.Audio.EmitChunk();
-        await WaitUntil(() => harness.Transport().Sent.Count >= 1);
+        await WaitUntil(() => harness.SentCount() >= 1);
 
         await harness.Provider.StopAsync();
 

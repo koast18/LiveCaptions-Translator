@@ -1,4 +1,4 @@
-using LiveCaptionsTranslator.Core.Audio;
+﻿using LiveCaptionsTranslator.Core.Audio;
 using LiveCaptionsTranslator.Core.Iflytek;
 
 namespace LiveCaptionsTranslator.Core.Tests;
@@ -123,8 +123,8 @@ public class IflytekProtocolTests
     [Fact]
     public void Protocol_constants_match_the_reference_client()
     {
-        Assert.Equal(Golden.Int("sampleRate"), AudioFormat.SampleRate);
-        Assert.Equal(Golden.Int("chunkBytes"), AudioFormat.ChunkBytes);
-        Assert.Equal(Golden.Int("chunkMs"), AudioFormat.ChunkMs);
+        Assert.Equal(AudioFormat.SampleRate, Golden.Int("sampleRate"));
+        Assert.Equal(AudioFormat.ChunkBytes, Golden.Int("chunkBytes"));
+        Assert.Equal(AudioFormat.ChunkMs, Golden.Int("chunkMs"));
     }
 }
