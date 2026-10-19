@@ -54,3 +54,26 @@ jobs:
           name: LiveCaptionsTranslator-win-x64
           path: ./publish/win-x64
           if-no-files-found: error
+
+  # Talks to the real iFlytek endpoint with a committed speech sample. This is the only job that
+  # proves the hand-rolled protocol works end to end, so it is kept separate from the unit tests:
+  # it needs the network and it is the job that fails first if the endpoint is unreachable from
+  # GitHub's runners or the committed credentials have been rotated.
+  integration:
+    name: Integration (real iFlytek endpoint)
+    runs-on: windows-latest
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Integration tests
+        run: >
+          dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj
+          -c Release --logger "console;verbosity=detailed"

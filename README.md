@@ -18,6 +18,14 @@
 
 </div>
 
+> [!IMPORTANT]
+> **This is a fork** ([`koast18/LiveCaptions-Translator`](https://github.com/koast18/LiveCaptions-Translator)) of
+> [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator).
+> It turns speech recognition and translation into swappable **providers**, and ships an iFlytek
+> (讯飞) speech-recognition provider that needs no Copilot+ PC.
+> Read [Fork notes](#fork-notes-providers-credentials-and-what-is-not-verified) before using it —
+> the iFlytek credentials are **not** official ones.
+
 ## Overview
 
 **✨ LiveCaptions Translator = Windows LiveCaptions + Translate API ✨**
@@ -211,3 +219,77 @@ After configuration, close Windows LiveCaptions and launch LiveCaptions Translat
 ### Star History
 
 [![Stargazers over time](https://starchart.cc/SakiRinn/LiveCaptions-Translator.svg?variant=adaptive)](https://starchart.cc/SakiRinn/LiveCaptions-Translator)
+
+---
+
+## Fork notes: providers, credentials and what is not verified
+
+### Provider architecture
+
+Speech recognition and translation are both plugin seams, so a backend can be replaced without
+touching the caption pipeline:
+
+| Layer | Interface | Registry | Shipped implementations |
+|---|---|---|---|
+| Speech recognition | `IAsrProvider` (`src/Core/Asr`) | `AsrProviderRegistry` | `windows-livecaptions`, `iflytek-iat` |
+| Audio capture | `IAudioSource` (`src/Core/Audio`) | `AudioSourceCatalog` | WASAPI loopback (system audio), microphone |
+| Translation | `ITranslationProvider` (`src/Core/Translation`) | `TranslationProviderRegistry` | every upstream engine, plus `iflytek-mt` |
+
+`LiveCaptionsTranslator.Core` has no WPF and no Windows dependency, so the protocol work, the
+resampler and the policy decisions are unit tested on every push.
+
+### iFlytek speech recognition: about the credentials
+
+The `iflytek-iat` provider streams audio to `wss://100ime-iat-api.xfyun.cn/v2/iat` with
+`app_id=100IME`. Those credentials are the ones 讯飞输入法's own web client embeds; they are
+**not** official 开放平台 credentials and **not** covered by any public API agreement.
+
+- They can be rotated or revoked by iFlytek at any time, which would break this provider.
+- Using them may violate iFlytek's terms of service.
+- They are committed as **overridable defaults**, so a rotation only needs a settings change.
+- The GitHub Actions runners are outside mainland China, so reaching the endpoint from CI is not
+  guaranteed by iFlytek's SLA.
+
+Every field (endpoint, app id, key, secret) is editable in *Settings → Speech Recognition*.
+
+### iFlytek machine translation: bring your own credentials
+
+`iflytek-mt` (`https://itrans.xf-yun.com/v1/its`) is a **separate** service. The `100IME`
+credentials above do not work for it. It stays unusable until you fill in your own 开放平台
+`app_id` / `api_key` / `api_secret` in *Settings → iFlytek Machine Translation*. Leaving it empty
+does not affect any other engine.
+
+### Verified vs. merely accepted languages
+
+The IAT endpoint answers `code 0` for **any** `language`/`accent` value it is handed, including
+nonsense ones. Parameter acceptance therefore proves nothing about recognition quality, so the
+two are tracked separately:
+
+| Language | Status | Evidence |
+|---|---|---|
+| Chinese (Mandarin, `zh_cn`/`mandarin`) | **Verified** | `tests/fixtures/iflytek-zh-cn-16k.wav` (SAPI zh-CN) recognised end to end by the CI integration job |
+| Chinese (Cantonese, `zh_cn`/`cantonese`) | Parameters accepted only | not exercised with real speech |
+| English (`en_us`) | Parameters accepted only | not exercised with real speech |
+| Japanese (`ja`) | Parameters accepted only | not exercised with real speech |
+| Korean (`ko`) | Parameters accepted only | not exercised with real speech |
+
+`AsrLanguage.Verified` carries this flag into the code, and the settings UI shows the same
+caveat. Windows Live Captions picks its own language, so none of its entries are marked verified.
+
+### Proxies
+
+Google, OpenAI, OpenRouter and DeepL are unreachable from some networks. *Settings → Network /
+Proxy* takes one proxy URL (`http://127.0.0.1:7897`, `socks5://127.0.0.1:1080`, ...) plus a
+checkbox per engine. Engines left unchecked go direct. With the field empty the machine's own
+proxy settings apply, which is exactly what upstream did.
+
+### Not verified
+
+- **The GUI.** CI builds it and unit tests the logic behind it, but no automated test drives the
+  WPF windows. Layout and interaction need a human.
+- **Real audio capture.** CI has no sound card; the resampler and the WAV writer are unit tested
+  with synthetic data, and the NAudio wiring is only proven to compile.
+- **iFlytek machine translation.** Implemented and unit tested against a stubbed transport, but
+  never called with real credentials.
+- **Proxy connectivity.** The resolution logic is unit tested; whether your proxy actually works
+  is not.
