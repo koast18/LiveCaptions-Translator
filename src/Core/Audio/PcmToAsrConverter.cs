@@ -107,18 +107,17 @@ namespace LiveCaptionsTranslator.Core.Audio
         /// <summary>Drops the mono samples that can no longer contribute to a future output.</summary>
         private void Compact()
         {
-            int drop = (int)position;
+            // `position` may already have run past the end of the buffer: the next output sample
+            // needs source samples that only arrive with the following chunk. Only the samples
+            // that are really there may be dropped, and the fractional offset must survive -
+            // losing it would shift every later chunk and drift the audio.
+            int drop = Math.Min((int)position, monoCount);
             if (drop <= 0)
                 return;
 
-            if (drop >= monoCount)
-            {
-                monoCount = 0;
-                position = 0;
-                return;
-            }
+            if (drop < monoCount)
+                Array.Copy(mono, drop, mono, 0, monoCount - drop);
 
-            Array.Copy(mono, drop, mono, 0, monoCount - drop);
             monoCount -= drop;
             position -= drop;
         }

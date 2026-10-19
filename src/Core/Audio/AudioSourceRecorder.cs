@@ -14,6 +14,7 @@ namespace LiveCaptionsTranslator.Core.Audio
         private readonly List<byte> pcm = [];
 
         private bool recording;
+        private long recordedBytes;
 
         public AudioSourceRecorder(IAudioSource source, string path)
         {
@@ -29,7 +30,7 @@ namespace LiveCaptionsTranslator.Core.Audio
             get
             {
                 lock (pcm)
-                    return pcm.Count;
+                    return recordedBytes;
             }
         }
 
@@ -40,6 +41,12 @@ namespace LiveCaptionsTranslator.Core.Audio
         {
             if (recording)
                 return;
+
+            lock (pcm)
+            {
+                pcm.Clear();
+                recordedBytes = 0;
+            }
 
             source.FrameAvailable += OnFrameAvailable;
             recording = true;
@@ -73,7 +80,10 @@ namespace LiveCaptionsTranslator.Core.Audio
         private void OnFrameAvailable(object? sender, AudioFrameEventArgs e)
         {
             lock (pcm)
+            {
                 pcm.AddRange(e.Pcm);
+                recordedBytes += e.Pcm.Length;
+            }
         }
     }
 }
