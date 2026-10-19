@@ -1,0 +1,169 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and release"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  # The release gate: nothing is published unless every test passes, including the one that
+  # talks to the real iFlytek endpoint with a committed speech sample.
+  verify:
+    name: Verify
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build
+        run: dotnet build LiveCaptionsTranslator.sln -c Release
+
+      - name: Test (Core)
+        run: dotnet test tests/LiveCaptionsTranslator.Core.Tests/LiveCaptionsTranslator.Core.Tests.csproj -c Release
+
+      - name: Test (Platform.Windows)
+        run: dotnet test tests/LiveCaptionsTranslator.Platform.Tests/LiveCaptionsTranslator.Platform.Tests.csproj -c Release
+
+      - name: Test (App)
+        run: dotnet test tests/LiveCaptionsTranslator.App.Tests/LiveCaptionsTranslator.App.Tests.csproj -c Release
+
+      - name: Integration (real iFlytek endpoint)
+        run: dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj -c Release --logger "console;verbosity=detailed"
+
+  release:
+    name: Publish win-x64 assets
+    needs: verify
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish (self-contained single file)
+        run: >
+          dotnet publish LiveCaptionsTranslator.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
+          -o ./publish/selfcontained
+
+      - name: Publish (framework-dependent single file)
+        run: >
+          dotnet publish LiveCaptionsTranslator.csproj
+          -c Release -r win-x64 --self-contained false
+          -p:PublishSingleFile=true
+          -o ./publish/framework
+
+      - name: Package assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          New-Item -ItemType Directory -Force -Path ziproot | Out-Null
+
+          # The self-contained build is the one most people want: no .NET install needed.
+          Copy-Item publish/selfcontained/LiveCaptionsTranslator.exe dist/LiveCaptionsTranslator-win-x64.exe
+          Copy-Item publish/framework/LiveCaptionsTranslator.exe dist/LiveCaptionsTranslator-win-x64-framework.exe
+
+          Copy-Item dist/LiveCaptionsTranslator-win-x64.exe ziproot/
+          Copy-Item dist/LiveCaptionsTranslator-win-x64-framework.exe ziproot/
+          Copy-Item README.md ziproot/
+          Copy-Item LICENSE ziproot/
+
+          Compress-Archive -Path ziproot/* -DestinationPath dist/LiveCaptionsTranslator-win-x64.zip -Force
+
+          Get-ChildItem dist | Select-Object Name, Length | Format-Table -AutoSize
+
+      - name: Release notes
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") { $tag = "${{ inputs.tag }}" }
+
+          $notes = @"
+          Windows x64 build of **LiveCaptions Translator (provider fork)**.
+
+          | Asset | Needs .NET 8? |
+          |---|---|
+          | ``LiveCaptionsTranslator-win-x64.exe`` | no, self-contained |
+          | ``LiveCaptionsTranslator-win-x64-framework.exe`` | yes |
+          | ``LiveCaptionsTranslator-win-x64.zip`` | both of the above, plus the README and LICENSE |
+
+          ### Read this before using the iFlytek provider
+
+          * The ``iflytek-iat`` provider talks to ``wss://100ime-iat-api.xfyun.cn/v2/iat`` with
+            ``app_id=100IME``. Those are the credentials 讯飞输入法's own web client embeds. They are
+            **not** official 开放平台 credentials and are **not** covered by any public API agreement.
+          * iFlytek can rotate or revoke them at any time, which would break that provider until the
+            credentials are updated in *Settings → Speech Recognition*.
+          * Using them may violate iFlytek's terms of service. Use the Windows Live Captions
+            provider if that matters to you.
+          * ``iflytek-mt`` (machine translation) is a **separate** service and needs your own
+            开放平台 ``app_id`` / ``api_key`` / ``api_secret``. It stays unusable until you fill them
+            in, which does not affect any other engine.
+
+          ### Language support
+
+          Only **Chinese (Mandarin)** has been verified against real speech (the CI integration job
+          recognises a committed sample end to end). Cantonese, English, Japanese and Korean are
+          only known to have their parameters accepted by the endpoint, which proves nothing about
+          recognition quality. See the README for the full table.
+
+          ### Not verified
+
+          * The GUI: it builds and its logic is unit tested, but no automated test drives the WPF
+            windows - **please confirm the interface manually**.
+          * Real audio capture: CI has no sound card; the resampler and WAV writer are unit tested
+            with synthetic data.
+          * iFlytek machine translation: implemented and unit tested against a stubbed transport,
+            never called with real credentials.
+
+          ### Verification
+
+          This release was only published after the full CI suite passed, including an integration
+          job that runs a committed 16 kHz Chinese speech sample through the real iFlytek endpoint
+          and asserts the transcript.
+          "@
+
+          $notes | Out-File -FilePath release-notes.md -Encoding utf8
+          Write-Output "notes written for $tag"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          name: LiveCaptions Translator ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+          files: |
+            dist/LiveCaptionsTranslator-win-x64.exe
+            dist/LiveCaptionsTranslator-win-x64-framework.exe
+            dist/LiveCaptionsTranslator-win-x64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiveCaptionsTranslator-win-x64-release
+          path: dist
+          if-no-files-found: error
