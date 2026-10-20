@@ -9,6 +9,25 @@ namespace LiveCaptionsTranslator.utils
         public const string GitHubReleasesUrl = "https://github.com/koast18/LiveCaptions-Translator/releases";
         public const string GitHubLatestReleaseApi = "https://api.github.com/repos/koast18/LiveCaptions-Translator/releases/latest";
 
+        /// <summary>
+        /// True when <paramref name="latestVersion"/> (from the release tag) is strictly newer than
+        /// the running assembly version. Values that cannot be parsed are treated as "not newer", so
+        /// a malformed tag can never produce an endless update prompt.
+        /// </summary>
+        public static bool IsNewerRelease(string? latestVersion, string? currentVersion)
+        {
+            if (string.IsNullOrWhiteSpace(latestVersion))
+                return false;
+
+            if (!Version.TryParse(latestVersion, out var latest))
+                return false;
+
+            if (!Version.TryParse(currentVersion, out var current))
+                return false;
+
+            return latest > current;
+        }
+
         public static async Task<string> GetLatestVersion()
         {
             string apiUrl = GitHubLatestReleaseApi;

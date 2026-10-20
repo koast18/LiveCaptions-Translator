@@ -58,6 +58,26 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      - name: Stamp the release tag into the assembly version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = "${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          $version = $tag.TrimStart('v')
+
+          # AssemblyVersion needs four numeric parts.
+          $parts = @($version.Split('.'))
+          while ($parts.Count -lt 4) { $parts += '0' }
+          $assembly = ($parts[0..3] -join '.')
+
+          $path = 'Properties/AssemblyInfo.cs'
+          $text = Get-Content $path -Raw
+          $text = $text -replace 'AssemblyVersion\("[^"]*"\)', "AssemblyVersion(`"$assembly`")"
+          $text = $text -replace 'AssemblyFileVersion\("[^"]*"\)', "AssemblyFileVersion(`"$assembly`")"
+          Set-Content -Path $path -Value $text -Encoding utf8
+
+          Write-Output "stamped assembly version $assembly from tag $tag"
+
       - name: Publish (self-contained single file)
         run: >
           dotnet publish LiveCaptionsTranslator.csproj

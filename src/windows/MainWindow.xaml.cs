@@ -190,7 +190,11 @@ namespace LiveCaptionsTranslator
             var ignoredVersion = Translator.Setting.IgnoredUpdateVersion;
             if (!string.IsNullOrEmpty(ignoredVersion) && ignoredVersion == latestVersion)
                 return;
-            if (!string.IsNullOrEmpty(latestVersion) && latestVersion != currentVersion)
+
+            // Compare versions numerically, not as strings: the release tag and the assembly
+            // version use different schemes, so "0.2.1" != "1.7.1300.1822" would otherwise nag on
+            // every start. Only a strictly newer release is worth prompting about.
+            if (UpdateUtil.IsNewerRelease(latestVersion, currentVersion))
             {
                 var dialog = new Wpf.Ui.Controls.MessageBox
                 {
