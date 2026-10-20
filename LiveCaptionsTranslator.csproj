@@ -39,6 +39,7 @@
 		<Using Include="LiveCaptionsTranslator.Core.Audio" />
 		<Using Include="LiveCaptionsTranslator.Core.Asr" />
 		<Using Include="LiveCaptionsTranslator.Core.Translation" />
+		<Using Include="LiveCaptionsTranslator.Core.Doubao" />
 		<Using Include="LiveCaptionsTranslator.Core.Iflytek" />
 		<Using Include="LiveCaptionsTranslator.Core.Net" />
 		<Using Include="LiveCaptionsTranslator.Platform.Windows" />
