@@ -1,5 +1,6 @@
 ﻿using System.Text;
 
+using LiveCaptionsTranslator.Core.Asr;
 using LiveCaptionsTranslator.Core.Doubao;
 
 namespace LiveCaptionsTranslator.Core.Tests;
