@@ -369,208 +369,6 @@ jobs:
             $width = $bounds.Right - $bounds.Left
             $height = $bounds.Bottom - $bounds.Top
 
-            # Everything reachable through the dictionary; used to spot a key shown as text.
-            $dictionaryKeys = @()
-            $english = Join-Path $PWD 'src/Localization/Strings.en.xaml'
-            if (Test-Path $english) {
-              foreach ($match in [regex]::Matches((Get-Content $english -Raw), 'x:Key="([^"]+)"')) {
-                $dictionaryKeys += $match.Groups[1].Value
-              }
-            }
-
-            function Measure() {
-              $elements = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants,
-                [System.Windows.Automation.Condition]::TrueCondition)
-              $past = @()
-              $keys = @()
-              foreach ($e in $elements) {
-                $rect = $e.Current.BoundingRectangle
-                $name = $e.Current.Name
-                if ($rect.Width -gt 0 -and $rect.Height -gt 0 -and (($rect.X + $rect.Width) -gt ($bounds.Right + 1))) {
-                  $past += ("{0} '{1}'" -f $e.Current.ControlType.ProgrammaticName.Replace('ControlType.',''), $name)
-                }
-                if ($name -and ($dictionaryKeys -ccontains $name.Trim())) { $keys += $name.Trim() }
-                if ($name -and ($name -match '(^|\s)Asr_[A-Za-z]+|(^|\s)(Setting|History|Welcome|Dialog|Error|Status|Proxy)_[A-Za-z]+')) {
-                  $keys += $name.Trim()
-                }
-              }
-              return [pscustomobject]@{ Count = $elements.Count; Past = $past; Keys = $keys }
-            }
-
-            function Capture([string] $suffix) {
-              $bmp = New-Object System.Drawing.Bitmap $width, $height
-              $g = [System.Drawing.Graphics]::FromImage($bmp)
-              $dc = $g.GetHdc()
-              [void][Ui]::PrintWindow($handle, $dc, 2)
-              $g.ReleaseHdc($dc)
-              $g.Dispose()
-              $bmp.Save((Join-Path $PWD "settings-$language$suffix.png"), [System.Drawing.Imaging.ImageFormat]::Png)
-              $bmp.Dispose()
-            }
-
-            $top = Measure
-            Capture ''
-            Write-Host "$language top    : $($top.Count) elements, $($top.Past.Count) past the edge, $($top.Keys.Count) keys"
-
-            # Scroll to the bottom so the interface-language picker is covered too.
-            $scroller = $null
-            foreach ($e in $win.FindAll([System.Windows.Automation.TreeScope]::Descendants,
-                                       [System.Windows.Automation.Condition]::TrueCondition)) {
-              $sp = $null
-              if ($e.TryGetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern, [ref]$sp) -and
-                  $sp.Current.VerticallyScrollable) { $scroller = $sp; break }
-            }
-
-            $bottom = $top
-            if ($scroller) {
-              $scroller.SetScrollPercent([System.Windows.Automation.ScrollPattern]::NoScroll, 100)
-              Start-Sleep -Milliseconds 1000
-              $bottom = Measure
-              Capture '-bottom'
-              Write-Host "$language bottom : $($bottom.Count) elements, $($bottom.Past.Count) past the edge, $($bottom.Keys.Count) keys"
-            }
-            else {
-              Write-Host "$language : the page does not scroll, one screenshot is enough"
-            }
-
-            $past = @($top.Past) + @($bottom.Past)
-            $keys = @($top.Keys) + @($bottom.Keys)
-
-            if (-not $p.HasExited) { $p.Kill() }
-
-            $lines = Get-Content $probe
-            [pscustomobject]@{
-              Theme   = ($lines | Select-String '^AppsUseLightTheme=' | Select-Object -First 1).Line
-              Bg      = ($lines | Select-String '^ApplicationBackgroundBrush=' | Select-Object -First 1).Line
-              Text    = ($lines | Select-String '^TextFillColorPrimaryBrush=' | Select-Object -First 1).Line
-              Luma    = [math]::Round($sum / $n, 1)
-              Size    = "${w}x${hh}"
-            }
-          }
-
-          $dark = Run 0
-          $light = Run 1
-
-          Write-Output "dark : $($dark.Theme) | $($dark.Bg) | $($dark.Text) | luma=$($dark.Luma) | $($dark.Size)"
-          Write-Output "light: $($light.Theme) | $($light.Bg) | $($light.Text) | luma=$($light.Luma) | $($light.Size)"
-
-          if ($dark.Theme -ne 'AppsUseLightTheme=0') { throw "dark run read the wrong registry value: $($dark.Theme)" }
-          if ($light.Theme -ne 'AppsUseLightTheme=1') { throw "light run read the wrong registry value: $($light.Theme)" }
-          if ($dark.Bg -eq $light.Bg) { throw "background brush did not change: $($dark.Bg)" }
-          if ($dark.Text -eq $light.Text) { throw "text brush did not change: $($dark.Text)" }
-
-          # The rendered pixels are the point: a correct dictionary on a transparent window still
-          # looks wrong, which is exactly the Windows 10 bug this job exists to catch.
-          if ($dark.Luma -ge 100) { throw "dark theme rendered bright (mean luma $($dark.Luma))" }
-          if ($light.Luma -le 120) { throw "light theme rendered dark (mean luma $($light.Luma))" }
-
-          Write-Output "OK: dark renders at luma $($dark.Luma), light at $($light.Luma)"
-
-  # Opens the settings page on a throwaway runner, proves nothing sticks out past the window,
-  # and keeps the screenshot as an artifact. The page used to render about 2000 px wide inside a
-  # 750 px window, which no unit test could see.
-  settings-layout:
-    name: Settings layout
-    runs-on: windows-latest
-    if: github.event_name != 'pull_request'
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
-          restore-keys: nuget-${{ runner.os }}-
-
-      - name: Publish
-        run: >
-          dotnet publish LiveCaptionsTranslator.csproj
-          -c Release -r win-x64 --self-contained false
-          -p:PublishSingleFile=true
-          -o ./publish/settings
-
-      - name: The settings page must fit the window in both languages
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Add-Type -AssemblyName System.Drawing, UIAutomationClient, UIAutomationTypes
-          Add-Type @"
-          using System;
-          using System.Runtime.InteropServices;
-          public class Ui {
-              [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
-              [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint dx, uint dy, uint d, IntPtr e);
-              [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
-              [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
-              [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint f);
-              [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
-          }
-          "@
-
-          $exe = Join-Path $PWD 'publish/settings/LiveCaptionsTranslator.exe'
-          $work = Join-Path $PWD 'publish/settings'
-          $failures = @()
-
-          function Check([string] $language) {
-            # The language is read from setting.json at startup, so switching it here is the same
-            # path a user takes.
-            Set-Content -Path (Join-Path $work 'setting.json') -Value ("{ `"UiLanguage`": `"$language`" }") -Encoding utf8
-
-            $root = [System.Windows.Automation.AutomationElement]::RootElement
-            $win = $null
-            $p = $null
-
-            # A cold runner can take half a minute to show the window, so allow two launches
-            # before calling it a failure.
-            for ($attempt = 0; $attempt -lt 2 -and -not $win; $attempt++) {
-              $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
-              for ($i = 0; $i -lt 120 -and -not $win; $i++) {
-                Start-Sleep -Milliseconds 500
-                $p.Refresh()
-                if ($p.HasExited) { break }
-                $cond = New-Object System.Windows.Automation.PropertyCondition(
-                  [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $p.Id)
-                $win = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
-              }
-              if (-not $win -and -not $p.HasExited) { $p.Kill(); Start-Sleep -Seconds 2 }
-            }
-
-            if (-not $win) { throw "the app never created a window for $language" }
-
-            $handle = [IntPtr]$win.Current.NativeWindowHandle
-            [void][Ui]::SetForegroundWindow($handle)
-
-            # The navigation entry is a DataItem whose name the dictionary controls, so find it by
-            # position as well as name: 'Setting' in English, something else in Chinese.
-            $nav = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants,
-              (New-Object System.Windows.Automation.PropertyCondition(
-                [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
-                [System.Windows.Automation.ControlType]::DataItem)))
-            $target = $null
-            foreach ($n in $nav) {
-              if ($n.Current.Name -eq 'Setting') { $target = $n; break }
-            }
-            if (-not $target -and $nav.Count -ge 2) { $target = $nav[1] }
-            if (-not $target) { throw "no settings navigation entry for $language" }
-
-            $r = $target.Current.BoundingRectangle
-            for ($click = 0; $click -lt 2; $click++) {
-              [void][Ui]::SetCursorPos([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2))
-              Start-Sleep -Milliseconds 300
-              [Ui]::mouse_event(0x0002, 0, 0, 0, [IntPtr]::Zero)
-              Start-Sleep -Milliseconds 80
-              [Ui]::mouse_event(0x0004, 0, 0, 0, [IntPtr]::Zero)
-              Start-Sleep -Milliseconds 1200
-            }
-
-            $bounds = New-Object Ui+RECT
-            [void][Ui]::GetWindowRect($handle, [ref]$bounds)
-            $width = $bounds.Right - $bounds.Left
-            $height = $bounds.Bottom - $bounds.Top
-
             $elements = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants,
               [System.Windows.Automation.Condition]::TrueCondition)
             $overflow = @()
@@ -583,6 +381,52 @@ jobs:
               }
             }
 
+            $bmp = New-Object System.Drawing.Bitmap $width, $height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $dc = $g.GetHdc()
+            [void][Ui]::PrintWindow($handle, $dc, 2)
+            $g.ReleaseHdc($dc)
+            $g.Dispose()
+            $bmp.Save((Join-Path $PWD "settings-$language.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp.Dispose()
+            # Also cover the bottom of the page: the interface-language picker lives there, and a
+            # screenshot of the top of a 775x170 window never showed the thing this change is about.
+            $scroller = $null
+            foreach ($e in $elements) {
+              $pattern = $null
+              if ($e.TryGetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern, [ref]$pattern) -and $pattern.Current.VerticallyScrollable) {
+                $scroller = $pattern
+                break
+              }
+            }
+
+            if ($scroller) {
+              $scroller.SetScrollPercent([System.Windows.Automation.ScrollPattern]::NoScroll, 100)
+              Start-Sleep -Milliseconds 1200
+
+              $elements = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+                [System.Windows.Automation.Condition]::TrueCondition)
+              foreach ($e in $elements) {
+                $rect = $e.Current.BoundingRectangle
+                if ($rect.Width -le 0 -or $rect.Height -le 0) { continue }
+                if (($rect.X + $rect.Width) -gt ($bounds.Right + 1)) {
+                  $overflow += ("bottom: {0} '{1}'" -f $e.Current.ControlType.ProgrammaticName.Replace('ControlType.',''), $e.Current.Name)
+                }
+                if ($e.Current.Name -and ($dictionaryKeys -ccontains $e.Current.Name.Trim())) {
+                  $keyLike += $e.Current.Name.Trim()
+                }
+              }
+
+              $bmp2 = New-Object System.Drawing.Bitmap $width, $height
+              $g2 = [System.Drawing.Graphics]::FromImage($bmp2)
+              $dc2 = $g2.GetHdc()
+              [void][Ui]::PrintWindow($handle, $dc2, 2)
+              $g2.ReleaseHdc($dc2)
+              $g2.Dispose()
+              $bmp2.Save((Join-Path $PWD "settings-$language-bottom.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+              $bmp2.Dispose()
+              Write-Host "$language : also checked the bottom of the page"
+            }
             if (-not $p.HasExited) { $p.Kill() }
 
             Write-Host "$language : ${width}x${height}, $($elements.Count) elements, $($overflow.Count) past the edge"
@@ -603,8 +447,8 @@ jobs:
               if ($dictionaryKeys -ccontains $name.Trim()) { $keyLike += $name.Trim() }
             }
 
-            if ($past.Count -gt 0) { return "$language : $($past.Count) elements extend past the window" }
-            if ($keys.Count -gt 0) { return ("$language : resource keys shown as text - " + (($keys | Select-Object -Unique) -join ', ')) }
+            if ($overflow.Count -gt 0) { return "$language : $($overflow.Count) elements extend past the window" }
+            if ($keyLike.Count -gt 0) { return ("$language : resource keys shown as text - " + (($keyLike | Select-Object -Unique) -join ', ')) }
             return $null
           }
 
