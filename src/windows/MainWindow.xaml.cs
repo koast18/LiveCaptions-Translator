@@ -22,7 +22,7 @@ namespace LiveCaptionsTranslator
 
             Loaded += (s, e) =>
             {
-                SystemThemeWatcher.Watch(this, WindowBackdropType.Mica, true);
+                SystemThemeWatcher.Watch(this, WindowBackdropType.Auto, true);
                 RootNavigation.Navigate(typeof(CaptionPage));
                 IsAutoHeight = true;
                 CheckForFirstUse();

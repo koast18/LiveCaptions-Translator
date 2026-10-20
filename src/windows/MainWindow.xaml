@@ -17,7 +17,7 @@
     ResizeMode="CanResizeWithGrip"
     SizeChanged="MainWindow_SizeChanged"
     Topmost="True"
-    WindowBackdropType="Mica"
+    WindowBackdropType="Auto"
     WindowStartupLocation="Manual"
     WindowStyle="None"
     mc:Ignorable="d">

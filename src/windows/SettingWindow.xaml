@@ -13,7 +13,7 @@
     ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     ExtendsContentIntoTitleBar="True"
     Topmost="True"
-    WindowBackdropType="Mica"
+    WindowBackdropType="Auto"
     WindowStartupLocation="CenterScreen"
     WindowStyle="None"
     mc:Ignorable="d">

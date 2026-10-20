@@ -26,7 +26,7 @@ namespace LiveCaptionsTranslator
 
             Loaded += (sender, args) =>
             {
-                SystemThemeWatcher.Watch(this, WindowBackdropType.Mica, true);
+                SystemThemeWatcher.Watch(this, WindowBackdropType.Auto, true);
                 Initialize();
                 SelectButton(PromptButton);
             };
