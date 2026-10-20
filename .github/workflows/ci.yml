@@ -290,7 +290,7 @@ jobs:
           -p:PublishSingleFile=true
           -o ./publish/settings
 
-      - name: The settings page must fit the window
+      - name: The settings page must fit the window in both languages
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -310,79 +310,102 @@ jobs:
 
           $exe = Join-Path $PWD 'publish/settings/LiveCaptionsTranslator.exe'
           $work = Join-Path $PWD 'publish/settings'
-          $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
-          Start-Sleep -Seconds 8
-          $p.Refresh()
-          if ($p.HasExited) { throw "the app exited with code $($p.ExitCode)" }
+          $failures = @()
 
-          $root = [System.Windows.Automation.AutomationElement]::RootElement
-          $cond = New-Object System.Windows.Automation.PropertyCondition(
-            [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $p.Id)
-          $win = $null
-          for ($i = 0; $i -lt 20 -and -not $win; $i++) {
-            $win = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
-            if (-not $win) { Start-Sleep -Milliseconds 500 }
-          }
-          if (-not $win) { throw 'the app never created a window' }
+          function Check([string] $language) {
+            # The language is read from setting.json at startup, so switching it here is the same
+            # path a user takes.
+            Set-Content -Path (Join-Path $work 'setting.json') -Value ("{ `"UiLanguage`": `"$language`" }") -Encoding utf8
 
-          $handle = [IntPtr]$win.Current.NativeWindowHandle
-          [void][Ui]::SetForegroundWindow($handle)
+            $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
+            Start-Sleep -Seconds 8
+            $p.Refresh()
+            if ($p.HasExited) { throw "the app exited with code $($p.ExitCode) for $language" }
 
-          # The navigation entry is a DataItem named after the page it opens.
-          $item = $win.FindFirst([System.Windows.Automation.TreeScope]::Descendants,
-            (New-Object System.Windows.Automation.PropertyCondition(
-              [System.Windows.Automation.AutomationElement]::NameProperty, 'Setting')))
-          if (-not $item) { throw 'the settings navigation entry was not found' }
-
-          $r = $item.Current.BoundingRectangle
-          for ($click = 0; $click -lt 2; $click++) {
-            [void][Ui]::SetCursorPos([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2))
-            Start-Sleep -Milliseconds 300
-            [Ui]::mouse_event(0x0002, 0, 0, 0, [IntPtr]::Zero)
-            Start-Sleep -Milliseconds 80
-            [Ui]::mouse_event(0x0004, 0, 0, 0, [IntPtr]::Zero)
-            Start-Sleep -Milliseconds 1200
-          }
-
-          $bounds = New-Object Ui+RECT
-          [void][Ui]::GetWindowRect($handle, [ref]$bounds)
-          $width = $bounds.Right - $bounds.Left
-          $height = $bounds.Bottom - $bounds.Top
-
-          $elements = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants,
-            [System.Windows.Automation.Condition]::TrueCondition)
-          $overflow = @()
-          foreach ($e in $elements) {
-            $rect = $e.Current.BoundingRectangle
-            if ($rect.Width -le 0 -or $rect.Height -le 0) { continue }
-            $right = $rect.X + $rect.Width
-            if ($right -gt ($bounds.Right + 1)) {
-              $overflow += ("{0} '{1}' ends at {2}, window ends at {3}" -f
-                $e.Current.ControlType.ProgrammaticName.Replace('ControlType.',''), $e.Current.Name, [int]$right, $bounds.Right)
+            $root = [System.Windows.Automation.AutomationElement]::RootElement
+            $cond = New-Object System.Windows.Automation.PropertyCondition(
+              [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $p.Id)
+            $win = $null
+            for ($i = 0; $i -lt 20 -and -not $win; $i++) {
+              $win = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
+              if (-not $win) { Start-Sleep -Milliseconds 500 }
             }
+            if (-not $win) { throw "the app never created a window for $language" }
+
+            $handle = [IntPtr]$win.Current.NativeWindowHandle
+            [void][Ui]::SetForegroundWindow($handle)
+
+            # The navigation entry is a DataItem whose name the dictionary controls, so find it by
+            # position as well as name: 'Setting' in English, something else in Chinese.
+            $nav = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+              (New-Object System.Windows.Automation.PropertyCondition(
+                [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+                [System.Windows.Automation.ControlType]::DataItem)))
+            $target = $null
+            foreach ($n in $nav) {
+              if ($n.Current.Name -eq 'Setting') { $target = $n; break }
+            }
+            if (-not $target -and $nav.Count -ge 2) { $target = $nav[1] }
+            if (-not $target) { throw "no settings navigation entry for $language" }
+
+            $r = $target.Current.BoundingRectangle
+            for ($click = 0; $click -lt 2; $click++) {
+              [void][Ui]::SetCursorPos([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2))
+              Start-Sleep -Milliseconds 300
+              [Ui]::mouse_event(0x0002, 0, 0, 0, [IntPtr]::Zero)
+              Start-Sleep -Milliseconds 80
+              [Ui]::mouse_event(0x0004, 0, 0, 0, [IntPtr]::Zero)
+              Start-Sleep -Milliseconds 1200
+            }
+
+            $bounds = New-Object Ui+RECT
+            [void][Ui]::GetWindowRect($handle, [ref]$bounds)
+            $width = $bounds.Right - $bounds.Left
+            $height = $bounds.Bottom - $bounds.Top
+
+            $elements = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+              [System.Windows.Automation.Condition]::TrueCondition)
+            $overflow = @()
+            foreach ($e in $elements) {
+              $rect = $e.Current.BoundingRectangle
+              if ($rect.Width -le 0 -or $rect.Height -le 0) { continue }
+              if (($rect.X + $rect.Width) -gt ($bounds.Right + 1)) {
+                $overflow += ("{0} '{1}'" -f
+                  $e.Current.ControlType.ProgrammaticName.Replace('ControlType.',''), $e.Current.Name)
+              }
+            }
+
+            $bmp = New-Object System.Drawing.Bitmap $width, $height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $dc = $g.GetHdc()
+            [void][Ui]::PrintWindow($handle, $dc, 2)
+            $g.ReleaseHdc($dc)
+            $g.Dispose()
+            $bmp.Save((Join-Path $PWD "settings-$language.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp.Dispose()
+            if (-not $p.HasExited) { $p.Kill() }
+
+            Write-Output "$language : ${width}x${height}, $($elements.Count) elements, $($overflow.Count) past the edge"
+            foreach ($o in ($overflow | Select-Object -First 5)) { Write-Output "    $o" }
+            if ($overflow.Count -gt 0) { return "$language : $($overflow.Count) elements extend past the window" }
+            return $null
           }
 
-          $bmp = New-Object System.Drawing.Bitmap $width, $height
-          $g = [System.Drawing.Graphics]::FromImage($bmp)
-          $dc = $g.GetHdc()
-          [void][Ui]::PrintWindow($handle, $dc, 2)
-          $g.ReleaseHdc($dc)
-          $g.Dispose()
-          $bmp.Save((Join-Path $PWD 'settings.png'), [System.Drawing.Imaging.ImageFormat]::Png)
-          $bmp.Dispose()
-          if (-not $p.HasExited) { $p.Kill() }
-
-          Write-Output "window ${width}x${height}, $($elements.Count) elements"
-          if ($overflow.Count -gt 0) {
-            $overflow | Select-Object -First 10 | ForEach-Object { Write-Output "  $_" }
-            throw "$($overflow.Count) elements extend past the window"
+          foreach ($language in @('en', 'zh-Hans')) {
+            $failure = Check $language
+            if ($failure) { $failures += $failure }
           }
-          Write-Output 'OK: every element is inside the window'
+
+          if ($failures.Count -gt 0) {
+            $failures | ForEach-Object { Write-Output $_ }
+            throw "the settings page does not fit the window"
+          }
+          Write-Output 'OK: the settings page fits the window in English and in Simplified Chinese'
 
       - name: Upload the settings screenshot
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: settings-screenshot
-          path: settings.png
+          path: settings-*.png
           if-no-files-found: warn
