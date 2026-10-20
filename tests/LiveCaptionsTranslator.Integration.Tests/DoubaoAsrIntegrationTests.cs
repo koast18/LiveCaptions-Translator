@@ -127,17 +127,20 @@ public class DoubaoAsrIntegrationTests
         string transcript = string.Empty;
         string wire = string.Empty;
 
-        for (int attempt = 1; attempt <= 3 && string.IsNullOrWhiteSpace(transcript); attempt++)
+        const int attempts = 5;
+
+        for (int attempt = 1; attempt <= attempts && string.IsNullOrWhiteSpace(transcript); attempt++)
         {
             (transcript, wire) = await TryRecogniseAsync(credentials, audio);
 
-            if (string.IsNullOrWhiteSpace(transcript))
-                await Task.Delay(TimeSpan.FromSeconds(2));
+            // The endpoint throttles bursts of sessions; give it room between attempts.
+            if (string.IsNullOrWhiteSpace(transcript) && attempt < attempts)
+                await Task.Delay(TimeSpan.FromSeconds(5));
         }
 
         Assert.False(
             string.IsNullOrWhiteSpace(transcript),
-            "the service returned no transcript after 3 attempts." + Environment.NewLine + wire);
+            $"the service returned no transcript after {attempts} attempts." + Environment.NewLine + wire);
 
         // Exact punctuation is the service's business; the words are what matter.
         Assert.Contains("今天天气", transcript);
