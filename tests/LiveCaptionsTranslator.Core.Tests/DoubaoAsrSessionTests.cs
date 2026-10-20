@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 
 using LiveCaptionsTranslator.Core.Doubao;
 
@@ -337,5 +337,104 @@ public class DoubaoAsrSessionTests
         Assert.Equal("oime", extra.GetProperty("app_name").GetString());
         Assert.Equal("tool", extra.GetProperty("input_mode").GetString());
         Assert.True(extra.GetProperty("use_twopass_retry").GetBoolean());
+    }
+
+    [Fact]
+    public async Task No_session_is_opened_until_the_first_ensure()
+    {
+        int created = 0;
+        var transport = new FakeTransport();
+        transport.Enqueue(Response("TaskStarted"));
+        transport.Enqueue(Response("SessionStarted"));
+
+        await using var streamer = new DoubaoAsrStreamer(() =>
+        {
+            created++;
+            return new DoubaoAsrSession(DeviceId, AppKey, () => transport);
+        });
+
+        // Nothing playing yet: no connection, no handshake.
+        Assert.Equal(0, created);
+        Assert.Equal(0, streamer.SessionsOpened);
+        Assert.Empty(transport.Sent);
+
+        await streamer.EnsureSessionAsync();
+
+        Assert.Equal(1, created);
+        Assert.Equal(1, streamer.SessionsOpened);
+        Assert.Equal("StartTask", Str(transport.Sent[0], 5));
+    }
+
+    [Fact]
+    public async Task Invalidating_a_session_reconnects_on_the_next_ensure()
+    {
+        int created = 0;
+        var transports = new List<FakeTransport>();
+
+        await using var streamer = new DoubaoAsrStreamer(() =>
+        {
+            var transport = new FakeTransport();
+            transport.Enqueue(Response("TaskStarted"));
+            transport.Enqueue(Response("SessionStarted"));
+            transports.Add(transport);
+            created++;
+            return new DoubaoAsrSession(DeviceId, AppKey, () => transport);
+        });
+
+        var first = await streamer.EnsureSessionAsync();
+        Assert.Same(first, await streamer.EnsureSessionAsync());
+
+        await streamer.InvalidateAsync();
+
+        var second = await streamer.EnsureSessionAsync();
+
+        Assert.NotSame(first, second);
+        Assert.Equal(2, created);
+        Assert.Equal(2, streamer.SessionsOpened);
+        Assert.False(transports[0].IsOpen);
+    }
+
+    [Fact]
+    public async Task Reconnect_gives_up_after_the_configured_number_of_failures()
+    {
+        var transport = new FakeTransport();
+        // Every handshake is rejected.
+        for (int i = 0; i < 10; i++)
+            transport.Enqueue(Response("TaskFailed", status: 45000001));
+
+        await using var streamer = new DoubaoAsrStreamer(
+            () => new DoubaoAsrSession(DeviceId, AppKey, () => transport),
+            new DoubaoStreamOptions { MaxConsecutiveFailures = 2 });
+
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            await Assert.ThrowsAsync<DoubaoSessionException>(() => streamer.EnsureSessionAsync());
+            await streamer.InvalidateAsync();
+        }
+
+        Assert.Equal(3, streamer.ConsecutiveFailures);
+
+        var error = await Assert.ThrowsAsync<DoubaoSessionException>(() => streamer.EnsureSessionAsync());
+        Assert.Contains("停止重连", error.Message);
+    }
+
+    [Fact]
+    public async Task A_healthy_session_resets_the_failure_counter()
+    {
+        var transport = new FakeTransport();
+        transport.Enqueue(Response("TaskFailed", status: 45000001));
+        transport.Enqueue(Response("TaskStarted"));
+        transport.Enqueue(Response("SessionStarted"));
+
+        await using var streamer = new DoubaoAsrStreamer(
+            () => new DoubaoAsrSession(DeviceId, AppKey, () => transport));
+
+        await Assert.ThrowsAsync<DoubaoSessionException>(() => streamer.EnsureSessionAsync());
+        Assert.Equal(1, streamer.ConsecutiveFailures);
+
+        await streamer.EnsureSessionAsync();
+        streamer.MarkHealthy();
+
+        Assert.Equal(0, streamer.ConsecutiveFailures);
     }
 }
