@@ -216,4 +216,24 @@
 
     <sys:String x:Key="Setting_Hide">隐藏</sys:String>
 
+    <sys:String x:Key="Error_TranslationTimeout">[错误] 翻译失败：请求超时（> 8 秒），请换更快的 API 或检查网络。</sys:String>
+
+    <sys:String x:Key="Error_TranslationHttp">[错误] 翻译失败：HTTP 错误 - {0}</sys:String>
+
+    <sys:String x:Key="Error_TranslationHttpBody">[错误] 翻译失败：HTTP 错误 - {0}：{1}</sys:String>
+
+    <sys:String x:Key="Error_TranslationNoContent">[错误] 翻译失败：没有内容</sys:String>
+
+    <sys:String x:Key="Error_TranslationBadFormat">[错误] 翻译失败：响应格式异常</sys:String>
+
+    <sys:String x:Key="Error_TranslationBadApiFormat">[错误] 翻译失败：API 响应格式异常</sys:String>
+
+    <sys:String x:Key="Error_TranslationNoFeedback">[错误] 翻译失败：没有有效反馈</sys:String>
+
+    <sys:String x:Key="Error_TranslationYoudao">[错误] 翻译失败：有道错误 - {0}</sys:String>
+
+    <sys:String x:Key="Error_TranslationBaidu">[错误] 翻译失败：百度错误 - {0}</sys:String>
+
+    <sys:String x:Key="Setting_Saved">已保存</sys:String>
+
 </ResourceDictionary>

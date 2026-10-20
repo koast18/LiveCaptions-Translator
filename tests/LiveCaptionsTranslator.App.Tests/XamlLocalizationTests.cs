@@ -25,6 +25,9 @@ public class XamlLocalizationTests
         "Ollama", "OpenAI", "OpenRouter", "Youdao",
         "API", "`api/chat`", "`api/v1`", "`v1/chat/completions`", "`v1`",
 
+        // Font families, not prose
+        "Segoe Fluent Icons, Segoe MDL2 Assets, Segoe UI Symbol",
+
         // Language codes and data values
         "de", "en", "fr", "ja", "ko", "1/1",
 
@@ -37,6 +40,11 @@ public class XamlLocalizationTests
     // The leading whitespace matters: "SizeToContent="Height"" must not look like Content="Height".
     private static readonly Regex Attribute = new(
         "(?<=\\s)(Text|Content|Title|ToolTip|Header|OffContent|OnContent|PlaceholderText)=\"([^\"{}][^\"]*)\"",
+        RegexOptions.Compiled);
+
+    /// <summary>Text that sits between two tags rather than in an attribute.</summary>
+    private static readonly Regex ElementText = new(
+        ">\\s*([A-Za-z\\u4e00-\\u9fff][^<>{}]*?)\\s*<",
         RegexOptions.Compiled);
 
     private static IEnumerable<string> XamlFiles() =>
@@ -73,5 +81,41 @@ public class XamlLocalizationTests
         Assert.True(
             offenders.Count == 0,
             "localisable text is still hardcoded:" + Environment.NewLine + string.Join(Environment.NewLine, offenders));
+    }
+
+    /// <summary>
+    /// Element content is text too. The attribute scan above missed
+    /// <c>&lt;ui:TextBlock&gt;Getting Started&lt;/ui:TextBlock&gt;</c> inside a TitleBar.Header,
+    /// which left the welcome window's title bar in English.
+    /// </summary>
+    [Fact]
+    public void No_localisable_text_is_left_as_element_content()
+    {
+        var offenders = new List<string>();
+
+        foreach (string file in XamlFiles())
+        {
+            string name = Path.GetFileName(file);
+            string text = File.ReadAllText(file);
+
+            // Comments hold prose about the code, not UI text.
+            text = Regex.Replace(text, "<!--.*?-->", string.Empty, RegexOptions.Singleline);
+
+            foreach (Match match in ElementText.Matches(text))
+            {
+                string value = match.Groups[1].Value.Trim();
+
+                if (value.Length < 2 || Allowed.Contains(value))
+                    continue;
+                if (value.StartsWith('{') || value.StartsWith("http"))
+                    continue;
+
+                offenders.Add($"{name}: >{value}<");
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            "localisable text is still element content:" + Environment.NewLine + string.Join(Environment.NewLine, offenders));
     }
 }

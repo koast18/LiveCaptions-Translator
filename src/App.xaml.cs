@@ -30,6 +30,9 @@ namespace LiveCaptionsTranslator
             // is thrown away again.
             ApplyTheme();
             LocalizationManager.Apply(Translator.Setting?.UiLanguage);
+
+            // Already installed by LocalizationBootstrap's module initialiser; repeated here so the
+            // hook is obviously in place wherever startup is read from.
             CoreStrings.Use(LocalizationManager.T);
 
             base.OnStartup(e);

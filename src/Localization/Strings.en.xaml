@@ -218,4 +218,24 @@ Please visit GitHub to download the latest release.</sys:String>
 
     <sys:String x:Key="Setting_Hide">Hide</sys:String>
 
+    <sys:String x:Key="Error_TranslationTimeout">[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), please use a faster API or check network connection.</sys:String>
+
+    <sys:String x:Key="Error_TranslationHttp">[ERROR] Translation Failed: HTTP Error - {0}</sys:String>
+
+    <sys:String x:Key="Error_TranslationHttpBody">[ERROR] Translation Failed: HTTP Error - {0}: {1}</sys:String>
+
+    <sys:String x:Key="Error_TranslationNoContent">[ERROR] Translation Failed: No content</sys:String>
+
+    <sys:String x:Key="Error_TranslationBadFormat">[ERROR] Translation Failed: Unexpected response format</sys:String>
+
+    <sys:String x:Key="Error_TranslationBadApiFormat">[ERROR] Translation Failed: Unexpected API response format</sys:String>
+
+    <sys:String x:Key="Error_TranslationNoFeedback">[ERROR] Translation Failed: No valid feedback</sys:String>
+
+    <sys:String x:Key="Error_TranslationYoudao">[ERROR] Translation Failed: Youdao Error - {0}</sys:String>
+
+    <sys:String x:Key="Error_TranslationBaidu">[ERROR] Translation Failed: Baidu Error - {0}</sys:String>
+
+    <sys:String x:Key="Setting_Saved">Saved</sys:String>
+
 </ResourceDictionary>

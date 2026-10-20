@@ -159,6 +159,26 @@ namespace LiveCaptionsTranslator
                 RefreshAsrHint();
             if (ButtonText is not null)
                 ApplyLiveCaptionsButtonText();
+            ApplySavedButtonText(IflytekMtApplyButton, iflytekMtSaved);
+            ApplySavedButtonText(DoubaoApplyButton, doubaoSaved);
+        }
+
+        private bool iflytekMtSaved;
+        private bool doubaoSaved;
+
+        /// <summary>
+        /// "Saved" is what the apply buttons show after a successful save. A bare TextBlock assigned
+        /// from code would stop following the language, so it is rebuilt from the dictionary.
+        /// </summary>
+        private static void ApplySavedButtonText(System.Windows.Controls.Button button, bool saved)
+        {
+            if (!saved)
+                return;
+
+            button.Content = new System.Windows.Controls.TextBlock
+            {
+                Text = LocalizationManager.T("Setting_Saved"),
+            };
         }
 
         private void IflytekMtApplyButton_click(object sender, RoutedEventArgs e)
@@ -170,7 +190,8 @@ namespace LiveCaptionsTranslator
             Translator.Setting.IflytekMtApiKey = IflytekMtApiKeyBox.Text.Trim();
             Translator.Setting.IflytekMtApiSecret = IflytekMtApiSecretBox.Text.Trim();
 
-            IflytekMtApplyButton.Content = new System.Windows.Controls.TextBlock { Text = "Saved" };
+            iflytekMtSaved = true;
+            ApplySavedButtonText(IflytekMtApplyButton, iflytekMtSaved);
         }
 
         private IReadOnlyList<AsrLanguage> asrLanguages = Array.Empty<AsrLanguage>();
@@ -364,7 +385,8 @@ namespace LiveCaptionsTranslator
 
             await Translator.SwitchAsrProviderAsync(DoubaoAsrProvider.ProviderId);
 
-            DoubaoApplyButton.Content = new System.Windows.Controls.TextBlock { Text = "Saved" };
+            doubaoSaved = true;
+            ApplySavedButtonText(DoubaoApplyButton, doubaoSaved);
         }
 
         private async void AsrApplyButton_click(object sender, RoutedEventArgs e)

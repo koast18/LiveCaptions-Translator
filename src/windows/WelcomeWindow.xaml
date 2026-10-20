@@ -30,9 +30,10 @@
             ShowMaximize="False"
             ShowMinimize="False">
             <ui:TitleBar.Header>
-                <ui:TextBlock Padding="15,0,0,0" VerticalAlignment="Center">
-                    Getting Started
-                </ui:TextBlock>
+                <ui:TextBlock
+                    Padding="15,0,0,0"
+                    VerticalAlignment="Center"
+                    Text="{DynamicResource Welcome_GettingStarted}" />
             </ui:TitleBar.Header>
         </ui:TitleBar>
 

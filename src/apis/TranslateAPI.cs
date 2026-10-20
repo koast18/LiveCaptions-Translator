@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 
 using LiveCaptionsTranslator.models;
 using LiveCaptionsTranslator.utils;
+using LiveCaptionsTranslator.Localization;
 
 namespace LiveCaptionsTranslator.apis
 {
@@ -143,13 +144,12 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return LocalizationManager.T("Error_TranslationTimeout");
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return LocalizationManager.T("Error_TranslationFailed", ex.Message);
             }
 
             if (response.IsSuccessStatusCode)
@@ -160,7 +160,7 @@ namespace LiveCaptionsTranslator.apis
                 return RegexPatterns.ModelThinking().Replace(output, "");
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return LocalizationManager.T("Error_TranslationHttp", response.StatusCode);
         }
 
         public static async Task<string> Ollama(string text, CancellationToken token = default)
@@ -206,13 +206,12 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return LocalizationManager.T("Error_TranslationTimeout");
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return LocalizationManager.T("Error_TranslationFailed", ex.Message);
             }
 
             if (response.IsSuccessStatusCode)
@@ -223,7 +222,7 @@ namespace LiveCaptionsTranslator.apis
                 return RegexPatterns.ModelThinking().Replace(output, "");
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return LocalizationManager.T("Error_TranslationHttp", response.StatusCode);
         }
 
         public static async Task<string> LMStudio(string text, CancellationToken token = default)
@@ -272,13 +271,12 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return LocalizationManager.T("Error_TranslationTimeout");
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return LocalizationManager.T("Error_TranslationFailed", ex.Message);
             }
 
             if (response.IsSuccessStatusCode)
@@ -303,12 +301,12 @@ namespace LiveCaptionsTranslator.apis
                     }
                 }
 
-                return "[ERROR] Translation Failed: Unexpected response format";
+                return LocalizationManager.T("Error_TranslationBadFormat");
             }
             else
             {
                 string body = await response.Content.ReadAsStringAsync();
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}: {body}";
+                return LocalizationManager.T("Error_TranslationHttpBody", response.StatusCode, body);
             }
         }
 
@@ -356,13 +354,12 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return LocalizationManager.T("Error_TranslationTimeout");
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return LocalizationManager.T("Error_TranslationFailed", ex.Message);
             }
 
             if (response.IsSuccessStatusCode)
@@ -376,7 +373,7 @@ namespace LiveCaptionsTranslator.apis
                 return RegexPatterns.ModelThinking().Replace(output, "");
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return LocalizationManager.T("Error_TranslationHttp", response.StatusCode);
         }
 
         public static async Task<string> Google(string text, CancellationToken token = default)
@@ -397,13 +394,12 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return LocalizationManager.T("Error_TranslationTimeout");
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return LocalizationManager.T("Error_TranslationFailed", ex.Message);
             }
 
             if (response.IsSuccessStatusCode)
@@ -416,7 +412,7 @@ namespace LiveCaptionsTranslator.apis
                 return translatedText;
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return LocalizationManager.T("Error_TranslationHttp", response.StatusCode);
         }
 
         public static async Task<string> Google2(string text, CancellationToken token = default)
@@ -443,13 +439,12 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return LocalizationManager.T("Error_TranslationTimeout");
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return LocalizationManager.T("Error_TranslationFailed", ex.Message);
             }
 
             if (response.IsSuccessStatusCode)
@@ -465,10 +460,10 @@ namespace LiveCaptionsTranslator.apis
                     return translatedText;
                 }
                 else
-                    return "[ERROR] Translation Failed: Unexpected API response format";
+                    return LocalizationManager.T("Error_TranslationBadApiFormat");
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return LocalizationManager.T("Error_TranslationHttp", response.StatusCode);
         }
 
         public static async Task<string> DeepL(string text, CancellationToken token = default)
@@ -498,13 +493,12 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return LocalizationManager.T("Error_TranslationTimeout");
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return LocalizationManager.T("Error_TranslationFailed", ex.Message);
             }
 
             if (response.IsSuccessStatusCode)
@@ -517,10 +511,10 @@ namespace LiveCaptionsTranslator.apis
                 {
                     return translations[0].GetProperty("text").GetString();
                 }
-                return "[ERROR] Translation Failed: No valid feedback";
+                return LocalizationManager.T("Error_TranslationNoFeedback");
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return LocalizationManager.T("Error_TranslationHttp", response.StatusCode);
         }
 
 
@@ -556,13 +550,12 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return LocalizationManager.T("Error_TranslationTimeout");
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return LocalizationManager.T("Error_TranslationFailed", ex.Message);
             }
 
             if (response.IsSuccessStatusCode)
@@ -571,13 +564,13 @@ namespace LiveCaptionsTranslator.apis
                 var responseObj = JsonSerializer.Deserialize<YoudaoConfig.TranslationResult>(responseString);
 
                 if (responseObj.errorCode != "0")
-                    return $"[ERROR] Translation Failed: Youdao Error - {responseObj.errorCode}";
+                    return LocalizationManager.T("Error_TranslationYoudao", responseObj.errorCode);
 
-                return responseObj.translation?.FirstOrDefault() ?? "[ERROR] Translation Failed: No content";
+                return responseObj.translation?.FirstOrDefault() ?? LocalizationManager.T("Error_TranslationNoContent");
             }
             else
             {
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return LocalizationManager.T("Error_TranslationHttp", response.StatusCode);
             }
         }
 
@@ -610,13 +603,12 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return LocalizationManager.T("Error_TranslationTimeout");
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return LocalizationManager.T("Error_TranslationFailed", ex.Message);
             }
 
             if (response.IsSuccessStatusCode)
@@ -626,7 +618,7 @@ namespace LiveCaptionsTranslator.apis
                 return responseObj.result;
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return LocalizationManager.T("Error_TranslationHttp", response.StatusCode);
         }
 
         public static async Task<string> Baidu(string text, CancellationToken token = default)
@@ -661,13 +653,12 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return LocalizationManager.T("Error_TranslationTimeout");
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return LocalizationManager.T("Error_TranslationFailed", ex.Message);
             }
 
             if (response.IsSuccessStatusCode)
@@ -676,13 +667,13 @@ namespace LiveCaptionsTranslator.apis
                 var responseObj = JsonSerializer.Deserialize<BaiduConfig.TranslationResult>(responseString);
 
                 if (responseObj.error_code is not null && responseObj.error_code != "0")
-                    return $"[ERROR] Translation Failed: Baidu Error - {responseObj.error_code}";
+                    return LocalizationManager.T("Error_TranslationBaidu", responseObj.error_code);
 
-                return responseObj.trans_result?.FirstOrDefault()?.dst ?? "[ERROR] Translation Failed: No content";
+                return responseObj.trans_result?.FirstOrDefault()?.dst ?? LocalizationManager.T("Error_TranslationNoContent");
             }
             else
             {
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return LocalizationManager.T("Error_TranslationHttp", response.StatusCode);
             }
         }
 
@@ -715,13 +706,12 @@ namespace LiveCaptionsTranslator.apis
             catch (OperationCanceledException ex)
             {
                 if (ex.Message.StartsWith("The request"))
-                    return $"[ERROR] Translation Failed: The request was canceled due to timeout (> 8 seconds), " +
-                           $"please use a faster API or check network connection.";
+                    return LocalizationManager.T("Error_TranslationTimeout");
                 throw;
             }
             catch (Exception ex)
             {
-                return $"[ERROR] Translation Failed: {ex.Message}";
+                return LocalizationManager.T("Error_TranslationFailed", ex.Message);
             }
 
             if (response.IsSuccessStatusCode)
@@ -731,7 +721,7 @@ namespace LiveCaptionsTranslator.apis
                 return responseObj.translatedText;
             }
             else
-                return $"[ERROR] Translation Failed: HTTP Error - {response.StatusCode}";
+                return LocalizationManager.T("Error_TranslationHttp", response.StatusCode);
         }
     }
 
