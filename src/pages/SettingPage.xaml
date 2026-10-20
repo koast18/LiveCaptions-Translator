@@ -12,11 +12,11 @@
 
     <Grid Margin="15">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" MinWidth="150" />
-            <ColumnDefinition Width="*" MinWidth="150" />
-            <ColumnDefinition Width="*" MinWidth="150" />
-            <ColumnDefinition Width="*" MinWidth="150" />
-            <ColumnDefinition Width="*" MinWidth="150" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
