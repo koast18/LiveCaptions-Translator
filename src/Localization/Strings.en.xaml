@@ -65,9 +65,9 @@
     <sys:String x:Key="Setting_Apply">Apply</sys:String>
     <sys:String x:Key="Setting_Register">Register</sys:String>
     <sys:String x:Key="Setting_GapMs">gap(ms)</sys:String>
-    <sys:String x:Key="Setting_GapTooltip">Silence before the service ends a sentence. 200 is the service default and chops at every breath; 500-800 reads better.</sys:String>
+    <sys:String x:Key="Setting_GapTooltip">Silence before Doubao ends a sentence. 200 is the service default and chops at every breath; 500-800 reads better.</sys:String>
     <sys:String x:Key="Setting_NetworkProxy">Network / Proxy</sys:String>
-    <sys:String x:Key="Setting_MachineTranslation">Machine Translation</sys:String>
+    <sys:String x:Key="Setting_MachineTranslation">iFlytek Machine Translation</sys:String>
     <sys:String x:Key="Setting_AppId">app_id</sys:String>
 
     <sys:String x:Key="Main_AlwaysOnTop">Always on Top</sys:String>
@@ -165,5 +165,57 @@
     <sys:String x:Key="Setting_AsrHintLiveCaptions">Windows Live Captions does the capture and recognition; choose the source language inside Live Captions itself. It only exists on Windows 11 22H2 and later.</sys:String>
     <sys:String x:Key="Setting_AsrHintIflytek">Streams the selected audio source to iFlytek. Only zh_cn has been exercised so far - the other languages are accepted by the endpoint but not verified against a real speech sample.</sys:String>
     <sys:String x:Key="Setting_AsrHintDoubao">Streams the selected audio source to Doubao. Press Register to create a device_id/app_key pair on this machine; nothing is committed to the repository.</sys:String>
+
+    <sys:String x:Key="Dialog_DeleteHistoryTitle">Do you want to delete all history?</sys:String>
+
+    <sys:String x:Key="Dialog_DeleteHistoryBody">This operation cannot be undone!</sys:String>
+
+    <sys:String x:Key="Dialog_Yes">Yes</sys:String>
+
+    <sys:String x:Key="Dialog_No">No</sys:String>
+
+    <sys:String x:Key="Dialog_NewVersionTitle">New Version Available</sys:String>
+
+    <sys:String x:Key="Dialog_NewVersionBody">A new version has been detected: {0}
+Current version: {1}
+Please visit GitHub to download the latest release.</sys:String>
+
+    <sys:String x:Key="Dialog_Update">Update</sys:String>
+
+    <sys:String x:Key="Dialog_IgnoreVersion">Ignore this version</sys:String>
+
+    <sys:String x:Key="Dialog_ApiUrlFirst">Please set the API URL first.</sys:String>
+
+    <sys:String x:Key="Dialog_ModelsLoaded">Loaded {0} model(s).</sys:String>
+
+    <sys:String x:Key="Dialog_ModelsNotFound">No models found or unable to connect. Check that the server is running.</sys:String>
+
+    <sys:String x:Key="Setting_DoubaoRegistered">Doubao device registered, credentials saved.</sys:String>
+
+    <sys:String x:Key="Setting_DoubaoRegisterFailed">Registration failed: {0}</sys:String>
+
+    <sys:String x:Key="Setting_ProxyFollowSystem">Empty = follow the system proxy (same as upstream)</sys:String>
+
+    <sys:String x:Key="Setting_ProxyEnabled">Enabled: {0}</sys:String>
+
+    <sys:String x:Key="Asr_DoubaoCredentialsMissing">Doubao needs a device_id / app_key pair: generate or paste them on the settings page.</sys:String>
+
+    <sys:String x:Key="Asr_FallbackNotice">{0} is unavailable on this machine ({1}); using {2} instead.</sys:String>
+
+    <sys:String x:Key="Asr_LiveCaptionsNeedsWin11">Windows Live Captions needs Windows 11 22H2 (build {0}) or later; this machine is build {1}.</sys:String>
+
+    <sys:String x:Key="Asr_LiveCaptionsMissingExe">LiveCaptions.exe was not found; the Windows Live Captions component is not installed.</sys:String>
+
+    <sys:String x:Key="Proxy_InvalidUrl">The proxy address is not a valid URL. For example http://127.0.0.1:7897 or socks5://127.0.0.1:1080</sys:String>
+
+    <sys:String x:Key="Proxy_UnsupportedScheme">Unsupported proxy scheme {0}; use http, https or socks5.</sys:String>
+
+    <sys:String x:Key="Proxy_MissingPort">The proxy address has no port.</sys:String>
+
+    <sys:String x:Key="Error_ProviderStartFailed">[ERROR] {0} failed to start: {1}</sys:String>
+
+    <sys:String x:Key="Error_TranslationFailed">[ERROR] Translation Failed: {0}</sys:String>
+
+    <sys:String x:Key="Setting_Hide">Hide</sys:String>
 
 </ResourceDictionary>

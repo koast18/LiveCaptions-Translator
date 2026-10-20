@@ -198,12 +198,10 @@ namespace LiveCaptionsTranslator
             {
                 var dialog = new Wpf.Ui.Controls.MessageBox
                 {
-                    Title = "New Version Available",
-                    Content = $"A new version has been detected: {latestVersion}\n" +
-                              $"Current version: {currentVersion}\n" +
-                              $"Please visit GitHub to download the latest release.",
-                    PrimaryButtonText = "Update",
-                    CloseButtonText = "Ignore this version"
+                    Title = LocalizationManager.T("Dialog_NewVersionTitle"),
+                    Content = LocalizationManager.T("Dialog_NewVersionBody", latestVersion, currentVersion),
+                    PrimaryButtonText = LocalizationManager.T("Dialog_Update"),
+                    CloseButtonText = LocalizationManager.T("Dialog_IgnoreVersion")
                 };
                 var result = await dialog.ShowDialogAsync();
 

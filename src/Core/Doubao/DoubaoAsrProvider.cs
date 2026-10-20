@@ -1,6 +1,7 @@
 ﻿using System.Threading.Channels;
 
 using LiveCaptionsTranslator.Core.Asr;
+using LiveCaptionsTranslator.Core.Localization;
 using LiveCaptionsTranslator.Core.Audio;
 
 namespace LiveCaptionsTranslator.Core.Doubao
@@ -86,7 +87,7 @@ namespace LiveCaptionsTranslator.Core.Doubao
         public bool IsAvailable => credentials?.IsComplete == true;
 
         public string? UnavailableReason =>
-            IsAvailable ? null : "豆包需要在设置里生成或填写设备凭证（device_id / app_key）。";
+            IsAvailable ? null : CoreStrings.Get("Asr_DoubaoCredentialsMissing");
 
         /// <summary>Sessions opened so far; more than one means a reconnect happened.</summary>
         public int SessionsOpened { get; private set; }

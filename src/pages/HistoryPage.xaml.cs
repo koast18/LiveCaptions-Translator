@@ -68,13 +68,13 @@ namespace LiveCaptionsTranslator
             {
                 Title = new TextBlock
                 {
-                    Text = "Do you want to delete all history?",
+                    Text = LocalizationManager.T("Dialog_DeleteHistoryTitle"),
                     FontSize = 18,
                     FontWeight = FontWeights.Regular
                 },
-                Content = "This operation cannot be undone!",
-                PrimaryButtonText = "Yes",
-                CloseButtonText = "No",
+                Content = LocalizationManager.T("Dialog_DeleteHistoryBody"),
+                PrimaryButtonText = LocalizationManager.T("Dialog_Yes"),
+                CloseButtonText = LocalizationManager.T("Dialog_No"),
                 DefaultButton = ContentDialogButton.Close,
                 DialogHost = dialogHostContainer,
                 Padding = new Thickness(8, 4, 8, 8),

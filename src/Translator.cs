@@ -158,7 +158,7 @@ namespace LiveCaptionsTranslator
             {
                 if (Caption != null)
                     Caption.DisplayTranslatedCaption =
-                        $"[ERROR] {provider.DisplayName} 启动失败：{exception.Message}";
+                        LocalizationManager.T("Error_ProviderStartFailed", provider.DisplayName, exception.Message);
             }
         }
 
@@ -409,7 +409,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception ex)
             {
-                return ($"[ERROR] Translation Failed: {ex.Message}", isChoke);
+                return (LocalizationManager.T("Error_TranslationFailed", ex.Message), isChoke);
             }
 
             return (translatedText, isChoke);

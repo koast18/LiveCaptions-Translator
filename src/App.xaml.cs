@@ -4,6 +4,7 @@ using System.Windows.Threading;
 
 using Microsoft.Win32;
 
+using LiveCaptionsTranslator.Core.Localization;
 using LiveCaptionsTranslator.Localization;
 
 using Wpf.Ui.Appearance;
@@ -29,6 +30,7 @@ namespace LiveCaptionsTranslator
             // is thrown away again.
             ApplyTheme();
             LocalizationManager.Apply(Translator.Setting?.UiLanguage);
+            CoreStrings.Use(LocalizationManager.T);
 
             base.OnStartup(e);
 

@@ -63,9 +63,9 @@
     <sys:String x:Key="Setting_Apply">应用</sys:String>
     <sys:String x:Key="Setting_Register">注册</sys:String>
     <sys:String x:Key="Setting_GapMs">断句(毫秒)</sys:String>
-    <sys:String x:Key="Setting_GapTooltip">静音多久算一句结束。200 是服务端默认值，会把每口气都切开；500-800 更自然。</sys:String>
+    <sys:String x:Key="Setting_GapTooltip">豆包判定一句话结束所需的静音时长。200 是服务默认值，每口气都会切一刀；500–800 读起来更顺。</sys:String>
     <sys:String x:Key="Setting_NetworkProxy">网络 / 代理</sys:String>
-    <sys:String x:Key="Setting_MachineTranslation">机器翻译</sys:String>
+    <sys:String x:Key="Setting_MachineTranslation">讯飞机器翻译</sys:String>
     <sys:String x:Key="Setting_AppId">app_id</sys:String>
 
     <sys:String x:Key="Main_AlwaysOnTop">窗口置顶</sys:String>
@@ -163,5 +163,57 @@
     <sys:String x:Key="Setting_AsrHintLiveCaptions">由 Windows 实时字幕负责采集与识别；源语言请到实时字幕里选。该功能只在 Windows 11 22H2 及以上存在。</sys:String>
     <sys:String x:Key="Setting_AsrHintIflytek">把选定的音频源推流到 iFlytek。目前只有 zh_cn 实测过，其它语言服务端接受，但没有拿真实语音验证。</sys:String>
     <sys:String x:Key="Setting_AsrHintDoubao">把选定的音频源推流到豆包。点「注册」可在本机生成 device_id / app_key 对；仓库里不提交任何凭据。</sys:String>
+
+    <sys:String x:Key="Dialog_DeleteHistoryTitle">要删除全部历史记录吗？</sys:String>
+
+    <sys:String x:Key="Dialog_DeleteHistoryBody">此操作无法撤销！</sys:String>
+
+    <sys:String x:Key="Dialog_Yes">是</sys:String>
+
+    <sys:String x:Key="Dialog_No">否</sys:String>
+
+    <sys:String x:Key="Dialog_NewVersionTitle">有新版本可用</sys:String>
+
+    <sys:String x:Key="Dialog_NewVersionBody">检测到新版本：{0}
+当前版本：{1}
+请到 GitHub 下载最新版本。</sys:String>
+
+    <sys:String x:Key="Dialog_Update">更新</sys:String>
+
+    <sys:String x:Key="Dialog_IgnoreVersion">忽略此版本</sys:String>
+
+    <sys:String x:Key="Dialog_ApiUrlFirst">请先填写 API 地址。</sys:String>
+
+    <sys:String x:Key="Dialog_ModelsLoaded">已加载 {0} 个模型。</sys:String>
+
+    <sys:String x:Key="Dialog_ModelsNotFound">没有找到模型，或无法连接。请确认服务已启动。</sys:String>
+
+    <sys:String x:Key="Setting_DoubaoRegistered">豆包设备已注册，凭证已保存。</sys:String>
+
+    <sys:String x:Key="Setting_DoubaoRegisterFailed">注册失败：{0}</sys:String>
+
+    <sys:String x:Key="Setting_ProxyFollowSystem">留空 = 跟随系统代理（与上游一致）</sys:String>
+
+    <sys:String x:Key="Setting_ProxyEnabled">已启用：{0}</sys:String>
+
+    <sys:String x:Key="Asr_DoubaoCredentialsMissing">豆包需要在设置里生成或填写设备凭证（device_id / app_key）。</sys:String>
+
+    <sys:String x:Key="Asr_FallbackNotice">{0} 在本机不可用（{1}），已改用 {2}。</sys:String>
+
+    <sys:String x:Key="Asr_LiveCaptionsNeedsWin11">Windows 实时字幕需要 Windows 11 22H2（build {0}）或更高，当前系统是 build {1}。</sys:String>
+
+    <sys:String x:Key="Asr_LiveCaptionsMissingExe">系统里找不到 LiveCaptions.exe，Windows 实时字幕组件未安装。</sys:String>
+
+    <sys:String x:Key="Proxy_InvalidUrl">代理地址不是合法的 URL，例如 http://127.0.0.1:7897 或 socks5://127.0.0.1:1080</sys:String>
+
+    <sys:String x:Key="Proxy_UnsupportedScheme">不支持的代理协议 {0}，请用 http、https 或 socks5</sys:String>
+
+    <sys:String x:Key="Proxy_MissingPort">代理地址缺少端口</sys:String>
+
+    <sys:String x:Key="Error_ProviderStartFailed">[错误] {0} 启动失败：{1}</sys:String>
+
+    <sys:String x:Key="Error_TranslationFailed">[错误] 翻译失败：{0}</sys:String>
+
+    <sys:String x:Key="Setting_Hide">隐藏</sys:String>
 
 </ResourceDictionary>

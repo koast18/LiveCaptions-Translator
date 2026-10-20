@@ -63,6 +63,7 @@ namespace LiveCaptionsTranslator
 
             // No restart: replacing the merged dictionary re-resolves every DynamicResource.
             LocalizationManager.Apply(language.Id);
+            RefreshLocalisedText();
         }
 
         private void LoadNetworkSettings()
@@ -71,9 +72,7 @@ namespace LiveCaptionsTranslator
             try
             {
                 ProxyBox.Text = Translator.Setting?.HttpProxy ?? string.Empty;
-                ProxyHintText.Text = string.IsNullOrWhiteSpace(ProxyBox.Text)
-                    ? "留空 = 跟随系统代理（与上游一致）"
-                    : $"已启用：{ProxyBox.Text.Trim()}";
+                ProxyHintText.Text = ProxyHint(ProxyBox.Text);
 
                 IflytekMtAppIdBox.Text = Translator.Setting?.IflytekMtAppId ?? string.Empty;
                 IflytekMtApiKeyBox.Text = Translator.Setting?.IflytekMtApiKey ?? string.Empty;
@@ -139,9 +138,27 @@ namespace LiveCaptionsTranslator
             }
 
             Translator.Setting.HttpProxy = value;
-            ProxyHintText.Text = string.IsNullOrWhiteSpace(value)
-                ? "留空 = 跟随系统代理（与上游一致）"
-                : $"已启用：{value}";
+            ProxyHintText.Text = ProxyHint(value);
+        }
+
+        /// <summary>Both states of the proxy hint follow the UI language.</summary>
+        private static string ProxyHint(string? proxy) =>
+            string.IsNullOrWhiteSpace(proxy)
+                ? LocalizationManager.T("Setting_ProxyFollowSystem")
+                : LocalizationManager.T("Setting_ProxyEnabled", proxy.Trim());
+
+        /// <summary>
+        /// Re-renders the text this page assigns from code. {DynamicResource} handles the XAML side
+        /// on its own, but these hints are plain strings, so they need a nudge.
+        /// </summary>
+        private void RefreshLocalisedText()
+        {
+            if (ProxyBox is not null)
+                ProxyHintText.Text = ProxyHint(ProxyBox.Text);
+            if (AsrProviderBox is not null)
+                RefreshAsrHint();
+            if (ButtonText is not null)
+                ApplyLiveCaptionsButtonText();
         }
 
         private void IflytekMtApplyButton_click(object sender, RoutedEventArgs e)
@@ -314,11 +331,11 @@ namespace LiveCaptionsTranslator
                 // fell back to before these credentials existed.
                 await Translator.SwitchAsrProviderAsync(DoubaoAsrProvider.ProviderId);
 
-                AsrHintText.Text = "豆包设备已注册，凭证已保存。";
+                AsrHintText.Text = LocalizationManager.T("Setting_DoubaoRegistered");
             }
             catch (Exception exception)
             {
-                AsrHintText.Text = $"注册失败：{exception.Message}";
+                AsrHintText.Text = LocalizationManager.T("Setting_DoubaoRegisterFailed", exception.Message);
             }
             finally
             {
@@ -359,20 +376,24 @@ namespace LiveCaptionsTranslator
             if (window == null)
                 return;
 
-            var button = sender as Wpf.Ui.Controls.Button;
-            var text = ButtonText.Text;
-
-            bool isHide = window.Current.BoundingRectangle == Rect.Empty;
-            if (isHide)
-            {
+            bool isHidden = window.Current.BoundingRectangle == Rect.Empty;
+            if (isHidden)
                 LiveCaptionsHandler.RestoreLiveCaptions(window);
-                ButtonText.Text = "Hide";
-            }
             else
-            {
                 LiveCaptionsHandler.HideLiveCaptions(window);
-                ButtonText.Text = "Show";
-            }
+
+            ApplyLiveCaptionsButtonText();
+        }
+
+        /// <summary>
+        /// The button names the action it will perform, so its text has to be recomputed when the
+        /// language changes - a {DynamicResource} binding is replaced the first time code sets it.
+        /// </summary>
+        private void ApplyLiveCaptionsButtonText()
+        {
+            var window = Translator.LiveCaptions?.Window;
+            bool isHidden = window is null || window.Current.BoundingRectangle == Rect.Empty;
+            ButtonText.Text = LocalizationManager.T(isHidden ? "Setting_Show" : "Setting_Hide");
         }
 
         private void TranslateAPIBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -480,7 +501,7 @@ namespace LiveCaptionsTranslator
         private void CheckForFirstUse()
         {
             if (Translator.FirstUseFlag)
-                ButtonText.Text = "Hide";
+                ApplyLiveCaptionsButtonText();
         }
 
         public void LoadAPISetting()

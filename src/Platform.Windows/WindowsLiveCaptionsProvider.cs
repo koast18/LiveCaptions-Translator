@@ -2,6 +2,7 @@
 using System.Windows.Automation;
 
 using LiveCaptionsTranslator.Core.Asr;
+using LiveCaptionsTranslator.Core.Localization;
 
 namespace LiveCaptionsTranslator.Platform.Windows
 {
@@ -98,11 +99,10 @@ namespace LiveCaptionsTranslator.Platform.Windows
 
                 if (WindowsBuild < MinimumWindowsBuild)
                 {
-                    return $"Windows 实时字幕需要 Windows 11 22H2（build {MinimumWindowsBuild}）或更高，" +
-                           $"当前系统是 build {WindowsBuild}。";
+                    return CoreStrings.Get("Asr_LiveCaptionsNeedsWin11", MinimumWindowsBuild, WindowsBuild);
                 }
 
-                return "系统里找不到 LiveCaptions.exe，Windows 实时字幕组件未安装。";
+                return CoreStrings.Get("Asr_LiveCaptionsMissingExe");
             }
         }
 

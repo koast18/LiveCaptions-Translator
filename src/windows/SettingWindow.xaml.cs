@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -153,7 +153,7 @@ namespace LiveCaptionsTranslator
 
                 if (string.IsNullOrWhiteSpace(baseUrl))
                 {
-                    System.Windows.MessageBox.Show("Please set the API URL first.", "Load Models", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    System.Windows.MessageBox.Show(LocalizationManager.T("Dialog_ApiUrlFirst"), LocalizationManager.T("SettingWindow_LoadModels"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                     return;
                 }
 
@@ -166,9 +166,9 @@ namespace LiveCaptionsTranslator
                     {
                         comboBox.ItemsSource = models;
                         if (models.Count > 0)
-                            System.Windows.MessageBox.Show($"Loaded {models.Count} model(s).", "Load Models", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                            System.Windows.MessageBox.Show(LocalizationManager.T("Dialog_ModelsLoaded", models.Count), LocalizationManager.T("SettingWindow_LoadModels"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                         else
-                            System.Windows.MessageBox.Show("No models found or unable to connect. Check that the server is running.", "Load Models", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                            System.Windows.MessageBox.Show(LocalizationManager.T("Dialog_ModelsNotFound"), LocalizationManager.T("SettingWindow_LoadModels"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                     }
                 }
                 finally

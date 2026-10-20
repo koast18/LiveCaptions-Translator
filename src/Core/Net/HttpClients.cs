@@ -1,5 +1,6 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
+using LiveCaptionsTranslator.Core.Localization;
 
 namespace LiveCaptionsTranslator.Core.Net
 {
@@ -70,19 +71,19 @@ namespace LiveCaptionsTranslator.Core.Net
 
             if (!Uri.TryCreate(proxyUrl.Trim(), UriKind.Absolute, out var uri))
             {
-                error = "代理地址不是合法的 URL，例如 http://127.0.0.1:7897 或 socks5://127.0.0.1:1080";
+                error = CoreStrings.Get("Proxy_InvalidUrl");
                 return false;
             }
 
             if (uri.Scheme is not ("http" or "https" or "socks4" or "socks4a" or "socks5"))
             {
-                error = $"不支持的代理协议 {uri.Scheme}，请用 http、https 或 socks5";
+                error = CoreStrings.Get("Proxy_UnsupportedScheme", uri.Scheme);
                 return false;
             }
 
             if (uri.Port <= 0)
             {
-                error = "代理地址缺少端口";
+                error = CoreStrings.Get("Proxy_MissingPort");
                 return false;
             }
 

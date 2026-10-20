@@ -1,3 +1,4 @@
+﻿using LiveCaptionsTranslator.Core.Localization;
 namespace LiveCaptionsTranslator.Core.Asr
 {
     /// <summary>Which backend to run, and whether the configured one had to be replaced.</summary>
@@ -53,7 +54,7 @@ namespace LiveCaptionsTranslator.Core.Asr
                     return new AsrSelection(
                         id,
                         FellBack: true,
-                        Reason: $"{requested.DisplayName} 在本机不可用（{reason}），已改用 {candidate.DisplayName}。");
+                        Reason: CoreStrings.Get("Asr_FallbackNotice", requested.DisplayName, reason ?? string.Empty, candidate.DisplayName));
                 }
 
                 return new AsrSelection(requestedId!, FellBack: false, Reason: reason);

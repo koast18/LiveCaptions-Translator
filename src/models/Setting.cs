@@ -547,7 +547,15 @@ namespace LiveCaptionsTranslator.models
                         WriteIndented = true,
                         Converters = { new ConfigDictConverter() }
                     };
-                    setting = JsonSerializer.Deserialize<Setting>(fileStream, options) ?? new Setting();
+                    SuppressSave = true;
+                    try
+                    {
+                        setting = JsonSerializer.Deserialize<Setting>(fileStream, options) ?? new Setting();
+                    }
+                    finally
+                    {
+                        SuppressSave = false;
+                    }
                 }
             }
             else
@@ -593,10 +601,14 @@ namespace LiveCaptionsTranslator.models
             }
         }
 
+        /// <summary>Set while deserialising: loading must not write the file back.</summary>
+        internal static bool SuppressSave;
+
         public void OnPropertyChanged([CallerMemberName] string? propName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
-            Translator.Setting?.Save();
+            if (!SuppressSave)
+                Translator.Setting?.Save();
         }
 
         public static bool IsConfigExist()
