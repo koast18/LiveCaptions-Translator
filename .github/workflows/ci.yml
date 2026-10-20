@@ -175,7 +175,14 @@ jobs:
             $env:LCT_THEME_PROBE = $probe
 
             $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
-            Start-Sleep -Seconds 6
+
+            # The probe is written once the dispatcher goes idle, which a cold runner can push
+            # well past a fixed sleep. Wait for the file instead of guessing.
+            for ($wait = 0; $wait -lt 60; $wait++) {
+              if (Test-Path $probe) { break }
+              if ($p.HasExited) { throw "the app exited before writing its probe (code $($p.ExitCode))" }
+              Start-Sleep -Milliseconds 500
+            }
 
             # MainWindowHandle is not reliable for a WPF window with custom chrome, so poll for it
             # instead of reading it once, and fall back to enumerating this process's windows.
