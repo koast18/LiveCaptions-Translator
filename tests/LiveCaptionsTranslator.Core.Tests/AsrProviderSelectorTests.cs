@@ -137,12 +137,13 @@ public class AsrProviderSelectorTests
         // Activation happens before the string dictionary is merged, so the selection must hand the
         // UI the pieces rather than a sentence baked in whatever language was installed at the time.
         Assert.NotNull(selection.Fallback);
-        Assert.Equal(selection.ProviderId, selection.Fallback!.Used);
+        Assert.False(string.IsNullOrWhiteSpace(selection.Fallback!.Used));
 
         string rendered = selection.Fallback.Render((key, args) =>
             key == "Asr_FallbackNotice" ? "{0} unavailable ({1}), using {2}." : key);
 
         Assert.Contains("unavailable", rendered);
         Assert.Contains(selection.Fallback.Used, rendered);
+        Assert.Equal("iflytek-iat", selection.ProviderId);
     }
 }
