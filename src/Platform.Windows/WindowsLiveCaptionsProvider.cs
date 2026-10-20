@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows.Automation;
 
 using LiveCaptionsTranslator.Core.Asr;
