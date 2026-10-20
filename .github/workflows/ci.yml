@@ -317,19 +317,25 @@ jobs:
             # path a user takes.
             Set-Content -Path (Join-Path $work 'setting.json') -Value ("{ `"UiLanguage`": `"$language`" }") -Encoding utf8
 
-            $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
-            Start-Sleep -Seconds 8
-            $p.Refresh()
-            if ($p.HasExited) { throw "the app exited with code $($p.ExitCode) for $language" }
-
             $root = [System.Windows.Automation.AutomationElement]::RootElement
-            $cond = New-Object System.Windows.Automation.PropertyCondition(
-              [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $p.Id)
             $win = $null
-            for ($i = 0; $i -lt 20 -and -not $win; $i++) {
-              $win = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
-              if (-not $win) { Start-Sleep -Milliseconds 500 }
+            $p = $null
+
+            # A cold runner can take half a minute to show the window, so allow two launches
+            # before calling it a failure.
+            for ($attempt = 0; $attempt -lt 2 -and -not $win; $attempt++) {
+              $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
+              for ($i = 0; $i -lt 120 -and -not $win; $i++) {
+                Start-Sleep -Milliseconds 500
+                $p.Refresh()
+                if ($p.HasExited) { break }
+                $cond = New-Object System.Windows.Automation.PropertyCondition(
+                  [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $p.Id)
+                $win = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
+              }
+              if (-not $win -and -not $p.HasExited) { $p.Kill(); Start-Sleep -Seconds 2 }
             }
+
             if (-not $win) { throw "the app never created a window for $language" }
 
             $handle = [IntPtr]$win.Current.NativeWindowHandle

@@ -139,8 +139,11 @@ public class AsrProviderSelectorTests
         Assert.NotNull(selection.Fallback);
         Assert.False(string.IsNullOrWhiteSpace(selection.Fallback!.Used));
 
+        // Same contract as LocalizationManager.T(key, args): the translator formats.
         string rendered = selection.Fallback.Render((key, args) =>
-            key == "Asr_FallbackNotice" ? "{0} unavailable ({1}), using {2}." : key);
+            key == "Asr_FallbackNotice"
+                ? string.Format("{0} unavailable ({1}), using {2}.", args)
+                : key);
 
         Assert.Contains("unavailable", rendered);
         Assert.Contains(selection.Fallback.Used, rendered);
