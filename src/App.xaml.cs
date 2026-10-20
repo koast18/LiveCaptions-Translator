@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.IO;
+using System.Windows;
 
 using Microsoft.Win32;
 
@@ -28,18 +29,63 @@ namespace LiveCaptionsTranslator
         /// </summary>
         private static void ApplyTheme()
         {
+            ApplicationTheme theme;
+            int registryValue;
+
             try
             {
-                ApplicationThemeManager.Apply(GetSystemTheme());
+                (theme, registryValue) = GetSystemTheme();
+                ApplicationThemeManager.Apply(theme);
             }
             catch (Exception)
             {
                 // A theme failure must never abort startup.
+                theme = ApplicationTheme.Dark;
+                registryValue = -1;
                 ApplicationThemeManager.Apply(ApplicationTheme.Dark);
+            }
+
+            WriteThemeProbe(theme, registryValue);
+        }
+
+        /// <summary>
+        /// Opt-in diagnostics: set <c>LCT_THEME_PROBE</c> to a file path and the app records which
+        /// theme it applied plus the brushes the resource dictionary actually resolved to.
+        /// </summary>
+        private static void WriteThemeProbe(ApplicationTheme theme, int registryValue)
+        {
+            string? path = Environment.GetEnvironmentVariable("LCT_THEME_PROBE");
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            try
+            {
+                var lines = new List<string>
+                {
+                    $"theme={theme}",
+                    $"AppsUseLightTheme={registryValue}",
+                };
+
+                foreach (string key in new[]
+                         {
+                             "ApplicationBackgroundBrush",
+                             "ControlFillColorDefaultBrush",
+                             "TextFillColorPrimaryBrush",
+                         })
+                {
+                    object? brush = Current?.TryFindResource(key);
+                    lines.Add($"{key}={brush?.ToString() ?? "<missing>"}");
+                }
+
+                File.WriteAllLines(path, lines);
+            }
+            catch (Exception)
+            {
+                // Diagnostics must never break the app.
             }
         }
 
-        private static ApplicationTheme GetSystemTheme()
+        private static (ApplicationTheme Theme, int RegistryValue) GetSystemTheme()
         {
             try
             {
@@ -47,15 +93,14 @@ namespace LiveCaptionsTranslator
                     @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
 
                 object? value = personalize?.GetValue("AppsUseLightTheme");
+                int raw = value is int number ? number : -1;
 
                 // No value at all (older Windows) means the dark default this app ships with.
-                return value is int light && light != 0
-                    ? ApplicationTheme.Light
-                    : ApplicationTheme.Dark;
+                return (raw == 1 ? ApplicationTheme.Light : ApplicationTheme.Dark, raw);
             }
             catch (Exception)
             {
-                return ApplicationTheme.Dark;
+                return (ApplicationTheme.Dark, -1);
             }
         }
 

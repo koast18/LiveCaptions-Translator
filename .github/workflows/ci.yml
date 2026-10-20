@@ -77,3 +77,69 @@ jobs:
         run: >
           dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj
           -c Release --logger "console;verbosity=detailed"
+
+  # Runs the real application in both Windows themes on an ephemeral runner and checks that the
+  # theme it applies (and the brushes it resolves) actually follow the setting. This is the only
+  # automated coverage for light/dark mode: it needs a desktop session and it changes the registry,
+  # which is fine on a throwaway runner but not on a developer machine.
+  ui-theme:
+    name: UI theme (light + dark)
+    runs-on: windows-latest
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish
+        run: >
+          dotnet publish LiveCaptionsTranslator.csproj
+          -c Release -r win-x64 --self-contained false
+          -p:PublishSingleFile=true
+          -o ./publish/ui
+
+      - name: Probe both themes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+          $exe = Join-Path $PWD 'publish/ui/LiveCaptionsTranslator.exe'
+          $work = Join-Path $PWD 'publish/ui'
+
+          function Probe([int] $light) {
+            Set-ItemProperty $key -Name AppsUseLightTheme -Value $light
+            Set-ItemProperty $key -Name SystemUsesLightTheme -Value $light
+            Start-Sleep -Seconds 1
+
+            $out = Join-Path $PWD "theme-$light.txt"
+            Remove-Item $out -ErrorAction SilentlyContinue
+            $env:LCT_THEME_PROBE = $out
+
+            $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
+            Start-Sleep -Seconds 10
+            if (-not $p.HasExited) { $p.Kill() }
+
+            if (-not (Test-Path $out)) { throw "the app never wrote $out (did it start?)" }
+            Write-Output "--- AppsUseLightTheme=$light ---"
+            Get-Content $out | ForEach-Object { Write-Output $_ }
+            return (Get-Content $out)
+          }
+
+          $dark = Probe 0
+          $lightResult = Probe 1
+
+          $darkTheme = ($dark | Select-String '^theme=').Line
+          $lightTheme = ($lightResult | Select-String '^theme=').Line
+          $darkBg = ($dark | Select-String '^ApplicationBackgroundBrush=').Line
+          $lightBg = ($lightResult | Select-String '^ApplicationBackgroundBrush=').Line
+
+          if ($darkTheme -ne 'theme=Dark') { throw "dark run applied '$darkTheme'" }
+          if ($lightTheme -ne 'theme=Light') { throw "light run applied '$lightTheme'" }
+          if ($darkBg -eq $lightBg) { throw "background brush did not change between themes: $darkBg" }
+
+          Write-Output "OK dark=$darkBg light=$lightBg"
