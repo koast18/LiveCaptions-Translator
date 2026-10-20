@@ -49,6 +49,9 @@ namespace LiveCaptionsTranslator
                 IflytekMtApiKeyBox.Text = Translator.Setting?.IflytekMtApiKey ?? string.Empty;
                 IflytekMtApiSecretBox.Text = Translator.Setting?.IflytekMtApiSecret ?? string.Empty;
 
+                DoubaoDeviceIdBox.Text = Translator.Setting?.DoubaoDeviceId ?? string.Empty;
+                DoubaoAppKeyBox.Text = Translator.Setting?.DoubaoAppKey ?? string.Empty;
+
                 BuildProxyTargets();
             }
             finally
@@ -185,6 +188,10 @@ namespace LiveCaptionsTranslator
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
+            DoubaoCredentialPanel.Visibility = provider?.Id == DoubaoAsrProvider.ProviderId
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
             string hint = provider switch
             {
                 null => string.Empty,
@@ -192,6 +199,8 @@ namespace LiveCaptionsTranslator
                     "Windows Live Captions does the capture and recognition; choose the source language inside Live Captions itself. It only exists on Windows 11 22H2 and later.",
                 { Id: IflytekIatProvider.ProviderId } =>
                     "Streams the selected audio source to iFlytek. Only zh_cn has been exercised so far - the other languages are accepted by the endpoint but not verified against a real speech sample.",
+                { Id: DoubaoAsrProvider.ProviderId } =>
+                    "Streams the selected audio source to Doubao. Press Register to create a device_id/app_key pair on this machine; nothing is committed to the repository.",
                 _ => string.Empty,
             };
 
@@ -250,6 +259,51 @@ namespace LiveCaptionsTranslator
             Translator.Setting.AudioSourceName = sourceId;
 
             await Translator.RestartAsrProviderAsync();
+        }
+
+        private async void DoubaoRegisterButton_click(object sender, RoutedEventArgs e)
+        {
+            if (Translator.Setting is null)
+                return;
+
+            DoubaoRegisterButton.IsEnabled = false;
+
+            try
+            {
+                var registrar = new DoubaoDeviceRegistrar();
+                var credentials = await registrar.RegisterAsync();
+
+                DoubaoDeviceIdBox.Text = credentials.DeviceId;
+                DoubaoAppKeyBox.Text = credentials.AppKey;
+
+                Translator.Setting.DoubaoDeviceId = credentials.DeviceId;
+                Translator.Setting.DoubaoAppKey = credentials.AppKey;
+
+                await Translator.RestartAsrProviderAsync();
+
+                AsrHintText.Text = "豆包设备已注册，凭证已保存。";
+            }
+            catch (Exception exception)
+            {
+                AsrHintText.Text = $"注册失败：{exception.Message}";
+            }
+            finally
+            {
+                DoubaoRegisterButton.IsEnabled = true;
+            }
+        }
+
+        private async void DoubaoApplyButton_click(object sender, RoutedEventArgs e)
+        {
+            if (Translator.Setting is null)
+                return;
+
+            Translator.Setting.DoubaoDeviceId = DoubaoDeviceIdBox.Text.Trim();
+            Translator.Setting.DoubaoAppKey = DoubaoAppKeyBox.Text.Trim();
+
+            await Translator.RestartAsrProviderAsync();
+
+            DoubaoApplyButton.Content = new System.Windows.Controls.TextBlock { Text = "Saved" };
         }
 
         private async void AsrApplyButton_click(object sender, RoutedEventArgs e)

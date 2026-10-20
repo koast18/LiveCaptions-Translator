@@ -371,6 +371,53 @@
                     <TextBlock Text="Apply" />
                 </ui:Button>
             </StackPanel>
+            <StackPanel
+                x:Name="DoubaoCredentialPanel"
+                Margin="0,8,0,0"
+                Orientation="Horizontal"
+                Visibility="Collapsed">
+                <TextBlock
+                    Margin="2.5,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="12.5"
+                    Text="device_id" />
+                <TextBox
+                    x:Name="DoubaoDeviceIdBox"
+                    Width="170"
+                    Height="30"
+                    Margin="8,0,0,0"
+                    Padding="8,4,8,4"
+                    FontSize="12.5" />
+                <TextBlock
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="12.5"
+                    Text="app_key" />
+                <TextBox
+                    x:Name="DoubaoAppKeyBox"
+                    Width="170"
+                    Height="30"
+                    Margin="8,0,0,0"
+                    Padding="8,4,8,4"
+                    FontSize="12.5" />
+                <ui:Button
+                    x:Name="DoubaoRegisterButton"
+                    Height="30"
+                    Margin="10,0,0,0"
+                    Padding="11,4,11,4"
+                    Click="DoubaoRegisterButton_click">
+                    <TextBlock Text="Register" />
+                </ui:Button>
+                <ui:Button
+                    x:Name="DoubaoApplyButton"
+                    Height="30"
+                    Margin="8,0,0,0"
+                    Padding="11,4,11,4"
+                    Click="DoubaoApplyButton_click">
+                    <TextBlock Text="Apply" />
+                </ui:Button>
+            </StackPanel>
+
             <TextBlock
                 x:Name="AsrHintText"
                 Margin="2.5,6,0,0"
