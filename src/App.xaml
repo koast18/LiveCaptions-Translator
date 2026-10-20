@@ -12,7 +12,11 @@
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
-            <FontFamily x:Key="SegoeFluentIcons">pack://application:,,,/;component/Fonts/#Segoe Fluent Icons</FontFamily>
+            <!-- The pack URI pointed at a Fonts/ folder that does not exist in this repository, so every
+                 symbol fell back to a font without those glyphs and drew "?" boxes. Name the system
+                 fonts instead: Windows 11 has Segoe Fluent Icons, Windows 10 ships Segoe MDL2 Assets
+                 with the same codepoints for the icons used here. -->
+            <FontFamily x:Key="SegoeFluentIcons">Segoe Fluent Icons, Segoe MDL2 Assets, Segoe UI Symbol</FontFamily>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
