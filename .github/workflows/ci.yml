@@ -111,6 +111,12 @@ jobs:
           Add-Type @"
           using System;
           using System.Runtime.InteropServices;
+          public class FindWin {
+              public delegate bool EnumProc(IntPtr hWnd, IntPtr lParam);
+              [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc callback, IntPtr lParam);
+              [DllImport("user32.dll")] public static extern int GetWindowThreadProcessId(IntPtr hWnd, out int pid);
+              [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+          }
           public class Shot {
               [StructLayout(LayoutKind.Sequential)]
               public struct RECT { public int Left, Top, Right, Bottom; }
@@ -133,11 +139,33 @@ jobs:
             $env:LCT_THEME_PROBE = $probe
 
             $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
-            Start-Sleep -Seconds 10
+            Start-Sleep -Seconds 6
 
-            $p.Refresh()
-            $h = $p.MainWindowHandle
-            if ($h -eq [IntPtr]::Zero) { throw 'the app never created a window' }
+            # MainWindowHandle is not reliable for a WPF window with custom chrome, so poll for it
+            # instead of reading it once, and fall back to enumerating this process's windows.
+            $h = [IntPtr]::Zero
+            for ($attempt = 0; $attempt -lt 40; $attempt++) {
+              $p.Refresh()
+              if ($p.HasExited) { throw "the app exited early with code $($p.ExitCode)" }
+              if ($p.MainWindowHandle -ne [IntPtr]::Zero) { $h = $p.MainWindowHandle; break }
+              Start-Sleep -Milliseconds 500
+            }
+
+            if ($h -eq [IntPtr]::Zero) {
+              $target = $p.Id
+              [void][FindWin]::EnumWindows({
+                param($wh, $lp)
+                $owner = 0
+                [void][FindWin]::GetWindowThreadProcessId($wh, [ref]$owner)
+                if ($owner -eq $target -and [FindWin]::IsWindowVisible($wh)) {
+                  $script:h = $wh
+                  return $false
+                }
+                return $true
+              }, [IntPtr]::Zero)
+            }
+
+            if ($h -eq [IntPtr]::Zero) { throw 'the app never created a visible window' }
 
             $r = New-Object Shot+RECT
             [Shot]::GetWindowRect($h, [ref]$r) | Out-Null
