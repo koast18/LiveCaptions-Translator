@@ -44,9 +44,18 @@ public class DoubaoAsrIntegrationTests
         {
             sentCount++;
 
-            // Log the first few packets and then every 20th, so the log stays readable.
-            if (sentCount <= 3 || sentCount % 20 == 0)
+            // Log the first few packets verbatim (the JSON payload is readable inside the frame),
+            // then every 20th by size only, so the log stays readable.
+            if (sentCount <= 3)
+            {
+                string text = System.Text.Encoding.UTF8.GetString(payload.Span);
+                string printable = new(text.Select(c => char.IsControl(c) || c == '�' ? '.' : c).ToArray());
+                log.Add($"sent #{sentCount} bytes={payload.Length} :: {printable}");
+            }
+            else if (sentCount % 20 == 0)
+            {
                 log.Add($"sent #{sentCount} bytes={payload.Length}");
+            }
 
             await inner.SendAsync(payload, cancellationToken);
         }
