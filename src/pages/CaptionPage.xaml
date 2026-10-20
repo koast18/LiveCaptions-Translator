@@ -7,127 +7,49 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="CaptionPage"
-    JournalEntry.KeepAlive="True"
     mc:Ignorable="d">
 
-    <Grid Margin="5,5,15,5">
-        <Grid.RowDefinitions>
-            <RowDefinition x:Name="OriginalCaption_Row" Height="Auto" />
-            <RowDefinition x:Name="TranslatedCaption_Row" Height="Auto" />
-            <RowDefinition x:Name="CaptionLogCard_Row" Height="Auto" />
-        </Grid.RowDefinitions>
+    <Grid Margin="4,4,4,0">
         <Grid.Resources>
             <Style x:Key="CaptionBlockStyle" TargetType="TextBlock">
                 <Setter Property="TextWrapping" Value="Wrap" />
-                <Setter Property="VerticalAlignment" Value="Stretch" />
+                <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
         </Grid.Resources>
 
-        <ui:Card
-            Grid.Row="0"
-            Padding="8"
-            VerticalAlignment="Stretch"
-            PreviewMouseWheel="OriginalCard_PreviewMouseWheel">
-            <TextBlock
-                x:Name="OriginalCaption"
-                Background="Transparent"
-                Cursor="Hand"
-                FontSize="15"
-                MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
-                Style="{StaticResource CaptionBlockStyle}"
-                Text="{Binding DisplayOriginalCaption, UpdateSourceTrigger=PropertyChanged}"
-                ToolTip="Click to Copy, Ctrl+Scroll to Resize Font" />
-        </ui:Card>
-
-        <ui:Card
-            Grid.Row="1"
-            MinHeight="43"
-            Margin="0,3,0,0"
-            Padding="8"
-            VerticalAlignment="Stretch"
-            PreviewMouseWheel="TranslatedCard_PreviewMouseWheel">
-            <ui:Card.Style>
-                <Style TargetType="ui:Card">
-                    <Style.Triggers>
-                        <!-- Nothing to add when the translation is the source text. -->
-                        <DataTrigger Binding="{Binding TranslationRedundant}" Value="True">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </ui:Card.Style>
-            <TextBlock
-                x:Name="TranslatedCaption"
-                Background="Transparent"
-                Cursor="Hand"
-                FontSize="18"
-                MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
-                Style="{StaticResource CaptionBlockStyle}"
-                Text="{Binding DisplayTranslatedCaption, UpdateSourceTrigger=PropertyChanged}"
-                ToolTip="Click to Copy, Ctrl+Scroll to Resize Font" />
-        </ui:Card>
-
-        <ui:Card
-            x:Name="LogCards"
-            Grid.Row="2"
-            Margin="0,0,0,5"
-            Padding="8"
-            VerticalAlignment="Top"
-            Background="Transparent"
-            BorderBrush="#00000000">
-            <ItemsControl
-                x:Name="LogCardItems"
-                MinHeight="50"
-                ItemsSource="{Binding DisplayLogCards, UpdateSourceTrigger=PropertyChanged}"
-                VirtualizingPanel.IsVirtualizing="True">
+        <!--  Rolling, lyrics-style view: the line being spoken is highlighted, the previous ones
+              fade out, and the list scrolls so the newest line is always at the bottom.  -->
+        <ScrollViewer
+            x:Name="RollingScroll"
+            HorizontalScrollBarVisibility="Disabled"
+            VerticalScrollBarVisibility="Hidden">
+            <ItemsControl x:Name="RollingItems" ItemsSource="{Binding RollingLines}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border
-                            Margin="0,0,0,5"
-                            Padding="10,5,10,5"
-                            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-                            BorderThickness="0,1,0,0">
-                            <Grid Grid.Row="0">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="*" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-
-                                <ui:Card
-                                    Grid.Row="0"
-                                    Padding="8"
-                                    VerticalAlignment="Stretch">
-                                    <TextBlock
-                                        x:Name="OriginalCaptionLog"
-                                        Background="Transparent"
-                                        Cursor="Hand"
-                                        FontSize="12"
-                                        MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
-                                        Style="{StaticResource CaptionBlockStyle}"
-                                        Text="{Binding SourceText}"
-                                        ToolTip="Click To Copy" />
-                                </ui:Card>
-                                <ui:Card
-                                    Grid.Row="1"
-                                    Margin="0,3,0,0"
-                                    Padding="8"
-                                    VerticalAlignment="Stretch">
-                                    <TextBlock
-                                        x:Name="TranslatedCaptionLog"
-                                        Background="Transparent"
-                                        Cursor="Hand"
-                                        FontSize="16"
-                                        MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
-                                        Style="{StaticResource CaptionBlockStyle}"
-                                        Text="{Binding TranslatedText}"
-                                        ToolTip="Click To Copy" />
-                                </ui:Card>
-                            </Grid>
-                        </Border>
+                        <TextBlock
+                            Margin="6,1"
+                            Cursor="Hand"
+                            MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
+                            Text="{Binding Text}"
+                            ToolTip="Click to Copy">
+                            <TextBlock.Style>
+                                <Style BasedOn="{StaticResource CaptionBlockStyle}" TargetType="TextBlock">
+                                    <Setter Property="FontSize" Value="13" />
+                                    <Setter Property="Opacity" Value="0.45" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsLatest}" Value="True">
+                                            <Setter Property="FontSize" Value="19" />
+                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                            <Setter Property="Opacity" Value="1" />
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-        </ui:Card>
-
+        </ScrollViewer>
     </Grid>
 </Page>

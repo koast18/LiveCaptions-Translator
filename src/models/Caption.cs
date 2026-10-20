@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -6,6 +7,9 @@ using LiveCaptionsTranslator.utils;
 
 namespace LiveCaptionsTranslator.models
 {
+    /// <summary>One line in the rolling caption view, lyrics style.</summary>
+    public sealed record CaptionLine(string Text, bool IsLatest);
+
     public class Caption : INotifyPropertyChanged
     {
         public const int MAX_CONTEXTS = 10;
@@ -16,6 +20,9 @@ namespace LiveCaptionsTranslator.models
         private string displayOriginalCaption = string.Empty;
         private string displayTranslatedCaption = string.Empty;
         private bool translationRedundant;
+
+        /// <summary>The rolling view: previous lines dimmed, the newest one highlighted.</summary>
+        public ObservableCollection<CaptionLine> RollingLines { get; } = [];
         private string overlayOriginalCaption = " ";
         private string overlayCurrentTranslation = " ";
         private string overlayNoticePrefix = " ";

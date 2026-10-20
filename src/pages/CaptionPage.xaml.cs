@@ -1,6 +1,6 @@
-﻿using System.Windows;
+﻿using System.Collections.Specialized;
+using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 
 using LiveCaptionsTranslator.Utils;
 
@@ -19,18 +19,35 @@ namespace LiveCaptionsTranslator
             DataContext = Translator.Caption;
             instance = this;
 
+            // Lyrics style: always keep the newest line in view.
+            Translator.Caption.RollingLines.CollectionChanged += OnRollingLinesChanged;
+
             Loaded += (s, e) =>
             {
                 AutoHeight();
                 (App.Current.MainWindow as MainWindow).CaptionLogButton.Visibility = Visibility.Visible;
+                ScrollToLatest();
             };
             Unloaded += (s, e) =>
             {
+                Translator.Caption.RollingLines.CollectionChanged -= OnRollingLinesChanged;
                 (App.Current.MainWindow as MainWindow).CaptionLogButton.Visibility = Visibility.Collapsed;
             };
 
             CollapseTranslatedCaption(Translator.Setting.MainWindow.CaptionLogEnabled);
-            ApplyFontSizes();
+        }
+
+        private void OnRollingLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+            => ScrollToLatest();
+
+        private void ScrollToLatest()
+        {
+            if (!IsLoaded)
+                return;
+
+            Dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Background,
+                new Action(() => RollingScroll.ScrollToEnd()));
         }
 
         private async void TextBlock_MouseLeftButtonDown(object sender, RoutedEventArgs e)
@@ -46,57 +63,16 @@ namespace LiveCaptionsTranslator
                 {
                     SnackbarHost.Show("Copy Failed.", string.Empty, SnackbarType.Error, 100);
                 }
+
                 await Task.Delay(500);
             }
         }
 
-        private void ApplyFontSizes()
-        {
-            OriginalCaption.FontSize = Translator.Setting.MainWindow.OriginalFontSize;
-            TranslatedCaption.FontSize = Translator.Setting.MainWindow.TranslatedFontSize;
-        }
-
-        private void OriginalCard_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (Keyboard.Modifiers != ModifierKeys.Control)
-                return;
-            Translator.Setting.MainWindow.OriginalFontSize =
-                AdjustFontSize(Translator.Setting.MainWindow.OriginalFontSize, e.Delta);
-            ApplyFontSizes();
-            e.Handled = true;
-        }
-
-        private void TranslatedCard_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (Keyboard.Modifiers != ModifierKeys.Control)
-                return;
-            Translator.Setting.MainWindow.TranslatedFontSize =
-                AdjustFontSize(Translator.Setting.MainWindow.TranslatedFontSize, e.Delta);
-            ApplyFontSizes();
-            e.Handled = true;
-        }
-
-        private static int AdjustFontSize(int current, int wheelDelta)
-        {
-            int next = current + (wheelDelta > 0 ? StyleConsts.DELTA_FONT_SIZE : -StyleConsts.DELTA_FONT_SIZE);
-            return Math.Clamp(next, StyleConsts.MIN_FONT_SIZE, StyleConsts.MAX_FONT_SIZE);
-        }
-
-        public void CollapseTranslatedCaption(bool isCollapsed)
-        {
-            var converter = new GridLengthConverter();
-
-            if (isCollapsed)
-            {
-                TranslatedCaption_Row.Height = (GridLength)converter.ConvertFromString("Auto");
-                LogCards.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                TranslatedCaption_Row.Height = (GridLength)converter.ConvertFromString("*");
-                LogCards.Visibility = Visibility.Collapsed;
-            }
-        }
+        /// <summary>
+        /// Kept for the "CaptionLog" toggle in the main window. The rolling view always shows the
+        /// context lines; the toggle only decides how tall the window grows for them.
+        /// </summary>
+        public void CollapseTranslatedCaption(bool isCollapsed) => AutoHeight();
 
         public void AutoHeight()
         {

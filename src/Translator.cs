@@ -348,6 +348,8 @@ namespace LiveCaptionsTranslator
                     // Nothing to show twice when the translation is the source text.
                     Caption.TranslationRedundant = IsTranslationRedundant(
                         Caption.OriginalCaption, Caption.TranslatedCaption);
+
+                    Caption.RebuildRollingLines(Setting.NumContexts);
                     Caption.DisplayTranslatedCaption =
                         TextUtil.ShortenDisplaySentence(Caption.TranslatedCaption, TextUtil.VERYLONG_THRESHOLD);
 
