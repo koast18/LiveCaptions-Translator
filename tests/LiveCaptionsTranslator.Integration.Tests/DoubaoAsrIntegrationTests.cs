@@ -145,13 +145,9 @@ public class DoubaoAsrIntegrationTests
 
         Assert.False(
             string.IsNullOrWhiteSpace(transcript),
-            "the service returned no transcript.
-" +
-            "notices: " + notices + "
-" +
-            "wire:
-  " + string.Join("
-  ", wireLog));
+            "the service returned no transcript." + Environment.NewLine +
+            "notices: " + notices + Environment.NewLine +
+            "wire:" + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", wireLog));
 
         // Exact punctuation is the service's business; the words are what matter.
         Assert.Contains("今天天气", transcript);
