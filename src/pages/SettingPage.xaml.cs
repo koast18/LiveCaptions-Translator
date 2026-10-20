@@ -17,7 +17,6 @@ namespace LiveCaptionsTranslator
         public SettingPage()
         {
             InitializeComponent();
-            ApplicationThemeManager.ApplySystemTheme();
             DataContext = Translator.Setting;
 
             Loaded += (s, e) =>

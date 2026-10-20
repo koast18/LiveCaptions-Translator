@@ -13,7 +13,6 @@ namespace LiveCaptionsTranslator
         public InfoPage()
         {
             InitializeComponent();
-            ApplicationThemeManager.ApplySystemTheme();
             var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
             Version.Text = version;
 

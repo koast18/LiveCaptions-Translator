@@ -25,7 +25,6 @@ namespace LiveCaptionsTranslator
         public HistoryPage()
         {
             InitializeComponent();
-            ApplicationThemeManager.ApplySystemTheme();
 
             Loaded += async (s, e) =>
             {

@@ -11,7 +11,6 @@ namespace LiveCaptionsTranslator
         public WelcomeWindow()
         {
             InitializeComponent();
-            ApplicationThemeManager.ApplySystemTheme();
 
             Loaded += (s, e) =>
             {

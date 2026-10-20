@@ -131,15 +131,22 @@ jobs:
           }
 
           $dark = Probe 0
-          $lightResult = Probe 1
+          $light = Probe 1
 
-          $darkTheme = ($dark | Select-String '^theme=').Line
-          $lightTheme = ($lightResult | Select-String '^theme=').Line
-          $darkBg = ($dark | Select-String '^ApplicationBackgroundBrush=').Line
-          $lightBg = ($lightResult | Select-String '^ApplicationBackgroundBrush=').Line
+          function Value($lines, $name) {
+            ($lines | Select-String "^$name=" | Select-Object -First 1).Line
+          }
 
-          if ($darkTheme -ne 'theme=Dark') { throw "dark run applied '$darkTheme'" }
-          if ($lightTheme -ne 'theme=Light') { throw "light run applied '$lightTheme'" }
-          if ($darkBg -eq $lightBg) { throw "background brush did not change between themes: $darkBg" }
+          $darkBg = Value $dark 'ApplicationBackgroundBrush'
+          $lightBg = Value $light 'ApplicationBackgroundBrush'
+          $darkText = Value $dark 'TextFillColorPrimaryBrush'
+          $lightText = Value $light 'TextFillColorPrimaryBrush'
 
-          Write-Output "OK dark=$darkBg light=$lightBg"
+          if ((Value $dark 'AppsUseLightTheme') -ne 'AppsUseLightTheme=0') { throw "dark run read the wrong registry value: $(Value $dark 'AppsUseLightTheme')" }
+          if ((Value $light 'AppsUseLightTheme') -ne 'AppsUseLightTheme=1') { throw "light run read the wrong registry value: $(Value $light 'AppsUseLightTheme')" }
+          if (-not $darkBg) { throw 'the app could not resolve ApplicationBackgroundBrush' }
+          if ($darkBg -eq $lightBg) { throw "the background brush did not change between themes: $darkBg" }
+          if ($darkText -eq $lightText) { throw "the text brush did not change between themes: $darkText" }
+
+          Write-Output "OK dark:  $darkBg  $darkText"
+          Write-Output "OK light: $lightBg  $lightText"

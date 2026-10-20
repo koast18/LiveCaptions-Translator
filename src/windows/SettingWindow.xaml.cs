@@ -21,7 +21,6 @@ namespace LiveCaptionsTranslator
         public SettingWindow()
         {
             InitializeComponent();
-            ApplicationThemeManager.ApplySystemTheme();
             DataContext = Translator.Setting;
 
             Loaded += (sender, args) =>
