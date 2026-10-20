@@ -43,7 +43,8 @@ public class ProviderCatalogTests
         // Selecting it in the picker must not blow up; it just explains what is missing.
         Assert.False(provider.IsAvailable);
         Assert.False(string.IsNullOrWhiteSpace(provider.UnavailableReason));
-        Assert.Contains("device_id", provider.UnavailableReason);
+        // The reason is a localisable key now; the app resolves it through CoreStrings.
+        Assert.Contains("Asr_DoubaoCredentialsMissing", provider.UnavailableReason);
     }
 
     [Fact]

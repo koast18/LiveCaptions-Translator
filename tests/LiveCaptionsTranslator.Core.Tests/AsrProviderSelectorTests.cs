@@ -1,4 +1,5 @@
-using LiveCaptionsTranslator.Core.Asr;
+﻿using LiveCaptionsTranslator.Core.Asr;
+using LiveCaptionsTranslator.Core.Localization;
 
 namespace LiveCaptionsTranslator.Core.Tests;
 
@@ -52,13 +53,29 @@ public class AsrProviderSelectorTests
     [Fact]
     public void An_unavailable_provider_falls_back_and_explains_why()
     {
-        var selection = AsrProviderSelector.Select(Registry(liveCaptionsAvailable: false), "windows-livecaptions");
+        // The reasons are localisable keys, so install the same translator the app installs
+        // rather than asserting on a key name.
+        CoreStrings.Use(key => key switch
+        {
+            "Asr_LiveCaptionsNeedsWin11" =>
+                "Windows Live Captions needs Windows 11 22H2 (build {0}) or later; this machine is build {1}.",
+            _ => key,
+        });
 
-        Assert.Equal("iflytek-iat", selection.ProviderId);
-        Assert.True(selection.FellBack);
-        Assert.NotNull(selection.Reason);
-        Assert.Contains("Windows 11 22H2", selection.Reason);
-        Assert.Contains("iflytek", selection.Reason, StringComparison.OrdinalIgnoreCase);
+        try
+        {
+            var selection = AsrProviderSelector.Select(Registry(liveCaptionsAvailable: false), "windows-livecaptions");
+
+            Assert.Equal("iflytek-iat", selection.ProviderId);
+            Assert.True(selection.FellBack);
+            Assert.NotNull(selection.Reason);
+            Assert.Contains("Windows 11 22H2", selection.Reason);
+            Assert.Contains("iflytek", selection.Reason, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            CoreStrings.Use(key => key);
+        }
     }
 
     [Fact]
