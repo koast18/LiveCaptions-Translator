@@ -122,6 +122,20 @@ jobs:
             开放平台 ``app_id`` / ``api_key`` / ``api_secret``. It stays unusable until you fill them
             in, which does not affect any other engine.
 
+          ### New in this release: Doubao speech recognition
+
+          ``doubao-asr`` is a third speech-recognition backend, implemented entirely in C# (managed
+          Opus through Concentus, hand-written protobuf, no Python and no native binaries).
+
+          * It ships **no shared credential**. Open *Settings -> Speech Recognition*, pick
+            ``doubao-asr`` and press **Register**: the app registers a device on this machine and
+            stores the ``device_id`` / ``app_key`` pair in ``setting.json``.
+          * It speaks the private protocol of the Doubao IME client. That is not a documented
+            public API, it can change or be throttled at any time, and using it may violate
+            Doubao's terms of service.
+          * The service auto-detects the language. Chinese is verified end to end by the CI
+            integration job; other languages are unverified.
+
           ### Windows 10
 
           ``windows-livecaptions`` needs Windows 11 22H2 or later. On Windows 10 the app detects
