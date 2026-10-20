@@ -1,0 +1,20 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!--  English strings. This file is the source of truth: every key that exists here must also
+          exist in Strings.zh-Hans.xaml, and the value must match what the app shipped before the
+          strings were extracted.  -->
+
+    <sys:String x:Key="App_Title">LiveCaptions Translator</sys:String>
+
+    <sys:String x:Key="Nav_Caption">Caption</sys:String>
+    <sys:String x:Key="Nav_Setting">Setting</sys:String>
+    <sys:String x:Key="Nav_History">History</sys:String>
+    <sys:String x:Key="Nav_Info">Info</sys:String>
+
+    <sys:String x:Key="Caption_CopyTooltip">Click to Copy</sys:String>
+    <sys:String x:Key="Caption_Copied">Copied.</sys:String>
+    <sys:String x:Key="Caption_CopyFailed">Copy Failed.</sys:String>
+
+</ResourceDictionary>

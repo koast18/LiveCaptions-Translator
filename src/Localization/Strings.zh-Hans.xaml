@@ -1,0 +1,18 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!--  简体中文。键集合必须与 Strings.en.xaml 完全一致。  -->
+
+    <sys:String x:Key="App_Title">实时字幕翻译</sys:String>
+
+    <sys:String x:Key="Nav_Caption">字幕</sys:String>
+    <sys:String x:Key="Nav_Setting">设置</sys:String>
+    <sys:String x:Key="Nav_History">历史</sys:String>
+    <sys:String x:Key="Nav_Info">关于</sys:String>
+
+    <sys:String x:Key="Caption_CopyTooltip">点击复制</sys:String>
+    <sys:String x:Key="Caption_Copied">已复制。</sys:String>
+    <sys:String x:Key="Caption_CopyFailed">复制失败。</sys:String>
+
+</ResourceDictionary>

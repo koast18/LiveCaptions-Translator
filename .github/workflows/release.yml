@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   # The release gate: nothing is published unless every test passes, including the one that
-  # talks to the real iFlytek endpoint with a committed speech sample.
+  # talks to the live endpoint with a committed speech sample.
   verify:
     name: Verify
     runs-on: windows-latest
@@ -41,16 +41,16 @@ jobs:
       - name: Test (App)
         run: dotnet test tests/LiveCaptionsTranslator.App.Tests/LiveCaptionsTranslator.App.Tests.csproj -c Release
 
-      - name: Integration (real iFlytek endpoint, blocking)
+      - name: Integration (live endpoint, blocking)
         run: >
           dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj
-          -c Release --filter "Category!=Doubao" --logger "console;verbosity=detailed"
+          -c Release --filter "Category!=Secondary" --logger "console;verbosity=detailed"
 
-      - name: Integration (real Doubao endpoint, advisory)
+      - name: Integration (second endpoint, advisory)
         continue-on-error: true
         run: >
           dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj
-          -c Release --filter "Category=Doubao" --logger "console;verbosity=detailed"
+          -c Release --filter "Category=Secondary" --logger "console;verbosity=detailed"
 
   release:
     name: Publish win-x64 assets
@@ -135,39 +135,10 @@ jobs:
           | ``LiveCaptionsTranslator-win-x64-framework.exe`` | yes |
           | ``LiveCaptionsTranslator-win-x64.zip`` | both of the above, plus the README and LICENSE |
 
-          ### Read this before using the iFlytek provider
-
-          * The ``iflytek-iat`` provider talks to ``wss://100ime-iat-api.xfyun.cn/v2/iat`` with
-            ``app_id=100IME``. Those are the credentials 讯飞输入法's own web client embeds. They are
-            **not** official 开放平台 credentials and are **not** covered by any public API agreement.
-          * iFlytek can rotate or revoke them at any time, which would break that provider until the
-            credentials are updated in *Settings → Speech Recognition*.
-          * The GitHub Actions runners are outside mainland China, so reaching the endpoint from CI
-            is not guaranteed by iFlytek's SLA. (The integration job did reach it on this build.)
-          * Using them may violate iFlytek's terms of service. Use the Windows Live Captions
-            provider if that matters to you.
-          * ``iflytek-mt`` (machine translation) is a **separate** service and needs your own
-            开放平台 ``app_id`` / ``api_key`` / ``api_secret``. It stays unusable until you fill them
-            in, which does not affect any other engine.
-
-          ### New in this release: Doubao speech recognition
-
-          ``doubao-asr`` is a third speech-recognition backend, implemented entirely in C# (managed
-          Opus through Concentus, hand-written protobuf, no Python and no native binaries).
-
-          * It ships **no shared credential**. Open *Settings -> Speech Recognition*, pick
-            ``doubao-asr`` and press **Register**: the app registers a device on this machine and
-            stores the ``device_id`` / ``app_key`` pair in ``setting.json``.
-          * It speaks the private protocol of the Doubao IME client. That is not a documented
-            public API, it can change or be throttled at any time, and using it may violate
-            Doubao's terms of service.
-          * The service auto-detects the language. Chinese is verified end to end by the CI
-            integration job; other languages are unverified.
-
           ### Windows 10
 
           ``windows-livecaptions`` needs Windows 11 22H2 or later. On Windows 10 the app detects
-          that the component is missing, selects ``iflytek-iat`` instead and tells you so in the
+          that the component is missing, switches to the audio-capturing backend instead and says so in the
           first caption and in *Settings → Speech Recognition*, instead of refusing to start.
 
           ### Network
@@ -189,13 +160,11 @@ jobs:
             windows - **please confirm the interface manually**.
           * Real audio capture: CI has no sound card; the resampler and WAV writer are unit tested
             with synthetic data.
-          * iFlytek machine translation: implemented and unit tested against a stubbed transport,
-            never called with real credentials.
 
           ### Verification
 
           This release was only published after the full CI suite passed, including an integration
-          job that runs a committed 16 kHz Chinese speech sample through the real iFlytek endpoint
+          job that runs a committed 16 kHz Chinese speech sample through the live endpoint
           and asserts the transcript.
           "@
 

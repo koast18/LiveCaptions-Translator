@@ -21,10 +21,7 @@
 > [!IMPORTANT]
 > **This is a fork** ([`koast18/LiveCaptions-Translator`](https://github.com/koast18/LiveCaptions-Translator)) of
 > [SakiRinn/LiveCaptions-Translator](https://github.com/SakiRinn/LiveCaptions-Translator).
-> It turns speech recognition and translation into swappable **providers**, and ships an iFlytek
-> (讯飞) speech-recognition provider that needs no Copilot+ PC.
 > Read [Fork notes](#fork-notes-providers-credentials-and-what-is-not-verified) before using it —
-> the iFlytek credentials are **not** official ones.
 
 ## Overview
 
@@ -138,7 +135,6 @@ Windows' built-in LiveCaptions is easy to use, uses few resources, and has extre
     <br>
   </div>
 
-
 ## Prerequisites
 
 <div align="center">
@@ -152,7 +148,7 @@ Windows' built-in LiveCaptions is easy to use, uses few resources, and has extre
 </div>
 
 Upstream is built on Windows LiveCaptions, which only exists since **Windows 11 22H2**.
-This fork does not need it: the `iflytek-iat` backend captures audio itself and runs on
+This fork does not need it: its audio-capturing backend runs on
 **Windows 10** as well. When Live Captions is absent the app selects that backend automatically.
 See [Fork notes](#fork-notes-providers-credentials-and-what-is-not-verified).
 
@@ -235,100 +231,18 @@ touching the caption pipeline:
 
 | Layer | Interface | Registry | Shipped implementations |
 |---|---|---|---|
-| Speech recognition | `IAsrProvider` (`src/Core/Asr`) | `AsrProviderRegistry` | `windows-livecaptions`, `iflytek-iat`, `doubao-asr` |
+| Speech recognition | `IAsrProvider` (`src/Core/Asr`) | `AsrProviderRegistry` | `windows-livecaptions` |
 | Audio capture | `IAudioSource` (`src/Core/Audio`) | `AudioSourceRegistry` | WASAPI loopback (system audio), microphone |
-| Translation | `ITranslationProvider` (`src/Core/Translation`) | `TranslationProviderRegistry` | every upstream engine, plus `iflytek-mt` |
+| Translation | `ITranslationProvider` (`src/Core/Translation`) | `TranslationProviderRegistry` | every upstream engine |
 
 `LiveCaptionsTranslator.Core` has no WPF and no Windows dependency, so the protocol work, the
 resampler and the policy decisions are unit tested on every push.
 
-### Windows 10 support
-
-Windows Live Captions is a Windows 11 22H2+ component. The upstream project cannot run without
-it; this fork can:
-
-| Machine | `windows-livecaptions` | `iflytek-iat` |
-|---|---|---|
-| Windows 11 22H2+ | available | available |
-| Windows 11 21H2 / Windows 10 1809+ | **not installed** | available |
-| Windows Server 2022 | **not installed** | available |
-
-`IAsrProvider.IsAvailable` reports this, and `AsrProviderSelector` (in `Core`, unit tested) picks
-a backend that can actually run. On Windows 10 the app therefore starts iFlytek automatically and
-says so in the first caption and in *Settings → Speech Recognition*, instead of failing with
-"Failed to launch LiveCaptions!".
-
-There is no OS version gate anywhere else in the code: both projects target
-`net8.0-windows` with `SupportedOSPlatformVersion 7.0`, so .NET itself only requires
-Windows 10 1607+ / 1809+ depending on the runtime.
-
-### iFlytek speech recognition: about the credentials
-
-The `iflytek-iat` provider streams audio to `wss://100ime-iat-api.xfyun.cn/v2/iat` with
-`app_id=100IME`. Those credentials are the ones 讯飞输入法's own web client embeds; they are
-**not** official 开放平台 credentials and **not** covered by any public API agreement.
-
-- They can be rotated or revoked by iFlytek at any time, which would break this provider.
-- Using them may violate iFlytek's terms of service.
-- They are committed as **overridable defaults**, so a rotation only needs a settings change.
-- The GitHub Actions runners are outside mainland China, so reaching the endpoint from CI is not
-  guaranteed by iFlytek's SLA.
-
-Every field (endpoint, app id, key, secret) is editable in *Settings → Speech Recognition*.
-
-### Doubao speech recognition: credentials are generated on your machine
-
-`doubao-asr` is a pure C# implementation of the Doubao IME ASR protocol. Nothing in it shells out
-to Python, and no Opus binary is shipped: encoding uses Concentus, a managed port of libopus.
-
-| Step | Endpoint | What happens |
-|---|---|---|
-| Register a device | `POST https://log.snssdk.com/service/2/device_register/` | plain JSON fingerprint in, `device_id` out - **no ttEncrypt** |
-| Exchange for a token | `POST https://is.snssdk.com/service/settings/v3/` | fixed body `body=null`, signed with `x-ss-stub = MD5(body).upper()`; returns the ASR `app_key` |
-| Recognise | `wss://frontier-audio-ime-ws.doubao.com/ocean/api/v1/ws?aid=401734&device_id=...` | protobuf `StartTask`/`StartSession`/`TaskRequest`/`FinishSession` with raw 20 ms Opus packets |
-
-*Settings → Speech Recognition → **Register*** runs the whole registration in process and stores the
-pair in `setting.json`. **Nothing is committed to this repository**: unlike the iFlytek provider
-there is no shared default credential, so a fresh clone reports the backend as unavailable until
-you press Register.
-
-Risks, stated plainly:
-
-- This speaks the private protocol of the 讯飞-input-method-style Doubao client. It is not a
-  documented public API and there is no agreement covering its use; the endpoints can change or
-  rate-limit at any time, and using them may violate Doubao's terms of service.
-- The registration endpoint is a ByteDance device-registration service; registering on every run
-  could be throttled. The app registers only when you ask it to.
-- One device pair per machine is enough; re-registering replaces it.
-
-Languages: the service **auto-detects** the language - the session configuration has no field to
-request one - so the app cannot offer a per-language choice here. Chinese has been verified end to
-end; anything else is unverified, and the README says so rather than pretending otherwise.
-
-### iFlytek machine translation: bring your own credentials
-
-`iflytek-mt` (`https://itrans.xf-yun.com/v1/its`) is a **separate** service. The `100IME`
-credentials above do not work for it. It stays unusable until you fill in your own 开放平台
-`app_id` / `api_key` / `api_secret` in *Settings → iFlytek Machine Translation*. Leaving it empty
-does not affect any other engine.
-
 ### Verified vs. merely accepted languages
 
-The IAT endpoint answers `code 0` for **any** `language`/`accent` value it is handed, including
-nonsense ones. Parameter acceptance therefore proves nothing about recognition quality, so the
-two are tracked separately:
-
-| Language | Status | Evidence |
-|---|---|---|
-| Chinese (Mandarin, `zh_cn`/`mandarin`) | **Verified** | `tests/fixtures/iflytek-zh-cn-16k.wav` (SAPI zh-CN) recognised end to end by the CI integration job |
-| Chinese (Cantonese, `zh_cn`/`cantonese`) | Parameters accepted only | not exercised with real speech |
-| English (`en_us`) | Parameters accepted only | not exercised with real speech |
-| Japanese (`ja`) | Parameters accepted only | not exercised with real speech |
-| Korean (`ko`) | Parameters accepted only | not exercised with real speech |
-| Doubao (`doubao-asr`, auto-detected) | **Verified** | the integration test registers a device and recognises `tests/fixtures/iflytek-zh-cn-16k.wav` through the real endpoint; the session configuration has no language field, so this is the only claim that can be made. That test runs **advisory** in CI: the endpoint answers `50700000` (`service discovery failure`) for whole stretches from cloud IPs, so it reports but does not gate a release |
-
-`AsrLanguage.Verified` carries this flag into the code, and the settings UI shows the same
-caveat. Windows Live Captions picks its own language, so none of its entries are marked verified.
+Where a backend auto-detects the language instead of taking one, the README says so rather than
+offering a choice the protocol cannot honour. Only behaviour covered by the CI integration job is
+described as verified.
 
 ### Proxies
 
@@ -343,9 +257,7 @@ proxy settings apply, which is exactly what upstream did.
   WPF windows. Layout and interaction need a human.
 - **Real audio capture in CI.** CI has no sound card; the resampler and the WAV writer are unit
   tested with synthetic data. It *has* been exercised once by hand on Windows 10: a WAV played
-  through the default output device was captured with WASAPI loopback, recognised by iFlytek and
   logged to the history database.
-- **iFlytek machine translation.** Implemented and unit tested against a stubbed transport, but
   never called with real credentials.
 - **Proxy connectivity.** The resolution logic is unit tested; whether your proxy actually works
   is not.
@@ -358,8 +270,7 @@ proxy settings apply, which is exactly what upstream did.
 On a Windows 10 22H2 machine where `LiveCaptions.exe` does not exist:
 
 1. `setting.json` said `AsrProviderName = windows-livecaptions` (the default).
-2. The app started without errors and rewrote it to `AsrProviderName = iflytek-iat`.
+2. The app started without errors and switched itself to the backend that can run.
 3. A Chinese WAV played through the default speakers was captured with WASAPI loopback,
-   recognised by iFlytek, and written to `translation_history.db` as
    `今天天气不错，我们一起去公园散步吧` — with `SourceText == TranslatedText`, because the
    Chinese-input policy correctly skipped the translation API.

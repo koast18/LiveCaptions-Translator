@@ -12,7 +12,7 @@ namespace LiveCaptionsTranslator.Integration.Tests;
 /// asserted. This is the only test that proves the whole hand-rolled chain works.
 /// </para>
 /// </summary>
-[Trait("Category", "Doubao")]
+[Trait("Category", "Secondary")]
 public class DoubaoAsrIntegrationTests
 {
     private static string FixturePath(string name) =>

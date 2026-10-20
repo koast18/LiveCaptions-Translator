@@ -43,6 +43,7 @@ namespace LiveCaptionsTranslator.models
         private string doubaoDeviceId;
         private string doubaoAppKey;
         private int doubaoVadWindowMs;
+        private string uiLanguage;
 
         private MainWindowState mainWindowState;
         private OverlayWindowState overlayWindowState;
@@ -325,6 +326,19 @@ namespace LiveCaptionsTranslator.models
         }
 
         /// <summary>
+        /// UI language id: <c>en</c> or <c>zh-Hans</c>. Applied at startup and whenever it changes.
+        /// </summary>
+        public string UiLanguage
+        {
+            get => uiLanguage;
+            set
+            {
+                uiLanguage = value;
+                OnPropertyChanged("UiLanguage");
+            }
+        }
+
+        /// <summary>
         /// Silence in milliseconds before Doubao ends a segment. The service default of 200 chops
         /// sentences at every breath, so the app asks for something calmer.
         /// </summary>
@@ -437,6 +451,7 @@ namespace LiveCaptionsTranslator.models
             doubaoDeviceId = string.Empty;
             doubaoAppKey = string.Empty;
             doubaoVadWindowMs = 600;
+            uiLanguage = LocalizationManager.Default;
             proxyApiNames =
             [
                 "Google",

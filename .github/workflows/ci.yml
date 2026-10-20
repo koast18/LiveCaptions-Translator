@@ -55,12 +55,12 @@ jobs:
           path: ./publish/win-x64
           if-no-files-found: error
 
-  # Talks to the real iFlytek endpoint with a committed speech sample. This is the only job that
+  # Talks to the live endpoint with a committed speech sample. This is the only job that
   # proves the hand-rolled protocol works end to end, so it is kept separate from the unit tests:
   # it needs the network and it is the job that fails first if the endpoint is unreachable from
   # GitHub's runners or the committed credentials have been rotated.
   integration:
-    name: Integration (real iFlytek endpoint)
+    name: Integration (live endpoint)
     runs-on: windows-latest
     if: github.event_name != 'pull_request'
 
@@ -77,16 +77,16 @@ jobs:
       - name: Integration tests (blocking)
         run: >
           dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj
-          -c Release --filter "Category!=Doubao" --logger "console;verbosity=detailed"
+          -c Release --filter "Category!=the secondary provider" --logger "console;verbosity=detailed"
 
-      # Advisory: the Doubao endpoint answers 50700000 ("service discovery failure") for whole
+      # Advisory: the second endpoint answers 50700000 ("service discovery failure") for whole
       # stretches of time from cloud IPs, which is their outage, not a regression here. It still
       # runs and reports, it just cannot block a build.
-      - name: Integration tests (Doubao, advisory)
+      - name: Integration tests (the secondary provider, advisory)
         continue-on-error: true
         run: >
           dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj
-          -c Release --filter "Category=Doubao" --logger "console;verbosity=detailed"
+          -c Release --filter "Category=the secondary provider" --logger "console;verbosity=detailed"
 
   # Runs the real application in both Windows themes on an ephemeral runner, checks the brushes it
   # resolved, and measures the pixels it actually drew. This is the only automated coverage for
