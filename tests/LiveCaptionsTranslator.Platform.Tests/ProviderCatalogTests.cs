@@ -72,6 +72,43 @@ public class ProviderCatalogTests
     }
 
     [Fact]
+    public void Registering_credentials_makes_a_freshly_created_provider_available()
+    {
+        // The picker re-creates providers through this factory, so registering must be visible
+        // without restarting the app.
+        LiveCaptionsTranslator.Core.Doubao.DoubaoCredentials? store = null;
+
+        var registry = new AsrProviderRegistry();
+        ProviderCatalog.RegisterAll(registry, () => store);
+
+        Assert.False(registry.Create("doubao-asr").IsAvailable);
+
+        store = new LiveCaptionsTranslator.Core.Doubao.DoubaoCredentials("1782778396951964", "key", "", "");
+
+        Assert.True(registry.Create("doubao-asr").IsAvailable);
+    }
+
+    [Fact]
+    public void The_selector_keeps_doubao_once_credentials_exist()
+    {
+        LiveCaptionsTranslator.Core.Doubao.DoubaoCredentials? store = null;
+
+        var registry = new AsrProviderRegistry();
+        ProviderCatalog.RegisterAll(registry, () => store);
+
+        // Before registering, requesting doubao falls back to a backend that can actually run.
+        Assert.NotEqual("doubao-asr", AsrProviderSelector.Select(registry, "doubao-asr").ProviderId);
+
+        store = new LiveCaptionsTranslator.Core.Doubao.DoubaoCredentials("1782778396951964", "key", "", "");
+
+        var selection = AsrProviderSelector.Select(registry, "doubao-asr");
+
+        Assert.Equal("doubao-asr", selection.ProviderId);
+        Assert.False(selection.FellBack);
+        Assert.Equal("doubao-asr", registry.Create(selection.ProviderId).Id);
+    }
+
+    [Fact]
     public void A_provider_factory_that_returns_null_keeps_the_picker_working()
     {
         var registry = new AsrProviderRegistry();

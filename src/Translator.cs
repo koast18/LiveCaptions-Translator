@@ -77,18 +77,27 @@ namespace LiveCaptionsTranslator
             if (string.IsNullOrWhiteSpace(providerId) || !AsrProviders.IsRegistered(providerId))
                 return;
 
-            if (ActiveAsrProvider?.Id == providerId)
-                return;
-
+            // Always stop and re-create, even for the same id: the factory reads the current
+            // settings, so newly registered credentials (or a changed language) take effect.
             await StopActiveProviderAsync();
             ActivateProvider(providerId);
             await StartActiveProviderAsync();
         }
 
-        /// <summary>Restarts the active provider, e.g. after its language or credentials changed.</summary>
+        /// <summary>
+        /// Re-creates the active provider, e.g. after its language or credentials changed. Re-creation
+        /// matters: providers capture their configuration when they are constructed, so restarting
+        /// the same instance would keep the stale credentials.
+        /// </summary>
         public static async Task RestartAsrProviderAsync()
         {
+            string? current = ActiveAsrProvider?.Id ?? setting?.AsrProviderName;
+
             await StopActiveProviderAsync();
+
+            if (current is not null)
+                ActivateProvider(current);
+
             await StartActiveProviderAsync();
         }
 

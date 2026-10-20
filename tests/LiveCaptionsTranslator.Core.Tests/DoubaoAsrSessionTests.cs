@@ -508,3 +508,167 @@ public class DoubaoTranscriptBuilderTests
         Assert.Equal("乙", builder.Text);
     }
 }
+
+public class DoubaoProviderStreamingTests
+{
+    /// <summary>Replays canned responses and records everything the provider sends.</summary>
+    private sealed class CapturingTransport : IDoubaoTransport
+    {
+        private readonly Queue<byte[]?> incoming = new();
+
+        public List<byte[]> Sent { get; } = [];
+
+        public bool IsOpen { get; private set; } = true;
+
+        public Task ConnectAsync(Uri uri, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken)
+        {
+            IsOpen = true;
+            return Task.CompletedTask;
+        }
+
+        public Task SendAsync(ReadOnlyMemory<byte> payload, CancellationToken cancellationToken)
+        {
+            Sent.Add(payload.ToArray());
+            return Task.CompletedTask;
+        }
+
+        public Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken)
+            => Task.FromResult(incoming.Count > 0 ? incoming.Dequeue() : null);
+
+        public ValueTask DisposeAsync()
+        {
+            IsOpen = false;
+            return ValueTask.CompletedTask;
+        }
+
+        public void Enqueue(byte[] data) => incoming.Enqueue(data);
+    }
+
+    private static byte[] Response(string messageType, int status = DoubaoStatusCodes.Ok)
+    {
+        var buffer = new List<byte>();
+        DoubaoProtoWriter.WriteString(buffer, 4, messageType);
+        DoubaoProtoWriter.WriteTag(buffer, 5, DoubaoWireType.Varint);
+        DoubaoProtoWriter.WriteVarint(buffer, (ulong)status);
+        return buffer.ToArray();
+    }
+
+    private static (string Method, int FrameState, int AudioLength) Decode(byte[] frame)
+    {
+        var reader = new DoubaoProtoReader(frame);
+        string method = string.Empty;
+        int frameState = 0;
+        int audioLength = 0;
+
+        while (reader.TryReadTag(out int field, out int wireType))
+        {
+            switch (field)
+            {
+                case 5 when wireType == DoubaoWireType.LengthDelimited:
+                    method = reader.ReadString();
+                    break;
+                case 7 when wireType == DoubaoWireType.LengthDelimited:
+                    audioLength = reader.ReadLengthDelimited().Length;
+                    break;
+                case 9 when wireType == DoubaoWireType.Varint:
+                    frameState = (int)reader.ReadVarint();
+                    break;
+                default:
+                    reader.Skip(wireType);
+                    break;
+            }
+        }
+
+        return (method, frameState, audioLength);
+    }
+
+    private static async Task WaitUntil(Func<bool> condition, int timeoutMs = 5000)
+    {
+        var started = Environment.TickCount64;
+
+        while (!condition())
+        {
+            if (Environment.TickCount64 - started > timeoutMs)
+                throw new TimeoutException("condition was not met in time");
+
+            await Task.Delay(20);
+        }
+    }
+
+    [Fact]
+    public async Task The_streaming_path_sends_first_middle_and_last()
+    {
+        var transport = new CapturingTransport();
+        transport.Enqueue(Response("TaskStarted"));
+        transport.Enqueue(Response("SessionStarted"));
+        transport.Enqueue(Response("SessionFinished"));
+
+        var audio = new FakeAudioSource();
+
+        await using var provider = new DoubaoAsrProvider(
+            new DoubaoCredentials("1782778396951964", "app-key", string.Empty, string.Empty),
+            () => transport);
+
+        await provider.StartAsync(new AsrContext
+        {
+            Sink = new RecordingSink(),
+            Options = new AsrOptions(),
+            AudioSource = audio,
+        });
+
+        // Two 40 ms chunks: enough for two 20 ms Opus frames with nothing left over.
+        audio.EmitChunk();
+        audio.EmitChunk();
+
+        await WaitUntil(() => transport.Sent.Count >= 4);
+
+        await provider.StopAsync();
+
+        var frames = transport.Sent.Select(Decode).ToList();
+
+        Assert.Contains(frames, frame => frame.Method == "TaskRequest" && frame.FrameState == (int)DoubaoFrameState.First);
+        Assert.Contains(frames, frame => frame.Method == "TaskRequest" && frame.FrameState == (int)DoubaoFrameState.Middle);
+        Assert.Contains(frames, frame => frame.Method == "TaskRequest" && frame.FrameState == (int)DoubaoFrameState.Last);
+        Assert.Contains(frames, frame => frame.Method == "FinishSession");
+
+        // The protocol messages come first, then audio.
+        Assert.Equal("StartTask", frames[0].Method);
+        Assert.Equal("StartSession", frames[1].Method);
+    }
+
+    [Fact]
+    public async Task No_connection_is_made_while_nothing_plays()
+    {
+        var transport = new CapturingTransport();
+
+        await using var provider = new DoubaoAsrProvider(
+            new DoubaoCredentials("1782778396951964", "app-key", string.Empty, string.Empty),
+            () => transport);
+
+        await provider.StartAsync(new AsrContext
+        {
+            Sink = new RecordingSink(),
+            Options = new AsrOptions(),
+            AudioSource = new FakeAudioSource(),
+        });
+
+        await Task.Delay(400);
+
+        Assert.Empty(transport.Sent);
+
+        await provider.StopAsync();
+    }
+
+    [Fact]
+    public async Task Starting_without_credentials_is_refused()
+    {
+        await using var provider = new DoubaoAsrProvider();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.StartAsync(new AsrContext
+        {
+            Sink = new RecordingSink(),
+            Options = new AsrOptions(),
+            AudioSource = new FakeAudioSource(),
+        }));
+    }
+}

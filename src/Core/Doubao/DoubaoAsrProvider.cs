@@ -297,7 +297,35 @@ namespace LiveCaptionsTranslator.Core.Doubao
                 try
                 {
                     if (!await channel.Reader.WaitToReadAsync(sessionToken))
+                    {
+                        // The input ended: flush the tail and mark it LAST, the way the reference
+                        // client closes a stream. Without it the service never sees a final frame.
+                        var tail = framer.Flush();
+
+                        if (tail.Count == 0)
+                        {
+                            await session.SendAudioAsync(
+                                encoder.EncodeFrame(new short[DoubaoOpusEncoder.FrameSamples]),
+                                DoubaoFrameState.Last,
+                                readTimestamp(),
+                                sessionToken);
+                        }
+                        else
+                        {
+                            foreach (var frame in tail)
+                            {
+                                await session.SendAudioAsync(
+                                    encoder.Encode(frame)[0],
+                                    DoubaoFrameState.Last,
+                                    readTimestamp(),
+                                    sessionToken);
+
+                                writeTimestamp(readTimestamp() + DoubaoOpusEncoder.FrameMilliseconds);
+                            }
+                        }
+
                         return true;
+                    }
                 }
                 catch (OperationCanceledException) when (!token.IsCancellationRequested)
                 {

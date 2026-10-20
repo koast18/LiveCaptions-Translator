@@ -279,7 +279,9 @@ namespace LiveCaptionsTranslator
                 Translator.Setting.DoubaoDeviceId = credentials.DeviceId;
                 Translator.Setting.DoubaoAppKey = credentials.AppKey;
 
-                await Translator.RestartAsrProviderAsync();
+                // Switch explicitly: the picker may still be sitting on the backend the selector
+                // fell back to before these credentials existed.
+                await Translator.SwitchAsrProviderAsync(DoubaoAsrProvider.ProviderId);
 
                 AsrHintText.Text = "豆包设备已注册，凭证已保存。";
             }
@@ -301,7 +303,7 @@ namespace LiveCaptionsTranslator
             Translator.Setting.DoubaoDeviceId = DoubaoDeviceIdBox.Text.Trim();
             Translator.Setting.DoubaoAppKey = DoubaoAppKeyBox.Text.Trim();
 
-            await Translator.RestartAsrProviderAsync();
+            await Translator.SwitchAsrProviderAsync(DoubaoAsrProvider.ProviderId);
 
             DoubaoApplyButton.Content = new System.Windows.Controls.TextBlock { Text = "Saved" };
         }
