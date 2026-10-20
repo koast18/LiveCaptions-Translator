@@ -1,4 +1,4 @@
-using System.Net.WebSockets;
+﻿using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 
@@ -152,7 +152,8 @@ namespace LiveCaptionsTranslator.Core.Doubao
         }
 
         public Task SendAsync(ReadOnlyMemory<byte> payload, CancellationToken cancellationToken) =>
-            socket.SendAsync(payload, WebSocketMessageType.Binary, true, cancellationToken);
+            // The Memory overload returns ValueTask on .NET 8.
+            socket.SendAsync(payload, WebSocketMessageType.Binary, true, cancellationToken).AsTask();
 
         public async Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken)
         {
