@@ -6,6 +6,7 @@ using LiveCaptionsTranslator.apis;
 using LiveCaptionsTranslator.models;
 using LiveCaptionsTranslator.translation;
 using LiveCaptionsTranslator.utils;
+using LiveCaptionsTranslator.Core.Asr;
 
 namespace LiveCaptionsTranslator
 {
@@ -105,14 +106,24 @@ namespace LiveCaptionsTranslator
         /// Explains why a different backend than the configured one is running, if that happened
         /// (typically: Windows Live Captions is absent, so the app fell back to iFlytek).
         /// </summary>
-        public static string? AsrFallbackNotice { get; private set; }
+        public static string? AsrFallbackNotice => RenderAsrFallbackNotice();
+
+        /// <summary>
+        /// Rendered on demand rather than when the provider is activated: activation happens before
+        /// App.InitializeComponent merges the dictionaries, so an eagerly built string would show the
+        /// bare resource key.
+        /// </summary>
+        public static string? RenderAsrFallbackNotice() =>
+            asrFallback?.Render((key, args) => LocalizationManager.T(key, args));
+
+        private static AsrFallbackNotice? asrFallback;
 
         /// <summary>Creates the provider instance for <paramref name="providerId"/>.</summary>
         private static void ActivateProvider(string? providerId)
         {
             var selection = AsrProviderSelector.Select(AsrProviders, providerId);
 
-            AsrFallbackNotice = selection.FellBack ? selection.Reason : null;
+            asrFallback = selection.FellBack ? selection.Fallback : null;
 
             ActiveAsrProvider = AsrProviders.Create(selection.ProviderId);
             LiveCaptions = ActiveAsrProvider as WindowsLiveCaptionsProvider;

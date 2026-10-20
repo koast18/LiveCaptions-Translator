@@ -5,7 +5,22 @@ namespace LiveCaptionsTranslator.Core.Asr
     /// <param name="ProviderId">Id of the backend the host should start.</param>
     /// <param name="FellBack">True when <paramref name="ProviderId"/> is not what was asked for.</param>
     /// <param name="Reason">Explains the fallback, for the settings UI and the first caption.</param>
-    public sealed record AsrSelection(string ProviderId, bool FellBack, string? Reason);
+    /// <param name="Reason">Rendered text, kept for logs and tests.</param>
+    /// <param name="Fallback">The parts the UI needs to render the explanation in the current
+    /// language. Rendering eagerly would bake in whatever language was installed when the provider
+    /// was activated - which happens before the string dictionary is merged.</param>
+    public sealed record AsrSelection(
+        string ProviderId,
+        bool FellBack,
+        string? Reason,
+        AsrFallbackNotice? Fallback = null);
+
+    /// <summary>The pieces of "X is unavailable (why), using Y instead".</summary>
+    public sealed record AsrFallbackNotice(string Requested, string? Why, string Used)
+    {
+        public string Render(Func<string, object?[], string> translate) =>
+            translate("Asr_FallbackNotice", new object?[] { Requested, Why ?? string.Empty, Used });
+    }
 
     /// <summary>
     /// Chooses the speech-recognition backend to run.
@@ -51,10 +66,13 @@ namespace LiveCaptionsTranslator.Core.Asr
                     if (!candidate.IsAvailable)
                         continue;
 
+                    var parts = new AsrFallbackNotice(requested.DisplayName, reason, candidate.DisplayName);
+
                     return new AsrSelection(
                         id,
                         FellBack: true,
-                        Reason: CoreStrings.Get("Asr_FallbackNotice", requested.DisplayName, reason ?? string.Empty, candidate.DisplayName));
+                        Reason: CoreStrings.Get("Asr_FallbackNotice", requested.DisplayName, reason ?? string.Empty, candidate.DisplayName),
+                        Fallback: parts);
                 }
 
                 return new AsrSelection(requestedId!, FellBack: false, Reason: reason);
