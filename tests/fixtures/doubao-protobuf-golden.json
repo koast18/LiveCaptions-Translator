@@ -1,0 +1,120 @@
+{
+  "source": "doubaoIME/run_asr.py 的手写 protobuf 编码器",
+  "frameStates": {
+    "unspecified": 0,
+    "first": 1,
+    "middle": 3,
+    "last": 9
+  },
+  "statusOk": 20000000,
+  "sessionConfig": "{\"audio_info\":{\"channel\":1,\"format\":\"speech_opus\",\"sample_rate\":16000},\"enable_punctuation\":true,\"enable_speech_rejection\":false,\"extra\":{\"app_name\":\"oime\",\"cell_compress_rate\":8,\"did\":\"1782778396951964\",\"enable_asr_threepass\":true,\"enable_asr_twopass\":true,\"input_mode\":\"tool\",\"end_smooth_window_ms\":200,\"use_twopass_retry\":true}}",
+  "requests": [
+    {
+      "label": "start_task",
+      "args": {
+        "token": "TOKEN-abc123",
+        "method_name": "StartTask",
+        "request_id": "rid-start"
+      },
+      "hex": "120c544f4b454e2d6162633132331a034153522a0953746172745461736b42097269642d7374617274"
+    },
+    {
+      "label": "start_session",
+      "args": {
+        "token": "TOKEN-abc123",
+        "method_name": "StartSession",
+        "request_id": "rid-session",
+        "payload": "{\"audio_info\":{\"channel\":1,\"format\":\"speech_opus\",\"sample_rate\":16000},\"enable_punctuation\":true,\"enable_speech_rejection\":false,\"extra\":{\"app_name\":\"oime\",\"cell_compress_rate\":8,\"did\":\"1782778396951964\",\"enable_asr_threepass\":true,\"enable_asr_twopass\":true,\"input_mode\":\"tool\",\"end_smooth_window_ms\":200,\"use_twopass_retry\":true}}"
+      },
+      "hex": "120c544f4b454e2d6162633132331a034153522a0c537461727453657373696f6e32cb027b22617564696f5f696e666f223a7b226368616e6e656c223a312c22666f726d6174223a227370656563685f6f707573222c2273616d706c655f72617465223a31363030307d2c22656e61626c655f70756e6374756174696f6e223a747275652c22656e61626c655f7370656563685f72656a656374696f6e223a66616c73652c226578747261223a7b226170705f6e616d65223a226f696d65222c2263656c6c5f636f6d70726573735f72617465223a382c22646964223a2231373832373738333936393531393634222c22656e61626c655f6173725f746872656570617373223a747275652c22656e61626c655f6173725f74776f70617373223a747275652c22696e7075745f6d6f6465223a22746f6f6c222c22656e645f736d6f6f74685f77696e646f775f6d73223a3230302c227573655f74776f706173735f7265747279223a747275657d7d420b7269642d73657373696f6e"
+    },
+    {
+      "label": "task_request_first",
+      "args": {
+        "token": "TOKEN-abc123",
+        "method_name": "TaskRequest",
+        "request_id": "rid-task",
+        "payload": "{\"extra\":{},\"timestamp_ms\":1700000000000}",
+        "frame_state": 1,
+        "audio_data_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627"
+      },
+      "hex": "120c544f4b454e2d6162633132331a034153522a0b5461736b5265717565737432297b226578747261223a7b7d2c2274696d657374616d705f6d73223a313730303030303030303030307d3a28000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262742087269642d7461736b4801"
+    },
+    {
+      "label": "task_request_middle",
+      "args": {
+        "token": "TOKEN-abc123",
+        "method_name": "TaskRequest",
+        "request_id": "rid-task",
+        "payload": "{\"extra\":{},\"timestamp_ms\":1700000000020}",
+        "frame_state": 3,
+        "audio_data_hex": "aabbcc"
+      },
+      "hex": "120c544f4b454e2d6162633132331a034153522a0b5461736b5265717565737432297b226578747261223a7b7d2c2274696d657374616d705f6d73223a313730303030303030303032307d3a03aabbcc42087269642d7461736b4803"
+    },
+    {
+      "label": "task_request_last",
+      "args": {
+        "token": "TOKEN-abc123",
+        "method_name": "TaskRequest",
+        "request_id": "rid-task",
+        "payload": "{\"extra\":{},\"timestamp_ms\":1700000000040}",
+        "frame_state": 9
+      },
+      "hex": "120c544f4b454e2d6162633132331a034153522a0b5461736b5265717565737432297b226578747261223a7b7d2c2274696d657374616d705f6d73223a313730303030303030303034307d42087269642d7461736b4809"
+    },
+    {
+      "label": "finish_session",
+      "args": {
+        "token": "TOKEN-abc123",
+        "method_name": "FinishSession",
+        "request_id": "rid-finish"
+      },
+      "hex": "120c544f4b454e2d6162633132331a034153522a0d46696e69736853657373696f6e420a7269642d66696e697368"
+    }
+  ],
+  "responses": [
+    {
+      "label": "task_started",
+      "hex": "0a097269642d737461727412067461736b2d311a03415352220b5461736b5374617274656432024f4b2880dac409",
+      "expected": {
+        "requestId": "rid-start",
+        "taskId": "task-1",
+        "serviceName": "ASR",
+        "messageType": "TaskStarted",
+        "statusCode": 20000000,
+        "statusMessage": "OK",
+        "resultJson": "",
+        "unknownField9": 0
+      }
+    },
+    {
+      "label": "result_with_unknown_fields",
+      "hex": "0a087269642d7461736b1a03415352220a5461736b526573756c743a1f7b22726573756c7473223a5b7b2274657874223a22e4bda0e5a5bd227d5d7d2880dac4094807d002d209",
+      "expected": {
+        "requestId": "rid-task",
+        "taskId": "",
+        "serviceName": "ASR",
+        "messageType": "TaskResult",
+        "statusCode": 20000000,
+        "statusMessage": "",
+        "resultJson": "{\"results\":[{\"text\":\"你好\"}]}",
+        "unknownField9": 7
+      }
+    },
+    {
+      "label": "session_failed",
+      "hex": "0a0b7269642d73657373696f6e220d53657373696f6e4661696c6564320f696e76616c69642073657373696f6e28c1caba15",
+      "expected": {
+        "requestId": "rid-session",
+        "taskId": "",
+        "serviceName": "",
+        "messageType": "SessionFailed",
+        "statusCode": 45000001,
+        "statusMessage": "invalid session",
+        "resultJson": "",
+        "unknownField9": 0
+      }
+    }
+  ]
+}
