@@ -59,6 +59,8 @@ public class AsrProviderSelectorTests
         {
             "Asr_LiveCaptionsNeedsWin11" =>
                 "Windows Live Captions needs Windows 11 22H2 (build {0}) or later; this machine is build {1}.",
+            "Asr_FallbackNotice" =>
+                "{0} is unavailable on this machine ({1}); using {2} instead.",
             _ => key,
         });
 
