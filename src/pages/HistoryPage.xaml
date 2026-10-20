@@ -71,7 +71,7 @@
                     MinWidth="200"
                     MaxWidth="200"
                     Margin="5,0,0,0"
-                    PlaceholderText="Search"
+                    PlaceholderText="{DynamicResource History_Search}"
                     QuerySubmitted="HistorySearchBox_QuerySubmitted"
                     TextChanged="HistorySearchBox_TextChanged" />
 

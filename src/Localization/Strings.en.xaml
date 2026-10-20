@@ -160,4 +160,6 @@
     <sys:String x:Key="Asr_Reconnecting">[WARNING] Connection lost, reconnecting ({0}/{1})…</sys:String>
     <sys:String x:Key="Asr_GaveUp">Gave up after {0} reconnect attempts, recognition stopped.</sys:String>
 
+    <sys:String x:Key="History_Search">Search</sys:String>
+
 </ResourceDictionary>

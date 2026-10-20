@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.RegularExpressions;
 
 namespace LiveCaptionsTranslator.App.Tests;
@@ -27,10 +27,16 @@ public class XamlLocalizationTests
 
         // Language codes and data values
         "de", "en", "fr", "ja", "ko", "1/1",
+
+        // Data shown verbatim: URLs, handles, version number
+        "1.1.1.1", "@SakiRinn", "@A-nony-mous",
+        "https://github.com/SakiRinn/LiveCaptions-Translator",
+        "https://github.com/SakiRinn/LiveCaptions-Translator/wiki",
     };
 
+    // The leading whitespace matters: "SizeToContent="Height"" must not look like Content="Height".
     private static readonly Regex Attribute = new(
-        "(Text|Content|Title|ToolTip|Header|OffContent|OnContent)=\"([^\"{}][^\"]*)\"",
+        "(?<=\s)(Text|Content|Title|ToolTip|Header|OffContent|OnContent|PlaceholderText)=\"([^\"{}][^\"]*)\"",
         RegexOptions.Compiled);
 
     private static IEnumerable<string> XamlFiles() =>

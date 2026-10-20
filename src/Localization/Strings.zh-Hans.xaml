@@ -158,4 +158,6 @@
     <sys:String x:Key="Asr_Reconnecting">[警告] 连接已断开，正在重连（{0}/{1}）…</sys:String>
     <sys:String x:Key="Asr_GaveUp">重连 {0} 次仍未成功，已停止识别。</sys:String>
 
+    <sys:String x:Key="History_Search">搜索</sys:String>
+
 </ResourceDictionary>
