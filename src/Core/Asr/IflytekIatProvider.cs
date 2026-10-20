@@ -137,7 +137,6 @@ namespace LiveCaptionsTranslator.Core.Asr
             var channel = queue!;
             var committed = new StringBuilder();
             int failures = 0;
-            int idleCloses = 0;
 
             while (!token.IsCancellationRequested)
             {
@@ -183,7 +182,6 @@ namespace LiveCaptionsTranslator.Core.Asr
                 catch (Exception exception)
                 {
                     failed = true;
-                    failures++;
                     context.Sink.OnNotice($"[WARNING] 讯飞连接异常：{exception.Message}");
                 }
                 finally
@@ -206,12 +204,6 @@ namespace LiveCaptionsTranslator.Core.Asr
                 }
 
                 // A session that actually streamed audio proves the link works again.
-                if (!failed && session.SentFrames > 0)
-                {
-                    failures = 0;
-                    idleCloses = 0;
-                }
-
                 // `inputEnded` means the host is shutting the provider down, not a dropped link.
                 if (token.IsCancellationRequested || inputEnded)
                     break;
@@ -219,30 +211,37 @@ namespace LiveCaptionsTranslator.Core.Asr
                 // Keep whatever was recognised so the transcript does not restart on reconnect.
                 committed.Append(session.Transcript.Text);
 
-                // Nothing was ever streamed, so the socket closed on an idle stream rather than on
-                // a real failure: retry quietly, but not forever.
-                if (!failed && session.SentFrames == 0)
+                // A session that streamed audio and then ended without an exception is not a
+                // failure: the service simply closed a stream that was mostly silence. Reconnect
+                // quietly, without counting it or alarming the user.
+                if (!failed && session.SentFrames > 0)
                 {
-                    idleCloses++;
+                    failures = 0;
 
-                    if (idleCloses > settings.MaxReconnectAttempts)
+                    try
                     {
-                        context.Sink.OnError(new IflytekIatException(
-                            -1, $"讯飞连接连续 {idleCloses} 次被服务端关闭，已停止重连"));
+                        await Task.Delay(settings.ReconnectDelay, token);
+                    }
+                    catch (OperationCanceledException)
+                    {
                         break;
                     }
+
+                    continue;
                 }
-                else if (failures > settings.MaxReconnectAttempts)
+
+                // A real failure: count it, tell the user, give up after the configured number.
+                failures++;
+
+                if (failures > settings.MaxReconnectAttempts)
                 {
                     context.Sink.OnError(new IflytekIatException(
-                        -1, $"重连 {failures} 次仍未成功，已停止讯飞识别"));
+                        -1, $"重连 {failures - 1} 次仍未成功，已停止讯飞识别"));
                     break;
                 }
-                else
-                {
-                    context.Sink.OnNotice(
-                        $"[WARNING] 讯飞连接已断开，正在重连（{failures}/{settings.MaxReconnectAttempts}）…");
-                }
+
+                context.Sink.OnNotice(
+                    $"[WARNING] 讯飞连接已断开，正在重连（{failures}/{settings.MaxReconnectAttempts}）…");
 
                 try
                 {
