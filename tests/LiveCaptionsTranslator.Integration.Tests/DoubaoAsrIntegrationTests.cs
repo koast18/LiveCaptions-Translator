@@ -1,4 +1,4 @@
-using LiveCaptionsTranslator.Core.Asr;
+﻿using LiveCaptionsTranslator.Core.Asr;
 using LiveCaptionsTranslator.Core.Audio;
 using LiveCaptionsTranslator.Core.Doubao;
 
@@ -19,6 +19,66 @@ public class DoubaoAsrIntegrationTests
 
     private static WavAudio ReadFixture() =>
         WavFile.Read(FixturePath("iflytek-zh-cn-16k.wav"));
+
+    /// <summary>Wraps the real transport and records what the server actually answered.</summary>
+    private sealed class LoggingTransport : IDoubaoTransport
+    {
+        private readonly IDoubaoTransport inner;
+        private readonly List<string> log;
+
+        public LoggingTransport(IDoubaoTransport inner, List<string> log)
+        {
+            this.inner = inner;
+            this.log = log;
+        }
+
+        public bool IsOpen => inner.IsOpen;
+
+        public Task ConnectAsync(Uri uri, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken)
+        {
+            log.Add($"connect {uri.Host}{uri.PathAndQuery}");
+            return inner.ConnectAsync(uri, headers, cancellationToken);
+        }
+
+        public async Task SendAsync(ReadOnlyMemory<byte> payload, CancellationToken cancellationToken)
+        {
+            sentCount++;
+
+            // Log the first few packets and then every 20th, so the log stays readable.
+            if (sentCount <= 3 || sentCount % 20 == 0)
+                log.Add($"sent #{sentCount} bytes={payload.Length}");
+
+            await inner.SendAsync(payload, cancellationToken);
+        }
+
+        private int sentCount;
+
+        public async Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken)
+        {
+            byte[]? data = await inner.ReceiveAsync(cancellationToken);
+
+            if (data is null)
+            {
+                log.Add("closed by server");
+                return null;
+            }
+
+            try
+            {
+                var response = DoubaoAsrResponse.Parse(data);
+                log.Add($"recv {response.MessageType} status={response.StatusCode} " +
+                        $"json={(string.IsNullOrEmpty(response.ResultJson) ? "-" : response.ResultJson)}");
+            }
+            catch (Exception exception)
+            {
+                log.Add($"recv <unparsed> bytes={data.Length} ({exception.GetType().Name})");
+            }
+
+            return data;
+        }
+
+        public ValueTask DisposeAsync() => inner.DisposeAsync();
+    }
 
     [Fact]
     public void The_committed_sample_is_the_expected_format()
@@ -54,8 +114,11 @@ public class DoubaoAsrIntegrationTests
         var source = new WavAudioSource(audio.Pcm);
         var sink = new CollectingSink();
 
+        var wireLog = new List<string>();
+
         await using var provider = new DoubaoAsrProvider(
             credentials,
+            transportFactory: () => new LoggingTransport(new WebSocketDoubaoTransport(), wireLog),
             streamOptions: new DoubaoStreamOptions
             {
                 MaxConsecutiveFailures = 1,
@@ -82,7 +145,13 @@ public class DoubaoAsrIntegrationTests
 
         Assert.False(
             string.IsNullOrWhiteSpace(transcript),
-            $"the service returned no transcript. notices: {notices}");
+            "the service returned no transcript.
+" +
+            "notices: " + notices + "
+" +
+            "wire:
+  " + string.Join("
+  ", wireLog));
 
         // Exact punctuation is the service's business; the words are what matter.
         Assert.Contains("今天天气", transcript);
