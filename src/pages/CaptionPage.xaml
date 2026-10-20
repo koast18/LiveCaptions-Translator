@@ -46,6 +46,16 @@
             Padding="8"
             VerticalAlignment="Stretch"
             PreviewMouseWheel="TranslatedCard_PreviewMouseWheel">
+            <ui:Card.Style>
+                <Style TargetType="ui:Card">
+                    <Style.Triggers>
+                        <!-- Nothing to add when the translation is the source text. -->
+                        <DataTrigger Binding="{Binding TranslationRedundant}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ui:Card.Style>
             <TextBlock
                 x:Name="TranslatedCaption"
                 Background="Transparent"

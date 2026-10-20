@@ -15,6 +15,7 @@ namespace LiveCaptionsTranslator.models
 
         private string displayOriginalCaption = string.Empty;
         private string displayTranslatedCaption = string.Empty;
+        private bool translationRedundant;
         private string overlayOriginalCaption = " ";
         private string overlayCurrentTranslation = " ";
         private string overlayNoticePrefix = " ";
@@ -39,6 +40,24 @@ namespace LiveCaptionsTranslator.models
                 OnPropertyChanged("DisplayOriginalCaption");
             }
         }
+        /// <summary>
+        /// True when the translation adds nothing - the source was already Simplified Chinese, so the
+        /// policy skipped the API and the two lines would read identically. The UI hides the second
+        /// line instead of showing it twice.
+        /// </summary>
+        public bool TranslationRedundant
+        {
+            get => translationRedundant;
+            set
+            {
+                if (translationRedundant == value)
+                    return;
+
+                translationRedundant = value;
+                OnPropertyChanged("TranslationRedundant");
+            }
+        }
+
         public string DisplayTranslatedCaption
         {
             get => displayTranslatedCaption;

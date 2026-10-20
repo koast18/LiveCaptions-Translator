@@ -344,6 +344,10 @@ namespace LiveCaptionsTranslator
                 {
                     // Main page
                     Caption.TranslatedCaption = translatedText;
+
+                    // Nothing to show twice when the translation is the source text.
+                    Caption.TranslationRedundant = IsTranslationRedundant(
+                        Caption.OriginalCaption, Caption.TranslatedCaption);
                     Caption.DisplayTranslatedCaption =
                         TextUtil.ShortenDisplaySentence(Caption.TranslatedCaption, TextUtil.VERYLONG_THRESHOLD);
 
@@ -472,6 +476,26 @@ namespace LiveCaptionsTranslator
 
             Caption?.OnPropertyChanged("DisplayLogCards");
             Caption?.OnPropertyChanged("OverlayPreviousTranslation");
+        }
+
+        /// <summary>
+        /// True when the "translation" carries nothing new, i.e. the source was already Simplified
+        /// Chinese and the policy skipped the API. Trailing punctuation and the notice prefixes are
+        /// ignored so "今天天气不错。" and "今天天气不错" still count as the same line.
+        /// </summary>
+        internal static bool IsTranslationRedundant(string? originalCaption, string? translatedCaption)
+        {
+            string original = NormalizeForComparison(originalCaption);
+            return original.Length > 0 && original == NormalizeForComparison(translatedCaption);
+        }
+
+        private static string NormalizeForComparison(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return string.Empty;
+
+            string stripped = RegexPatterns.NoticePrefix().Replace(text!, string.Empty);
+            return stripped.Trim().TrimEnd('.', '。', '!', '！', '?', '？', ' ', '	');
         }
 
         public static void ClearContexts()

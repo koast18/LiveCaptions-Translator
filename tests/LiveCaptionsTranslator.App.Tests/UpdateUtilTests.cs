@@ -29,3 +29,27 @@ public class UpdateUtilTests
     public void Unparsable_values_never_prompt(string? latest, string? current)
         => Assert.False(UpdateUtil.IsNewerRelease(latest, current));
 }
+
+/// <summary>
+/// The caption page used to show the same sentence twice whenever the source was already
+/// Simplified Chinese and the translation policy skipped the API.
+/// </summary>
+public class RedundantTranslationTests
+{
+    [Theory]
+    [InlineData("今天天气不错。", "今天天气不错。")]
+    [InlineData("今天天气不错。", "今天天气不错")]
+    [InlineData("今天天气不错", "今天天气不错。")]
+    [InlineData("今天天气不错。", "[  12 ms] 今天天气不错。")]
+    [InlineData("  今天天气不错。  ", "今天天气不错。")]
+    public void Identical_lines_are_redundant(string original, string translated)
+        => Assert.True(LiveCaptionsTranslator.Translator.IsTranslationRedundant(original, translated));
+
+    [Theory]
+    [InlineData("今天天气不错。", "The weather is nice.")]
+    [InlineData("我们一起去公园", "我们一起去公园散步吧。")]
+    [InlineData("", "")]
+    [InlineData("今天天气", "")]
+    public void Different_lines_are_not(string original, string translated)
+        => Assert.False(LiveCaptionsTranslator.Translator.IsTranslationRedundant(original, translated));
+}
