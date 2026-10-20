@@ -19,6 +19,12 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          # Caches ~/.nuget/packages keyed on the project files. Without it every job re-downloads
+          # Concentus, NAudio, protobuf and the test SDK from nuget.org on each push.
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/Directory.Packages.props
 
       - name: Restore
         run: dotnet restore LiveCaptionsTranslator.sln
@@ -72,6 +78,12 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          # Caches ~/.nuget/packages keyed on the project files. Without it every job re-downloads
+          # Concentus, NAudio, protobuf and the test SDK from nuget.org on each push.
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/Directory.Packages.props
 
       # Blocking: proves the hand-rolled protocol against a service we can rely on.
       - name: Integration tests (blocking)
@@ -105,6 +117,12 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          # Caches ~/.nuget/packages keyed on the project files. Without it every job re-downloads
+          # Concentus, NAudio, protobuf and the test SDK from nuget.org on each push.
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/Directory.Packages.props
 
       - name: Publish
         run: >
