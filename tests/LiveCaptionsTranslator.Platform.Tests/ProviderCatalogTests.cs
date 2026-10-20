@@ -61,6 +61,17 @@ public class ProviderCatalogTests
     }
 
     [Fact]
+    public void Doubao_reports_a_verified_chinese_language()
+    {
+        var provider = BuildRegistry().Create("doubao-asr");
+
+        // The integration job recognises the committed Chinese sample, so that entry is verified.
+        Assert.Contains(provider.SupportedLanguages, language => language.Verified);
+        Assert.All(provider.SupportedLanguages, language =>
+            Assert.False(provider.LanguageIsHostControlled && language.Id != "auto"));
+    }
+
+    [Fact]
     public void A_provider_factory_that_returns_null_keeps_the_picker_working()
     {
         var registry = new AsrProviderRegistry();

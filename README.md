@@ -235,7 +235,7 @@ touching the caption pipeline:
 
 | Layer | Interface | Registry | Shipped implementations |
 |---|---|---|---|
-| Speech recognition | `IAsrProvider` (`src/Core/Asr`) | `AsrProviderRegistry` | `windows-livecaptions`, `iflytek-iat` |
+| Speech recognition | `IAsrProvider` (`src/Core/Asr`) | `AsrProviderRegistry` | `windows-livecaptions`, `iflytek-iat`, `doubao-asr` |
 | Audio capture | `IAudioSource` (`src/Core/Audio`) | `AudioSourceRegistry` | WASAPI loopback (system audio), microphone |
 | Translation | `ITranslationProvider` (`src/Core/Translation`) | `TranslationProviderRegistry` | every upstream engine, plus `iflytek-mt` |
 
@@ -276,6 +276,35 @@ The `iflytek-iat` provider streams audio to `wss://100ime-iat-api.xfyun.cn/v2/ia
 
 Every field (endpoint, app id, key, secret) is editable in *Settings → Speech Recognition*.
 
+### Doubao speech recognition: credentials are generated on your machine
+
+`doubao-asr` is a pure C# implementation of the Doubao IME ASR protocol. Nothing in it shells out
+to Python, and no Opus binary is shipped: encoding uses Concentus, a managed port of libopus.
+
+| Step | Endpoint | What happens |
+|---|---|---|
+| Register a device | `POST https://log.snssdk.com/service/2/device_register/` | plain JSON fingerprint in, `device_id` out - **no ttEncrypt** |
+| Exchange for a token | `POST https://is.snssdk.com/service/settings/v3/` | fixed body `body=null`, signed with `x-ss-stub = MD5(body).upper()`; returns the ASR `app_key` |
+| Recognise | `wss://frontier-audio-ime-ws.doubao.com/ocean/api/v1/ws?aid=401734&device_id=...` | protobuf `StartTask`/`StartSession`/`TaskRequest`/`FinishSession` with raw 20 ms Opus packets |
+
+*Settings → Speech Recognition → **Register*** runs the whole registration in process and stores the
+pair in `setting.json`. **Nothing is committed to this repository**: unlike the iFlytek provider
+there is no shared default credential, so a fresh clone reports the backend as unavailable until
+you press Register.
+
+Risks, stated plainly:
+
+- This speaks the private protocol of the 讯飞-input-method-style Doubao client. It is not a
+  documented public API and there is no agreement covering its use; the endpoints can change or
+  rate-limit at any time, and using them may violate Doubao's terms of service.
+- The registration endpoint is a ByteDance device-registration service; registering on every run
+  could be throttled. The app registers only when you ask it to.
+- One device pair per machine is enough; re-registering replaces it.
+
+Languages: the service **auto-detects** the language - the session configuration has no field to
+request one - so the app cannot offer a per-language choice here. Chinese has been verified end to
+end; anything else is unverified, and the README says so rather than pretending otherwise.
+
 ### iFlytek machine translation: bring your own credentials
 
 `iflytek-mt` (`https://itrans.xf-yun.com/v1/its`) is a **separate** service. The `100IME`
@@ -296,6 +325,7 @@ two are tracked separately:
 | English (`en_us`) | Parameters accepted only | not exercised with real speech |
 | Japanese (`ja`) | Parameters accepted only | not exercised with real speech |
 | Korean (`ko`) | Parameters accepted only | not exercised with real speech |
+| Doubao (`doubao-asr`, auto-detected) | **Verified** | the CI integration job registers a device and recognises `tests/fixtures/iflytek-zh-cn-16k.wav` through the real endpoint; the session configuration has no language field, so this is the only claim that can be made |
 
 `AsrLanguage.Verified` carries this flag into the code, and the settings UI shows the same
 caveat. Windows Live Captions picks its own language, so none of its entries are marked verified.

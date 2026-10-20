@@ -36,7 +36,10 @@ namespace LiveCaptionsTranslator.Core.Doubao
         /// </summary>
         private static readonly AsrLanguage[] Languages =
         {
-            new("auto", "自动检测（普通话）", null, Verified: false),
+            // Verified by tests/fixtures/iflytek-zh-cn-16k.wav in the CI integration job: the
+            // service detected the language and recognised the sample. Other languages are not
+            // exercised, and the session configuration has no field to request one.
+            new("auto", "自动检测（普通话）", null, Verified: true),
         };
 
         private readonly DoubaoCredentials? credentials;
