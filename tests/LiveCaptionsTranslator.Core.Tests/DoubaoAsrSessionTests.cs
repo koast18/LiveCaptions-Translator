@@ -456,7 +456,10 @@ public class DoubaoTranscriptBuilderTests
 
         Assert.Equal("今天天", builder.Append(Interim("今天天", 0)).Text);
         Assert.Equal("今天天气不错。", builder.Append(Interim("今天天气不错。", 0)).Text);
-        Assert.Equal("今天天气不错。", builder.Committed);
+
+        // Same start_time means the same segment, so nothing has been committed yet.
+        Assert.Equal(string.Empty, builder.Committed);
+        Assert.Equal("今天天气不错。", builder.Current);
     }
 
     [Fact]
