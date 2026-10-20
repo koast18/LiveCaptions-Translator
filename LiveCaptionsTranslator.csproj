@@ -31,6 +31,10 @@
 		<None Remove="src\Core\**" />
 		<None Remove="src\Platform.Windows\**" />
 		<None Remove="tests\**" />
+		<!-- The app project sits at the repository root, so the WPF page glob would otherwise
+		     compile XAML that test output copied under tests/**/bin into the real assembly. -->
+		<Page Remove="tests\**" />
+		<DefaultItemExcludes>$(DefaultItemExcludes);tests\**</DefaultItemExcludes>
 	</ItemGroup>
 
 	<!-- Text helpers live in the UI-independent Core library; make them visible everywhere. -->
