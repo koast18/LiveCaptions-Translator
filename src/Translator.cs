@@ -206,8 +206,10 @@ namespace LiveCaptionsTranslator
                     Localize = (key, args) => LocalizationManager.T(key, args),
                 });
 
-                // Only surfaced once the replacement backend actually started.
-                SetCaptionStatus(() => LocalizationManager.T("Status_Warning", RenderAsrFallbackNotice() ?? string.Empty));
+                // Only surfaced when a different backend was actually substituted - this used to run
+                // unconditionally, which painted a bare "[WARNING]" over every start.
+                if (asrFallback is not null && Caption is not null)
+                    SetCaptionStatus(() => LocalizationManager.T("Status_Warning", RenderAsrFallbackNotice() ?? string.Empty));
             }
             catch (Exception exception)
             {

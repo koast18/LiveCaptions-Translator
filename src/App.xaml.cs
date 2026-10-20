@@ -15,6 +15,10 @@ namespace LiveCaptionsTranslator
     {
         App()
         {
+            // First, before anything can ask for a string: Translator's static constructor runs
+            // further down this method and already produces user-facing text.
+            LocalizationManager.Preload();
+
             AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
             Translator.Setting?.Save();
 

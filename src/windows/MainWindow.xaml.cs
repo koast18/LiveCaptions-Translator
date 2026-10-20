@@ -140,6 +140,49 @@ namespace LiveCaptionsTranslator
             IsAutoHeight = false;
         }
 
+
+        /// <summary>
+        /// The window is a compact caption bar by design (750x170), which is the wrong shape for a
+        /// settings page or a history table. Grow it when those pages are opened and put it back when
+        /// the caption page returns, so nothing has to be clipped.
+        /// </summary>
+        private void RootNavigation_Navigated(object sender, NavigatedEventArgs e) => FitToPage(e.Page?.GetType());
+
+        private Size compactSize;
+        private bool grown;
+
+        private void FitToPage(Type? page)
+        {
+            const double NeededWidth = 1000;
+            const double NeededHeight = 820;
+
+            bool needsRoom = page is not null && page != typeof(CaptionPage);
+
+            if (needsRoom)
+            {
+                if (grown)
+                    return;
+
+                compactSize = new Size(ActualWidth, ActualHeight);
+                grown = true;
+
+                // Only grow: a user who already made the window large should keep their size.
+                Width = Math.Max(ActualWidth, NeededWidth);
+                Height = Math.Max(ActualHeight, NeededHeight);
+                return;
+            }
+
+            if (!grown)
+                return;
+
+            grown = false;
+            if (compactSize.Width > 0 && compactSize.Height > 0)
+            {
+                Width = Math.Max(MinWidth, compactSize.Width);
+                Height = Math.Max(MinHeight, compactSize.Height);
+            }
+        }
+
         public void ToggleTopmost(bool enabled)
         {
             var button = TopmostButton as Button;

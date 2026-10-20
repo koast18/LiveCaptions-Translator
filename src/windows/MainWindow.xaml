@@ -83,7 +83,8 @@
                 IsBackButtonVisible="Collapsed"
                 IsPaneOpen="False"
                 IsPaneToggleVisible="False"
-                PaneDisplayMode="LeftMinimal">
+                PaneDisplayMode="LeftMinimal"
+                Navigated="RootNavigation_Navigated">
                 <ui:NavigationView.MenuItems>
                     <ui:NavigationViewItem
                         Margin="0,6,0,3"

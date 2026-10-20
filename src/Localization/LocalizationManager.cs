@@ -66,10 +66,14 @@ namespace LiveCaptionsTranslator.Localization
                 // English goes in first and stays: WPF resolves a DynamicResource against the merged
                 // chain, so a key missing from the selected language falls back to English instead of
                 // rendering blank.
-                if (id != Default)
-                    dictionaries.Add(Load(Default));
+                var english = Load(Default);
+                dictionaries.Add(english);
 
-                dictionaries.Add(Load(id));
+                var selected = id == Default ? english : Load(id);
+                if (id != Default)
+                    dictionaries.Add(selected);
+
+                Snapshot(english, selected);
             }
             catch (IOException) when (id != Default)
             {
@@ -78,6 +82,44 @@ namespace LiveCaptionsTranslator.Localization
             }
 
             LanguageChanged?.Invoke();
+        }
+
+        private static Dictionary<string, string>? snapshot;
+
+        private static void Snapshot(ResourceDictionary english, ResourceDictionary selected)
+        {
+            var merged = new Dictionary<string, string>(StringComparer.Ordinal);
+
+            foreach (var source in new[] { english, selected })
+            {
+                foreach (object? entry in source.Keys)
+                {
+                    if (entry is string name && source[name] is string text)
+                        merged[name] = text;
+                }
+            }
+
+            Volatile.Write(ref snapshot, merged);
+        }
+
+        /// <summary>
+        /// Loads English before anything else can ask for a string. Called from App's constructor,
+        /// which runs before App.InitializeComponent merges the dictionaries.
+        /// </summary>
+        public static void Preload()
+        {
+            if (Volatile.Read(ref snapshot) is { Count: > 0 })
+                return;
+
+            try
+            {
+                var english = Load(Default);
+                Snapshot(english, english);
+            }
+            catch (Exception)
+            {
+                // Nothing on disk to read yet; T falls back to its own source.
+            }
         }
 
         private static ResourceDictionary Load(string id) => new()
@@ -93,6 +135,11 @@ namespace LiveCaptionsTranslator.Localization
         /// </summary>
         public static string T(string key)
         {
+            // A plain dictionary, not Application.Resources: T is called from the translation and ASR
+            // loops, and touching a WPF object from those threads throws.
+            if (Volatile.Read(ref snapshot) is { } current && current.TryGetValue(key, out string? text))
+                return text;
+
             if (Application.Current?.TryFindResource(key) is string found)
                 return found;
 
