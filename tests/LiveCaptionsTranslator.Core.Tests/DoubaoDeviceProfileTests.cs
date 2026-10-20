@@ -175,7 +175,8 @@ public class DoubaoDeviceProfileTests
         {
             string body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
             string? stub = request.Headers.TryGetValues("x-ss-stub", out var values) ? values.First() : null;
-            string? agent = request.Headers.TryGetValues("User-Agent", out var agents) ? agents.First() : null;
+            // .NET parses User-Agent into product + comment, so join the parts back together.
+            string? agent = request.Headers.TryGetValues("User-Agent", out var agents) ? string.Join(" ", agents) : null;
             seen.Add((request.RequestUri!.Host, agent, stub, body));
 
             return request.RequestUri.Host == "log.snssdk.com"
