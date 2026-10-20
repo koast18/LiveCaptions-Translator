@@ -17,6 +17,23 @@ namespace LiveCaptionsTranslator.Platform.Windows
     {
         public const string ProviderId = "windows-livecaptions";
 
+        /// <summary>Windows 11 22H2, the first build that ships Live Captions.</summary>
+        public const int MinimumWindowsBuild = 22621;
+
+        /// <summary>File the component installs; its absence means Live Captions is not present.</summary>
+        public static string ExecutablePath => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.System), "LiveCaptions.exe");
+
+        /// <summary>Build number of the running OS, e.g. 19045 for Windows 10 22H2.</summary>
+        public static int WindowsBuild => Environment.OSVersion.Version.Build;
+
+        /// <summary>Whether the Live Captions component is installed at all.</summary>
+        public static bool ComponentInstalled => File.Exists(ExecutablePath);
+
+        /// <summary>Pure form of the availability rule, so it can be tested for any Windows build.</summary>
+        public static bool IsSupportedOn(int windowsBuild, bool componentInstalled) =>
+            windowsBuild >= MinimumWindowsBuild && componentInstalled;
+
         /// <summary>
         /// Languages Windows Live Captions can be configured for. The language that is actually
         /// used is picked inside Windows Live Captions itself, so none of these are marked as
@@ -57,6 +74,29 @@ namespace LiveCaptionsTranslator.Platform.Windows
         /// claim to know what is being recognised.
         /// </summary>
         public bool LanguageIsHostControlled => false;
+
+        /// <summary>
+        /// False on Windows 10 and on any Windows 11 build older than 22H2: Live Captions simply
+        /// is not there. The host then falls back to a backend that captures audio itself.
+        /// </summary>
+        public bool IsAvailable => IsSupportedOn(WindowsBuild, ComponentInstalled);
+
+        public string? UnavailableReason
+        {
+            get
+            {
+                if (IsAvailable)
+                    return null;
+
+                if (WindowsBuild < MinimumWindowsBuild)
+                {
+                    return $"Windows 实时字幕需要 Windows 11 22H2（build {MinimumWindowsBuild}）或更高，" +
+                           $"当前系统是 build {WindowsBuild}。";
+                }
+
+                return "系统里找不到 LiveCaptions.exe，Windows 实时字幕组件未安装。";
+            }
+        }
 
         public IReadOnlyList<AsrLanguage> SupportedLanguages => Languages;
 

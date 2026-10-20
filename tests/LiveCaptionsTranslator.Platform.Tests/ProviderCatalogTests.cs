@@ -40,6 +40,51 @@ public class ProviderCatalogTests
         Assert.True(registry.Create("iflytek-iat").RequiresAudioSource);
     }
 
+    [Theory]
+    [InlineData(22621, true, true)]    // Windows 11 22H2 with the component installed
+    [InlineData(22631, true, true)]    // Windows 11 23H2
+    [InlineData(19045, true, false)]   // Windows 10 22H2: build is too old
+    [InlineData(20348, true, false)]   // Server 2022
+    [InlineData(22621, false, false)]  // component missing
+    public void Live_captions_availability_rule(int build, bool installed, bool expected)
+        => Assert.Equal(expected, WindowsLiveCaptionsProvider.IsSupportedOn(build, installed));
+
+    [Fact]
+    public void Live_captions_reports_availability_consistently_on_this_machine()
+    {
+        var provider = BuildRegistry().Create("windows-livecaptions");
+
+        if (provider.IsAvailable)
+        {
+            Assert.Null(provider.UnavailableReason);
+        }
+        else
+        {
+            // A backend that cannot run must say why, so the settings UI can explain it.
+            Assert.False(string.IsNullOrWhiteSpace(provider.UnavailableReason));
+        }
+    }
+
+    [Fact]
+    public void The_iflytek_backend_works_without_any_windows_component()
+    {
+        // This is what makes the app usable on Windows 10: no Live Captions, no problem.
+        var provider = BuildRegistry().Create("iflytek-iat");
+
+        Assert.True(provider.IsAvailable);
+        Assert.Null(provider.UnavailableReason);
+    }
+
+    [Fact]
+    public void The_selector_never_picks_a_backend_that_cannot_run()
+    {
+        var registry = BuildRegistry();
+        var selection = AsrProviderSelector.Select(registry, "windows-livecaptions");
+
+        var chosen = registry.Create(selection.ProviderId);
+        Assert.True(chosen.IsAvailable, $"selector chose '{selection.ProviderId}', which is not available here");
+    }
+
     [Fact]
     public void Verified_language_state_survives_the_catalog()
     {

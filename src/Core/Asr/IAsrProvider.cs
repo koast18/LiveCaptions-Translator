@@ -65,6 +65,16 @@ namespace LiveCaptionsTranslator.Core.Asr
         /// </summary>
         bool LanguageIsHostControlled => true;
 
+        /// <summary>
+        /// Whether this backend can run on the current machine. A provider that reports
+        /// <c>false</c> must never be started; the host selects another one instead, so a machine
+        /// without the Windows Live Captions component still works.
+        /// </summary>
+        bool IsAvailable => true;
+
+        /// <summary>Why <see cref="IsAvailable"/> is <c>false</c>, phrased for the settings UI.</summary>
+        string? UnavailableReason => null;
+
         /// <summary>Languages this provider can be asked to recognise.</summary>
         IReadOnlyList<AsrLanguage> SupportedLanguages { get; }
 

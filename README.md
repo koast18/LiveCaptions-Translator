@@ -145,12 +145,16 @@ Windows' built-in LiveCaptions is easy to use, uses few resources, and has extre
 
 | Requirement                                                                                                           | Details                                     |
 |-----------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
-| <img src="https://img.shields.io/badge/Windows-11%20(22H2+)-0078D6?style=for-the-badge&logo=windows&logoColor=white"> | With LiveCaptions support.                  |
+| <img src="https://img.shields.io/badge/Windows-10%20%2F%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white"> | Windows 10 1809 or later.                  |
+| <img src="https://img.shields.io/badge/Windows-11%20(22H2%2B)-0078D6?style=for-the-badge&logo=windows&logoColor=white"> | Only for the `windows-livecaptions` backend. |
 | <img src="https://img.shields.io/badge/.NET-8.0+-512BD4?style=for-the-badge&logo=dotnet&logoColor=white">             | Recommended. Not test in previous versions. |
 
 </div>
 
-This tool is based on Windows LiveCaptions, which is available since **Windows 11 22H2**.
+Upstream is built on Windows LiveCaptions, which only exists since **Windows 11 22H2**.
+This fork does not need it: the `iflytek-iat` backend captures audio itself and runs on
+**Windows 10** as well. When Live Captions is absent the app selects that backend automatically.
+See [Fork notes](#fork-notes-providers-credentials-and-what-is-not-verified).
 
 We suggest you have **.NET runtime 8.0** or higher installed. If you are not available to install one, you can download the ***with runtime*** version but its size is bigger.
 
@@ -232,11 +236,31 @@ touching the caption pipeline:
 | Layer | Interface | Registry | Shipped implementations |
 |---|---|---|---|
 | Speech recognition | `IAsrProvider` (`src/Core/Asr`) | `AsrProviderRegistry` | `windows-livecaptions`, `iflytek-iat` |
-| Audio capture | `IAudioSource` (`src/Core/Audio`) | `AudioSourceCatalog` | WASAPI loopback (system audio), microphone |
+| Audio capture | `IAudioSource` (`src/Core/Audio`) | `AudioSourceRegistry` | WASAPI loopback (system audio), microphone |
 | Translation | `ITranslationProvider` (`src/Core/Translation`) | `TranslationProviderRegistry` | every upstream engine, plus `iflytek-mt` |
 
 `LiveCaptionsTranslator.Core` has no WPF and no Windows dependency, so the protocol work, the
 resampler and the policy decisions are unit tested on every push.
+
+### Windows 10 support
+
+Windows Live Captions is a Windows 11 22H2+ component. The upstream project cannot run without
+it; this fork can:
+
+| Machine | `windows-livecaptions` | `iflytek-iat` |
+|---|---|---|
+| Windows 11 22H2+ | available | available |
+| Windows 11 21H2 / Windows 10 1809+ | **not installed** | available |
+| Windows Server 2022 | **not installed** | available |
+
+`IAsrProvider.IsAvailable` reports this, and `AsrProviderSelector` (in `Core`, unit tested) picks
+a backend that can actually run. On Windows 10 the app therefore starts iFlytek automatically and
+says so in the first caption and in *Settings → Speech Recognition*, instead of failing with
+"Failed to launch LiveCaptions!".
+
+There is no OS version gate anywhere else in the code: both projects target
+`net8.0-windows` with `SupportedOSPlatformVersion 7.0`, so .NET itself only requires
+Windows 10 1607+ / 1809+ depending on the runtime.
 
 ### iFlytek speech recognition: about the credentials
 
@@ -293,3 +317,6 @@ proxy settings apply, which is exactly what upstream did.
   never called with real credentials.
 - **Proxy connectivity.** The resolution logic is unit tested; whether your proxy actually works
   is not.
+- **Windows 11.** Every end-to-end run so far happened on Windows 10 22H2 (build 19045), which
+  is the only machine this was developed on. The Windows 11 path - and the Live Captions
+  backend with it - has never been executed.

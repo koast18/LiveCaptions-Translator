@@ -186,15 +186,23 @@ namespace LiveCaptionsTranslator
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
-            AsrHintText.Text = provider switch
+            string hint = provider switch
             {
                 null => string.Empty,
                 { Id: WindowsLiveCaptionsProvider.ProviderId } =>
-                    "Windows Live Captions does the capture and recognition; choose the source language inside Live Captions itself.",
+                    "Windows Live Captions does the capture and recognition; choose the source language inside Live Captions itself. It only exists on Windows 11 22H2 and later.",
                 { Id: IflytekIatProvider.ProviderId } =>
                     "Streams the selected audio source to iFlytek. Only zh_cn has been exercised so far - the other languages are accepted by the endpoint but not verified against a real speech sample.",
                 _ => string.Empty,
             };
+
+            if (provider is { IsAvailable: false })
+                hint = $"⚠ {provider.UnavailableReason}\n{hint}";
+
+            if (Translator.AsrFallbackNotice is { Length: > 0 } fallback)
+                hint = $"{fallback}\n{hint}";
+
+            AsrHintText.Text = hint;
         }
 
         private IAsrProvider? CreateSelectedProvider() =>

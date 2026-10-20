@@ -92,18 +92,24 @@ namespace LiveCaptionsTranslator
             await StartActiveProviderAsync();
         }
 
-        /// <summary>Creates the provider instance for <paramref name="providerId"/>, falling back to Live Captions.</summary>
+        /// <summary>
+        /// Explains why a different backend than the configured one is running, if that happened
+        /// (typically: Windows Live Captions is absent, so the app fell back to iFlytek).
+        /// </summary>
+        public static string? AsrFallbackNotice { get; private set; }
+
+        /// <summary>Creates the provider instance for <paramref name="providerId"/>.</summary>
         private static void ActivateProvider(string? providerId)
         {
-            string id = !string.IsNullOrWhiteSpace(providerId) && AsrProviders.IsRegistered(providerId!)
-                ? providerId!
-                : WindowsLiveCaptionsProvider.ProviderId;
+            var selection = AsrProviderSelector.Select(AsrProviders, providerId);
 
-            ActiveAsrProvider = AsrProviders.Create(id);
+            AsrFallbackNotice = selection.FellBack ? selection.Reason : null;
+
+            ActiveAsrProvider = AsrProviders.Create(selection.ProviderId);
             LiveCaptions = ActiveAsrProvider as WindowsLiveCaptionsProvider;
 
             if (setting != null)
-                setting.AsrProviderName = id;
+                setting.AsrProviderName = selection.ProviderId;
         }
 
         private static async Task StartActiveProviderAsync()
@@ -133,6 +139,10 @@ namespace LiveCaptionsTranslator
                     },
                     AudioSource = audioSource,
                 });
+
+                // Only surfaced once the replacement backend actually started.
+                if (AsrFallbackNotice is { Length: > 0 } notice && Caption != null)
+                    Caption.DisplayTranslatedCaption = $"[WARNING] {notice}";
             }
             catch (Exception exception)
             {
