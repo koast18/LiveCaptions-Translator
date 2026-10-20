@@ -263,3 +263,126 @@ jobs:
           if ($light.Luma -le 120) { throw "light theme rendered dark (mean luma $($light.Luma))" }
 
           Write-Output "OK: dark renders at luma $($dark.Luma), light at $($light.Luma)"
+
+  # Opens the settings page on a throwaway runner, proves nothing sticks out past the window,
+  # and keeps the screenshot as an artifact. The page used to render about 2000 px wide inside a
+  # 750 px window, which no unit test could see.
+  settings-layout:
+    name: Settings layout
+    runs-on: windows-latest
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Publish
+        run: >
+          dotnet publish LiveCaptionsTranslator.csproj
+          -c Release -r win-x64 --self-contained false
+          -p:PublishSingleFile=true
+          -o ./publish/settings
+
+      - name: The settings page must fit the window
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName System.Drawing, UIAutomationClient, UIAutomationTypes
+          Add-Type @"
+          using System;
+          using System.Runtime.InteropServices;
+          public class Ui {
+              [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+              [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint dx, uint dy, uint d, IntPtr e);
+              [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+              [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+              [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint f);
+              [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+          }
+          "@
+
+          $exe = Join-Path $PWD 'publish/settings/LiveCaptionsTranslator.exe'
+          $work = Join-Path $PWD 'publish/settings'
+          $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
+          Start-Sleep -Seconds 8
+          $p.Refresh()
+          if ($p.HasExited) { throw "the app exited with code $($p.ExitCode)" }
+
+          $root = [System.Windows.Automation.AutomationElement]::RootElement
+          $cond = New-Object System.Windows.Automation.PropertyCondition(
+            [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $p.Id)
+          $win = $null
+          for ($i = 0; $i -lt 20 -and -not $win; $i++) {
+            $win = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
+            if (-not $win) { Start-Sleep -Milliseconds 500 }
+          }
+          if (-not $win) { throw 'the app never created a window' }
+
+          $handle = [IntPtr]$win.Current.NativeWindowHandle
+          [void][Ui]::SetForegroundWindow($handle)
+
+          # The navigation entry is a DataItem named after the page it opens.
+          $item = $win.FindFirst([System.Windows.Automation.TreeScope]::Descendants,
+            (New-Object System.Windows.Automation.PropertyCondition(
+              [System.Windows.Automation.AutomationElement]::NameProperty, 'Setting')))
+          if (-not $item) { throw 'the settings navigation entry was not found' }
+
+          $r = $item.Current.BoundingRectangle
+          for ($click = 0; $click -lt 2; $click++) {
+            [void][Ui]::SetCursorPos([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2))
+            Start-Sleep -Milliseconds 300
+            [Ui]::mouse_event(0x0002, 0, 0, 0, [IntPtr]::Zero)
+            Start-Sleep -Milliseconds 80
+            [Ui]::mouse_event(0x0004, 0, 0, 0, [IntPtr]::Zero)
+            Start-Sleep -Milliseconds 1200
+          }
+
+          $bounds = New-Object Ui+RECT
+          [void][Ui]::GetWindowRect($handle, [ref]$bounds)
+          $width = $bounds.Right - $bounds.Left
+          $height = $bounds.Bottom - $bounds.Top
+
+          $elements = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+            [System.Windows.Automation.Condition]::TrueCondition)
+          $overflow = @()
+          foreach ($e in $elements) {
+            $rect = $e.Current.BoundingRectangle
+            if ($rect.Width -le 0 -or $rect.Height -le 0) { continue }
+            $right = $rect.X + $rect.Width
+            if ($right -gt ($bounds.Right + 1)) {
+              $overflow += ("{0} '{1}' ends at {2}, window ends at {3}" -f
+                $e.Current.ControlType.ProgrammaticName.Replace('ControlType.',''), $e.Current.Name, [int]$right, $bounds.Right)
+            }
+          }
+
+          $bmp = New-Object System.Drawing.Bitmap $width, $height
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $dc = $g.GetHdc()
+          [void][Ui]::PrintWindow($handle, $dc, 2)
+          $g.ReleaseHdc($dc)
+          $g.Dispose()
+          $bmp.Save((Join-Path $PWD 'settings.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+          $bmp.Dispose()
+          if (-not $p.HasExited) { $p.Kill() }
+
+          Write-Output "window ${width}x${height}, $($elements.Count) elements"
+          if ($overflow.Count -gt 0) {
+            $overflow | Select-Object -First 10 | ForEach-Object { Write-Output "  $_" }
+            throw "$($overflow.Count) elements extend past the window"
+          }
+          Write-Output 'OK: every element is inside the window'
+
+      - name: Upload the settings screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: settings-screenshot
+          path: settings.png
+          if-no-files-found: warn
