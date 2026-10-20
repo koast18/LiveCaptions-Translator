@@ -450,6 +450,7 @@
             <ComboBox
                 x:Name="UiLanguageBox"
                 Width="170"
+                HorizontalAlignment="Left"
                 Height="30"
                 Padding="10,4,10,7"
                 FontSize="13.3"

@@ -227,11 +227,11 @@ namespace LiveCaptionsTranslator
             {
                 null => string.Empty,
                 { Id: WindowsLiveCaptionsProvider.ProviderId } =>
-                    "Windows Live Captions does the capture and recognition; choose the source language inside Live Captions itself. It only exists on Windows 11 22H2 and later.",
+                    LocalizationManager.T("Setting_AsrHintLiveCaptions"),
                 { Id: IflytekIatProvider.ProviderId } =>
-                    "Streams the selected audio source to iFlytek. Only zh_cn has been exercised so far - the other languages are accepted by the endpoint but not verified against a real speech sample.",
+                    LocalizationManager.T("Setting_AsrHintIflytek"),
                 { Id: DoubaoAsrProvider.ProviderId } =>
-                    "Streams the selected audio source to Doubao. Press Register to create a device_id/app_key pair on this machine; nothing is committed to the repository.",
+                    LocalizationManager.T("Setting_AsrHintDoubao"),
                 _ => string.Empty,
             };
 

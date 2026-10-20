@@ -160,4 +160,8 @@
 
     <sys:String x:Key="History_Search">搜索</sys:String>
 
+    <sys:String x:Key="Setting_AsrHintLiveCaptions">由 Windows 实时字幕负责采集与识别；源语言请到实时字幕里选。该功能只在 Windows 11 22H2 及以上存在。</sys:String>
+    <sys:String x:Key="Setting_AsrHintIflytek">把选定的音频源推流到 iFlytek。目前只有 zh_cn 实测过，其它语言服务端接受，但没有拿真实语音验证。</sys:String>
+    <sys:String x:Key="Setting_AsrHintDoubao">把选定的音频源推流到豆包。点「注册」可在本机生成 device_id / app_key 对；仓库里不提交任何凭据。</sys:String>
+
 </ResourceDictionary>
