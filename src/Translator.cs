@@ -147,6 +147,7 @@ namespace LiveCaptionsTranslator
                         Settings = setting?.AsrProviderSettings ?? new Dictionary<string, string>(),
                     },
                     AudioSource = audioSource,
+                    Localize = (key, args) => LocalizationManager.T(key, args),
                 });
 
                 // Only surfaced once the replacement backend actually started.
@@ -441,7 +442,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception ex)
             {
-                SnackbarHost.Show("[ERROR] Logging history failed.", ex.Message, SnackbarType.Error,
+                SnackbarHost.Show(LocalizationManager.T("Error_LoggingFailed"), ex.Message, SnackbarType.Error,
                     timeout: 2, closeButton: true);
             }
         }
@@ -461,7 +462,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception ex)
             {
-                SnackbarHost.Show("[ERROR] Logging history failed.", ex.Message, SnackbarType.Error,
+                SnackbarHost.Show(LocalizationManager.T("Error_LoggingFailed"), ex.Message, SnackbarType.Error,
                     timeout: 2, closeButton: true);
             }
         }

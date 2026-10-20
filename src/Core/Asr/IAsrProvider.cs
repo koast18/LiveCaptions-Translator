@@ -1,4 +1,4 @@
-using LiveCaptionsTranslator.Core.Audio;
+﻿using LiveCaptionsTranslator.Core.Audio;
 
 namespace LiveCaptionsTranslator.Core.Asr
 {
@@ -92,5 +92,12 @@ namespace LiveCaptionsTranslator.Core.Asr
 
         /// <summary>Required when <see cref="IAsrProvider.RequiresAudioSource"/> is <c>true</c>.</summary>
         public IAudioSource? AudioSource { get; init; }
+
+        /// <summary>
+        /// Optional localiser: given a string key and its arguments, returns the text to show the
+        /// user. Core has no UI dependency, so the host injects this; when it is absent the provider
+        /// falls back to a neutral English message.
+        /// </summary>
+        public Func<string, object?[], string>? Localize { get; init; }
     }
 }

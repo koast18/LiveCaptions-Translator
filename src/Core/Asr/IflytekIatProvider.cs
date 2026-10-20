@@ -182,7 +182,7 @@ namespace LiveCaptionsTranslator.Core.Asr
                 catch (Exception exception)
                 {
                     failed = true;
-                    context.Sink.OnNotice($"[WARNING] 讯飞连接异常：{exception.Message}");
+                    context.Sink.OnNotice(Localize(context, "Asr_ConnectionError", exception.Message));
                 }
                 finally
                 {
@@ -236,12 +236,12 @@ namespace LiveCaptionsTranslator.Core.Asr
                 if (failures > settings.MaxReconnectAttempts)
                 {
                     context.Sink.OnError(new IflytekIatException(
-                        -1, $"重连 {failures - 1} 次仍未成功，已停止讯飞识别"));
+                        -1, Localize(context, "Asr_GaveUp", failures - 1)));
                     break;
                 }
 
                 context.Sink.OnNotice(
-                    $"[WARNING] 讯飞连接已断开，正在重连（{failures}/{settings.MaxReconnectAttempts}）…");
+                    Localize(context, "Asr_Reconnecting", failures, settings.MaxReconnectAttempts));
 
                 try
                 {
@@ -307,6 +307,10 @@ namespace LiveCaptionsTranslator.Core.Asr
         /// Blocks until at least one captured chunk is queued. Returns <c>false</c> when the input
         /// has ended (the host completed the channel).
         /// </summary>
+        /// <summary>Uses the host localiser when one was injected, English otherwise.</summary>
+        private static string Localize(AsrContext context, string key, params object?[] args) =>
+            context.Localize?.Invoke(key, args) ?? key;
+
         private static async Task<bool> WaitForInputAsync(Channel<byte[]> channel, CancellationToken token)
         {
             try

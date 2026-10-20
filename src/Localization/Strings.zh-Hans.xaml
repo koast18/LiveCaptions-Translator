@@ -144,4 +144,18 @@
     <sys:String x:Key="SettingWindow_ApiUrl">API 地址</sys:String>
     <sys:String x:Key="SettingWindow_ApiUrlBase">API 地址（Base）</sys:String>
 
+    <sys:String x:Key="Error_LoggingFailed">[错误] 写入历史记录失败。</sys:String>
+    <sys:String x:Key="Error_OpenBrowserFailed">[错误] 打开浏览器失败。</sys:String>
+    <sys:String x:Key="Error_UpdateCheckFailed">[错误] 检查更新失败。</sys:String>
+    <sys:String x:Key="Caption_Paused">[已暂停]</sys:String>
+    <sys:String x:Key="History_SaveFailed">保存失败。</sys:String>
+    <sys:String x:Key="History_SaveSuccess">保存成功。</sys:String>
+    <sys:String x:Key="History_FileSavedTo">文件已保存到：{0}</sys:String>
+    <sys:String x:Key="History_FileSaveFailed">文件保存失败：{0}</sys:String>
+    <sys:String x:Key="Asr_LiveCaptionsRestarting">[警告] LiveCaptions 意外退出，正在重启…</sys:String>
+    <sys:String x:Key="Asr_ConnectFailed">[警告] 连接失败：{0}</sys:String>
+    <sys:String x:Key="Asr_ConnectionError">[警告] 连接异常：{0}</sys:String>
+    <sys:String x:Key="Asr_Reconnecting">[警告] 连接已断开，正在重连（{0}/{1}）…</sys:String>
+    <sys:String x:Key="Asr_GaveUp">重连 {0} 次仍未成功，已停止识别。</sys:String>
+
 </ResourceDictionary>

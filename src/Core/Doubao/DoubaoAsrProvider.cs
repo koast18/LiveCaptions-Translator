@@ -212,7 +212,7 @@ namespace LiveCaptionsTranslator.Core.Doubao
                     }
                     catch (Exception exception)
                     {
-                        context.Sink.OnNotice($"[WARNING] 豆包连接失败：{exception.Message}");
+                        context.Sink.OnNotice(Localize(context, "Asr_ConnectFailed", exception.Message));
                         await DelayAsync(streamOptions.ReconnectDelay, token);
                         continue;
                     }
@@ -238,7 +238,7 @@ namespace LiveCaptionsTranslator.Core.Doubao
                     }
                     catch (Exception exception)
                     {
-                        context.Sink.OnNotice($"[WARNING] 豆包连接异常：{exception.Message}");
+                        context.Sink.OnNotice(Localize(context, "Asr_ConnectionError", exception.Message));
                         await streamer.InvalidateAsync();
                         await DelayAsync(streamOptions.ReconnectDelay, token);
                         continue;
@@ -415,6 +415,10 @@ namespace LiveCaptionsTranslator.Core.Doubao
                 // Best effort: results that arrived are already published.
             }
         }
+
+        /// <summary>Uses the host localiser when one was injected, English otherwise.</summary>
+        private static string Localize(AsrContext context, string key, params object?[] args) =>
+            context.Localize?.Invoke(key, args) ?? key;
 
         private static async Task<bool> WaitForInputAsync(Channel<byte[]> channel, CancellationToken token)
         {

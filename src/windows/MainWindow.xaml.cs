@@ -180,7 +180,7 @@ namespace LiveCaptionsTranslator
             }
             catch (Exception ex)
             {
-                SnackbarHost.Show("[ERROR] Update Check Failed.", ex.Message, SnackbarType.Error,
+                SnackbarHost.Show(LocalizationManager.T("Error_UpdateCheckFailed"), ex.Message, SnackbarType.Error,
                     timeout: 2, closeButton: true);
 
                 return;
@@ -220,7 +220,7 @@ namespace LiveCaptionsTranslator
                     }
                     catch (Exception ex)
                     {
-                        SnackbarHost.Show("[ERROR] Open Browser Failed.", ex.Message, SnackbarType.Error,
+                        SnackbarHost.Show(LocalizationManager.T("Error_OpenBrowserFailed"), ex.Message, SnackbarType.Error,
                             timeout: 2, closeButton: true);
                     }
                 }

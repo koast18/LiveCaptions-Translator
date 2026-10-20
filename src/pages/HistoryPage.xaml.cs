@@ -126,11 +126,11 @@ namespace LiveCaptionsTranslator
                 try
                 {
                     await SQLiteHistoryLogger.ExportToCSV(saveFileDialog.FileName);
-                    SnackbarHost.Show("Saved Success.", $"File saved to: {saveFileDialog.FileName}", SnackbarType.Success);
+                    SnackbarHost.Show(LocalizationManager.T("History_SaveSuccess"), $"File saved to: {saveFileDialog.FileName}", SnackbarType.Success);
                 }
                 catch (Exception ex)
                 {
-                    SnackbarHost.Show("Save Failed.", $"File saved faild:{ex.Message}", SnackbarType.Error);
+                    SnackbarHost.Show(LocalizationManager.T("History_SaveFailed"), $"File saved faild:{ex.Message}", SnackbarType.Error);
                 }
             }
         }

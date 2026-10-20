@@ -146,4 +146,18 @@
     <sys:String x:Key="SettingWindow_ApiUrl">API Url</sys:String>
     <sys:String x:Key="SettingWindow_ApiUrlBase">API Url (Base)</sys:String>
 
+    <sys:String x:Key="Error_LoggingFailed">[ERROR] Logging history failed.</sys:String>
+    <sys:String x:Key="Error_OpenBrowserFailed">[ERROR] Open Browser Failed.</sys:String>
+    <sys:String x:Key="Error_UpdateCheckFailed">[ERROR] Update Check Failed.</sys:String>
+    <sys:String x:Key="Caption_Paused">[Paused]</sys:String>
+    <sys:String x:Key="History_SaveFailed">Save Failed.</sys:String>
+    <sys:String x:Key="History_SaveSuccess">Saved Success.</sys:String>
+    <sys:String x:Key="History_FileSavedTo">File saved to: {0}</sys:String>
+    <sys:String x:Key="History_FileSaveFailed">File saved faild:{0}</sys:String>
+    <sys:String x:Key="Asr_LiveCaptionsRestarting">[WARNING] LiveCaptions was unexpectedly closed, restarting...</sys:String>
+    <sys:String x:Key="Asr_ConnectFailed">[WARNING] Connection failed: {0}</sys:String>
+    <sys:String x:Key="Asr_ConnectionError">[WARNING] Connection error: {0}</sys:String>
+    <sys:String x:Key="Asr_Reconnecting">[WARNING] Connection lost, reconnecting ({0}/{1})…</sys:String>
+    <sys:String x:Key="Asr_GaveUp">Gave up after {0} reconnect attempts, recognition stopped.</sys:String>
+
 </ResourceDictionary>
