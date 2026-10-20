@@ -385,8 +385,8 @@ jobs:
             $bmp.Dispose()
             if (-not $p.HasExited) { $p.Kill() }
 
-            Write-Output "$language : ${width}x${height}, $($elements.Count) elements, $($overflow.Count) past the edge"
-            foreach ($o in ($overflow | Select-Object -First 5)) { Write-Output "    $o" }
+            Write-Host "$language : ${width}x${height}, $($elements.Count) elements, $($overflow.Count) past the edge"
+            foreach ($o in ($overflow | Select-Object -First 5)) { Write-Host "    $o" }
             if ($overflow.Count -gt 0) { return "$language : $($overflow.Count) elements extend past the window" }
             return $null
           }
