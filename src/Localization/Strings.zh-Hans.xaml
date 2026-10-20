@@ -11,6 +11,8 @@
     <sys:String x:Key="Nav_History">历史</sys:String>
     <sys:String x:Key="Nav_Info">关于</sys:String>
 
+    <sys:String x:Key="Setting_UiLanguage">界面语言</sys:String>
+
     <sys:String x:Key="Caption_CopyTooltip">点击复制</sys:String>
     <sys:String x:Key="Caption_Copied">已复制。</sys:String>
     <sys:String x:Key="Caption_CopyFailed">复制失败。</sys:String>

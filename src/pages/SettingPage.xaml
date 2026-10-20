@@ -23,6 +23,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Column="0" Orientation="Vertical">
@@ -437,6 +438,23 @@
                 FontSize="11.5"
                 Opacity="0.7"
                 TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!--  Interface language. Swapping the merged string dictionary updates every open window.  -->
+        <StackPanel
+            Grid.Row="4"
+            Grid.ColumnSpan="5"
+            Margin="15,15,0,0"
+            Orientation="Vertical">
+            <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_UiLanguage}" />
+            <ComboBox
+                x:Name="UiLanguageBox"
+                Width="170"
+                Height="30"
+                Padding="10,4,10,7"
+                FontSize="13.3"
+                DisplayMemberPath="DisplayName"
+                SelectionChanged="UiLanguageBox_SelectionChanged" />
         </StackPanel>
 
         <!--  Proxy. Google / OpenAI / OpenRouter / DeepL are unreachable from some networks,

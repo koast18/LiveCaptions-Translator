@@ -13,6 +13,8 @@
     <sys:String x:Key="Nav_History">History</sys:String>
     <sys:String x:Key="Nav_Info">Info</sys:String>
 
+    <sys:String x:Key="Setting_UiLanguage">Interface Language</sys:String>
+
     <sys:String x:Key="Caption_CopyTooltip">Click to Copy</sys:String>
     <sys:String x:Key="Caption_Copied">Copied.</sys:String>
     <sys:String x:Key="Caption_CopyFailed">Copy Failed.</sys:String>

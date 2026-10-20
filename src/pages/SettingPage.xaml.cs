@@ -31,9 +31,39 @@ namespace LiveCaptionsTranslator
             LoadAPISetting();
             LoadAsrSettings();
             LoadNetworkSettings();
+            LoadLanguageSettings();
         }
 
         private bool loadingNetworkSettings;
+        private bool loadingLanguageSettings;
+
+        private void LoadLanguageSettings()
+        {
+            loadingLanguageSettings = true;
+            try
+            {
+                UiLanguageBox.ItemsSource = LocalizationManager.Available;
+                UiLanguageBox.SelectedItem = LocalizationManager.Available
+                    .FirstOrDefault(option => option.Id == LocalizationManager.Normalize(Translator.Setting?.UiLanguage))
+                    ?? LocalizationManager.Available[0];
+            }
+            finally
+            {
+                loadingLanguageSettings = false;
+            }
+        }
+
+        private void UiLanguageBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (loadingLanguageSettings || UiLanguageBox.SelectedItem is not UiLanguage language)
+                return;
+
+            if (Translator.Setting is not null)
+                Translator.Setting.UiLanguage = language.Id;
+
+            // No restart: replacing the merged dictionary re-resolves every DynamicResource.
+            LocalizationManager.Apply(language.Id);
+        }
 
         private void LoadNetworkSettings()
         {
