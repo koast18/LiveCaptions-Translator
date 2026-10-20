@@ -66,6 +66,11 @@ namespace LiveCaptionsTranslator.Core.Doubao
         bool IsVadTimeout,
         bool IsStreamFinish)
     {
+        /// <summary>Start of the recognised span in seconds; a new value means a new segment.</summary>
+        public double StartTime { get; init; }
+
+        public double EndTime { get; init; }
+
         /// <summary>True when the service will not revise this segment any more.</summary>
         public bool IsFinal =>
             IsStreamFinish || IsForceFinished || IsVadFinished || IsVadTimeout;
@@ -100,7 +105,11 @@ namespace LiveCaptionsTranslator.Core.Doubao
                     IsVadFinished: ReadBool(item, "is_vad_finished"),
                     IsForceFinished: ReadBool(item, "is_force_finished"),
                     IsVadTimeout: ReadBool(item, "is_vad_timeout"),
-                    IsStreamFinish: ReadBool(item, "stream_asr_finish")));
+                    IsStreamFinish: ReadBool(item, "stream_asr_finish"))
+                {
+                    StartTime = ReadDouble(item, "start_time"),
+                    EndTime = ReadDouble(item, "end_time"),
+                });
             }
 
             return segments;
@@ -115,9 +124,61 @@ namespace LiveCaptionsTranslator.Core.Doubao
                 ? value.GetString() ?? string.Empty
                 : string.Empty;
 
+        private static double ReadDouble(JsonElement element, string name) =>
+            element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number
+                ? value.GetDouble()
+                : -1;
+
         private static bool ReadBool(JsonElement element, string name) =>
             element.TryGetProperty(name, out var value) &&
             value.ValueKind is JsonValueKind.True;
+    }
+
+    /// <summary>
+    /// Turns the service's per-segment stream into the accumulated transcript the caption pipeline
+    /// expects. A result revises the current segment; a result with a different <c>start_time</c>
+    /// starts a new one and commits the previous text.
+    /// </summary>
+    public sealed class DoubaoTranscriptBuilder
+    {
+        private readonly System.Text.StringBuilder committed = new();
+        private string current = string.Empty;
+        private double currentStart = -1;
+
+        /// <summary>Text already committed, i.e. segments that will not be revised again.</summary>
+        public string Committed => committed.ToString();
+
+        /// <summary>The segment currently being revised.</summary>
+        public string Current => current;
+
+        /// <summary>Full transcript seen so far.</summary>
+        public string Text => committed + current;
+
+        /// <summary>Applies one result and returns the transcript plus whether it was finalised.</summary>
+        public (string Text, bool IsFinal) Append(DoubaoResultSegment segment)
+        {
+            ArgumentNullException.ThrowIfNull(segment);
+
+            if (currentStart >= 0 && segment.StartTime > currentStart + 1e-6)
+            {
+                committed.Append(current);
+                current = string.Empty;
+            }
+
+            if (segment.IsFinal)
+            {
+                committed.Append(segment.Text);
+                current = string.Empty;
+                currentStart = -1;
+
+                return (committed.ToString(), true);
+            }
+
+            currentStart = segment.StartTime;
+            current = segment.Text;
+
+            return (committed + current, false);
+        }
     }
 
     /// <summary>The socket half of a session; abstracted so the flow can be tested without a network.</summary>

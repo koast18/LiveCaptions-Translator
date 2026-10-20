@@ -309,15 +309,23 @@ namespace LiveCaptionsTranslator.Core.Doubao
             return false;
         }
 
+        /// <summary>
+        /// Reads results and republishes them as an accumulated transcript: the service sends one
+        /// segment at a time, and the caption pipeline expects the whole transcript.
+        /// </summary>
         private static async Task PumpAsync(DoubaoAsrSession session, IAsrSink sink, CancellationToken token)
         {
+            var transcript = new DoubaoTranscriptBuilder();
+
             await session.PumpAsync(
                 segment =>
                 {
-                    if (segment.IsFinal)
-                        sink.OnFinal(segment.Text);
+                    var (text, isFinal) = transcript.Append(segment);
+
+                    if (isFinal)
+                        sink.OnFinal(text);
                     else
-                        sink.OnPartial(segment.Text);
+                        sink.OnPartial(text);
 
                     return Task.CompletedTask;
                 },

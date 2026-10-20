@@ -438,3 +438,70 @@ public class DoubaoAsrSessionTests
         Assert.Equal(0, streamer.ConsecutiveFailures);
     }
 }
+
+public class DoubaoTranscriptBuilderTests
+{
+    private static DoubaoResultSegment Interim(string text, double start) =>
+        new(text, IsInterim: true, IsVadFinished: false, IsForceFinished: false,
+            IsVadTimeout: false, IsStreamFinish: false) { StartTime = start };
+
+    private static DoubaoResultSegment Final(string text, double start) =>
+        new(text, IsInterim: false, IsVadFinished: true, IsForceFinished: false,
+            IsVadTimeout: false, IsStreamFinish: false) { StartTime = start };
+
+    [Fact]
+    public void A_growing_segment_replaces_itself()
+    {
+        var builder = new DoubaoTranscriptBuilder();
+
+        Assert.Equal("今天天", builder.Append(Interim("今天天", 0)).Text);
+        Assert.Equal("今天天气不错。", builder.Append(Interim("今天天气不错。", 0)).Text);
+        Assert.Equal("今天天气不错。", builder.Committed);
+    }
+
+    [Fact]
+    public void A_new_start_time_commits_the_previous_segment()
+    {
+        var builder = new DoubaoTranscriptBuilder();
+
+        builder.Append(Interim("今天天气不错。", 0));
+        builder.Append(Interim("我", 1.81));
+
+        // The observed stream: 0 -> 1.81 starts the second sentence.
+        Assert.Equal("今天天气不错。我", builder.Text);
+        Assert.Equal("今天天气不错。", builder.Committed);
+
+        builder.Append(Interim("我们一起去公园散步吧。", 1.81));
+
+        Assert.Equal("今天天气不错。我们一起去公园散步吧。", builder.Text);
+    }
+
+    [Fact]
+    public void A_final_segment_is_committed_and_resets_the_state()
+    {
+        var builder = new DoubaoTranscriptBuilder();
+
+        builder.Append(Interim("今天天气不错。", 0));
+        var (text, isFinal) = builder.Append(Final("今天天气不错。", 0));
+
+        Assert.True(isFinal);
+        Assert.Equal("今天天气不错。", text);
+        Assert.Equal(string.Empty, builder.Current);
+
+        // A later segment continues from the committed text.
+        builder.Append(Interim("我们", 1.81));
+        Assert.Equal("今天天气不错。我们", builder.Text);
+    }
+
+    [Fact]
+    public void Missing_start_times_still_accumulate()
+    {
+        var builder = new DoubaoTranscriptBuilder();
+
+        // Both report -1, which must not look like a new segment every time.
+        builder.Append(Interim("甲", -1));
+        builder.Append(Interim("乙", -1));
+
+        Assert.Equal("乙", builder.Text);
+    }
+}
