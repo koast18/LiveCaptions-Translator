@@ -12,11 +12,11 @@
 
     <Grid Margin="15">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" MinWidth="150" />
+            <ColumnDefinition Width="*" MinWidth="150" />
+            <ColumnDefinition Width="*" MinWidth="150" />
+            <ColumnDefinition Width="*" MinWidth="150" />
+            <ColumnDefinition Width="*" MinWidth="150" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -31,7 +31,7 @@
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
                     <TextBlock Margin="2.5,0,0,5" Text="LiveCaptions" />
                     <ui:Flyout x:Name="LiveCaptionsInfoFlyout">
-                        <TextBlock Width="300" TextWrapping="Wrap">
+                        <TextBlock MaxWidth="300" TextWrapping="Wrap">
                             <Run Text="{DynamicResource Setting_LiveCaptionsNote1}" />
                             <Run FontWeight="DemiBold" TextDecorations="Underline" Text="{DynamicResource Setting_LiveCaptionsNote2}" />
                             <Run Text="{DynamicResource Setting_LiveCaptionsNote3}" />
@@ -44,6 +44,7 @@
                     <Button
                         x:Name="LiveCaptionsInfo"
                         Width="15"
+                        HorizontalAlignment="Left"
                         Height="15"
                         Margin="-5,-3,0,0"
                         Padding="0"
@@ -57,6 +58,7 @@
                 <ui:Button
                     x:Name="LiveCaptionsButton"
                     Width="120"
+                    HorizontalAlignment="Left"
                     Height="30"
                     Padding="11,4,11,4"
                     Click="LiveCaptionsButton_click">
@@ -68,7 +70,7 @@
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
                     <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_ApiInterval}" />
                     <ui:Flyout x:Name="FrequencyInfoFlyout">
-                        <TextBlock Width="300" TextWrapping="Wrap">
+                        <TextBlock MaxWidth="300" TextWrapping="Wrap">
                             <Run Text="{DynamicResource Setting_ApiIntervalHint1}" />
                             <Run Text="{DynamicResource Setting_ApiIntervalHint2}" />
                             <Run FontWeight="SemiBold" Text="{DynamicResource Setting_ApiIntervalHint3}" />
@@ -78,6 +80,7 @@
                     <Button
                         x:Name="FrequencyInfo"
                         Width="15"
+                        HorizontalAlignment="Left"
                         Height="15"
                         Margin="-5,-3,0,0"
                         Padding="0"
@@ -91,6 +94,7 @@
                 <StackPanel Orientation="Horizontal">
                     <Slider
                         Width="120"
+                        HorizontalAlignment="Left"
                         Margin="0,0,5,0"
                         AutoToolTipPlacement="TopLeft"
                         AutoToolTipPrecision="0"
@@ -106,13 +110,14 @@
                     <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_TranslateApi}" />
                     <ui:Flyout x:Name="TranslateAPIInfoFlyout">
                         <TextBlock
-                            Width="300"
+                            MaxWidth="300"
                             Text="{DynamicResource Setting_TranslateApiHint}"
                             TextWrapping="Wrap" />
                     </ui:Flyout>
                     <Button
                         x:Name="TranslateAPIInfo"
                         Width="15"
+                        HorizontalAlignment="Left"
                         Height="15"
                         Margin="-5,-3,0,0"
                         Padding="0"
@@ -126,6 +131,7 @@
                 <ComboBox
                     x:Name="TranslateAPIBox"
                     Width="150"
+                    HorizontalAlignment="Left"
                     Height="30"
                     Padding="10,4,10,7"
                     FontSize="13.3"
@@ -140,7 +146,7 @@
                         VerticalAlignment="Center"
                         Text="{DynamicResource Setting_TargetLanguage}" />
                     <ui:Flyout x:Name="TargetLangInfoFlyout">
-                        <TextBlock Width="350" TextWrapping="Wrap">
+                        <TextBlock MaxWidth="350" TextWrapping="Wrap">
                             <Run FontWeight="DemiBold" TextDecorations="Underline" Text="{DynamicResource Setting_TargetLangHint1}" />
                             <Run Text="{DynamicResource Setting_TargetLangHint2}" />
                             <Run FontWeight="Bold" Text="{DynamicResource Setting_TargetLangHint3}" />
@@ -152,6 +158,7 @@
                     <Button
                         x:Name="TargetLangInfo"
                         Width="15"
+                        HorizontalAlignment="Left"
                         Height="15"
                         Margin="-5,-3,0,0"
                         Padding="0"
@@ -165,6 +172,7 @@
                 <ComboBox
                     x:Name="TargetLangBox"
                     Width="150"
+                    HorizontalAlignment="Left"
                     Height="30"
                     Padding="10,4,10,7"
                     FontSize="13.3"
@@ -182,6 +190,7 @@
                 <ui:Button
                     x:Name="APISettingButton"
                     Width="100"
+                    HorizontalAlignment="Left"
                     Height="30"
                     Padding="11,4,11,4"
                     Click="APISettingButton_click">
@@ -192,6 +201,7 @@
                 <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_ShowLatency}" />
                 <ui:ToggleSwitch
                     Width="100"
+                    HorizontalAlignment="Left"
                     Height="30"
                     Padding="10,4,10,7"
                     IsChecked="{Binding MainWindow.LatencyShow, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -205,7 +215,7 @@
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
                     <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_Contexts}" />
                     <ui:Flyout x:Name="CaptionLogMaxInfoFlyout">
-                        <TextBlock Width="300" TextWrapping="Wrap">
+                        <TextBlock MaxWidth="300" TextWrapping="Wrap">
                             <Run FontWeight="Bold" Text="{DynamicResource Setting_ContextsLabel}" />
                             <Run Text="{DynamicResource Setting_ContextsHint1}" />
                             <Run FontWeight="Bold" Text="{DynamicResource Setting_ContextAware}" />
@@ -223,6 +233,7 @@
                     <Button
                         x:Name="CaptionLogMaxInfo"
                         Width="15"
+                        HorizontalAlignment="Left"
                         Height="15"
                         Margin="-5,-3,0,0"
                         Padding="0"
@@ -235,6 +246,7 @@
                 </StackPanel>
                 <ui:NumberBox
                     Width="135"
+                    HorizontalAlignment="Left"
                     Height="30"
                     Padding="10,4,10,7"
                     FontSize="13.3"
@@ -253,6 +265,7 @@
                 <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_DisplaySentences}" />
                 <ui:NumberBox
                     Width="135"
+                    HorizontalAlignment="Left"
                     Height="30"
                     Padding="10,4,10,7"
                     FontSize="13.3"
@@ -274,6 +287,7 @@
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
                     <ui:ToggleSwitch
                         Width="90"
+                        HorizontalAlignment="Left"
                         Height="30"
                         Padding="10,4,10,7"
                         IsChecked="{Binding ContextAware, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -282,6 +296,7 @@
                     <Button
                         x:Name="ContextAwareInfo"
                         Width="15"
+                        HorizontalAlignment="Left"
                         Height="15"
                         Margin="-5,-3,0,0"
                         Padding="0"
@@ -292,7 +307,7 @@
                         <ui:SymbolIcon Symbol="Info16" />
                     </Button>
                     <ui:Flyout x:Name="ContextAwareInfoFlyout">
-                        <TextBlock Width="300" TextWrapping="Wrap">
+                        <TextBlock MaxWidth="300" TextWrapping="Wrap">
                             <Run Text="{DynamicResource Setting_ContextAwareHint1}" />
                             <Run Text="{DynamicResource Setting_ContextAwareHint2}" />
                         </TextBlock>
