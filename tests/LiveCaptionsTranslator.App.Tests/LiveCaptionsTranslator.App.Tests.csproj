@@ -23,6 +23,10 @@
 
 	<ItemGroup>
 		<!-- The dictionaries are parsed by the parity test. -->
+		<None Include="..\..\src\**\*.xaml"
+		      Exclude="..\..\src\Localization\Strings.*.xaml"
+		      Link="XamlUnderTest\%(RecursiveDir)%(Filename)%(Extension)"
+		      CopyToOutputDirectory="PreserveNewest" />
 		<None Include="..\..\src\Localization\Strings.*.xaml"
 		      Link="Localization\%(Filename)%(Extension)"
 		      CopyToOutputDirectory="PreserveNewest" />
