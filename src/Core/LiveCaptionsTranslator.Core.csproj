@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
@@ -10,5 +10,10 @@
 		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 		<IsPackable>false</IsPackable>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- The protobuf reader/writer are internal; the codec tests drive them directly. -->
+		<InternalsVisibleTo Include="LiveCaptionsTranslator.Core.Tests" />
+	</ItemGroup>
 
 </Project>

@@ -25,10 +25,10 @@ public class DoubaoProtobufTests
         using var document = Golden();
         var states = document.RootElement.GetProperty("frameStates");
 
-        Assert.Equal(states.GetProperty("unspecified").GetInt32(), (int)DoubaoFrameState.Unspecified);
-        Assert.Equal(states.GetProperty("first").GetInt32(), (int)DoubaoFrameState.First);
-        Assert.Equal(states.GetProperty("middle").GetInt32(), (int)DoubaoFrameState.Middle);
-        Assert.Equal(states.GetProperty("last").GetInt32(), (int)DoubaoFrameState.Last);
+        Assert.Equal((int)DoubaoFrameState.Unspecified, states.GetProperty("unspecified").GetInt32());
+        Assert.Equal((int)DoubaoFrameState.First, states.GetProperty("first").GetInt32());
+        Assert.Equal((int)DoubaoFrameState.Middle, states.GetProperty("middle").GetInt32());
+        Assert.Equal((int)DoubaoFrameState.Last, states.GetProperty("last").GetInt32());
 
         Assert.Equal(1, (int)DoubaoFrameState.First);
         Assert.Equal(3, (int)DoubaoFrameState.Middle);
