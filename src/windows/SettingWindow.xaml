@@ -6,7 +6,7 @@
     xmlns:local="clr-namespace:LiveCaptionsTranslator"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="API Setting"
+    Title="{DynamicResource Setting_ApiSetting}"
     Width="950"
     Height="500"
     ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
@@ -29,7 +29,7 @@
             Height="27"
             ShowMaximize="False">
             <ui:TitleBar.Header>
-                <ui:TextBlock Padding="15,0,0,0" VerticalAlignment="Center">API Setting</ui:TextBlock>
+                <ui:TextBlock Padding="15,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Setting_ApiSetting}" />
             </ui:TitleBar.Header>
         </ui:TitleBar>
 
@@ -52,7 +52,7 @@
                             Tag="Prompt">
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Margin="0,0,10,0" Symbol="DocumentCatchUp16" />
-                                <ui:TextBlock VerticalAlignment="Center" Text="Prompt" />
+                                <ui:TextBlock VerticalAlignment="Center" Text="{DynamicResource SettingWindow_Prompt}" />
                             </StackPanel>
                         </ui:Button>
 
@@ -198,7 +198,7 @@
                             Margin="0,0,0,10"
                             FontSize="28"
                             FontWeight="Heavy"
-                            Text="API Setting" />
+                            Text="{DynamicResource Setting_ApiSetting}" />
 
                         <StackPanel x:Name="AllSettings" Margin="5">
                             <StackPanel x:Name="PromptSection" Margin="20">
@@ -206,14 +206,14 @@
                                     Margin="10"
                                     FontSize="20"
                                     FontWeight="Medium"
-                                    Text="Prompt" />
+                                    Text="{DynamicResource SettingWindow_Prompt}" />
                                 <ui:Card Padding="15">
                                     <StackPanel Margin="15,0,15,0" Orientation="Vertical">
                                         <ui:TextBlock Margin="2.5,0,0,5" TextWrapping="Wrap">
-                                            <Run FontWeight="Bold" Text="Note 1:" />
-                                            <Run Text="The {0} in the prompt indicates the target language, so make sure your prompt includes {0}." />
-                                            <Run FontWeight="Bold" Text="&#x0A;Note 2:" />
-                                            <Run Text="The source text is enclosed with 🔤." />
+                                            <Run FontWeight="Bold" Text="{DynamicResource SettingWindow_Note1}" />
+                                            <Run Text="{DynamicResource SettingWindow_PromptPlaceholder}" />
+                                            <Run FontWeight="Bold" Text="{DynamicResource SettingWindow_Note2}" />
+                                            <Run Text="{DynamicResource SettingWindow_SourceEnclosed}" />
                                         </ui:TextBlock>
                                         <ui:TextBox
                                             x:Name="PromptTextBox"
@@ -239,7 +239,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="{DynamicResource SettingWindow_CurrentConfig}" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -261,17 +261,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="{DynamicResource SettingWindow_New}"
                                                     Tag="Ollama" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="{DynamicResource SettingWindow_Delete}"
                                                     Tag="Ollama" />
                                                 <ui:Flyout x:Name="OllamaDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="{DynamicResource SettingWindow_KeepOneConfig}"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -292,7 +292,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Model Name" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ModelName}" />
                                                 <ui:TextBox
                                                     Width="130"
                                                     Height="30"
@@ -305,7 +305,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Temperature" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_Temperature}" />
                                                 <ui:NumberBox
                                                     Width="130"
                                                     Height="30"
@@ -324,12 +324,12 @@
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
                                                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ApiUrl}" />
                                                     <ui:Flyout x:Name="OllamaAPIUrlInfoFlyout">
                                                         <ui:TextBlock Width="170" TextWrapping="Wrap">
-                                                            <Run Text="No need to explicitly add" />
+                                                            <Run Text="{DynamicResource SettingWindow_NoNeedToAdd}" />
                                                             <Run FontWeight="Bold" Text="`api/chat`" />
-                                                            <Run Text="suffix." />
+                                                            <Run Text="{DynamicResource SettingWindow_Suffix}" />
                                                         </ui:TextBlock>
                                                     </ui:Flyout>
                                                     <Button
@@ -371,7 +371,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="{DynamicResource SettingWindow_CurrentConfig}" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -393,17 +393,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="{DynamicResource SettingWindow_New}"
                                                     Tag="LMStudio" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="{DynamicResource SettingWindow_Delete}"
                                                     Tag="LMStudio" />
                                                 <ui:Flyout x:Name="LMStudioDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="{DynamicResource SettingWindow_KeepOneConfig}"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -426,7 +426,7 @@
                                                 Grid.ColumnSpan="2"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Model Name" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ModelName}" />
                                                 <StackPanel Orientation="Horizontal">
                                                     <ComboBox
                                                         x:Name="LMStudioModelComboBox"
@@ -443,7 +443,7 @@
                                                         x:Name="LMStudioLoadModelsButton"
                                                         Margin="10,0,0,0"
                                                         Padding="8,4,8,4"
-                                                        Content="Load Models"
+                                                        Content="{DynamicResource SettingWindow_LoadModels}"
                                                         Click="LoadModelsButton_Click"
                                                         Tag="LMStudio" />
                                                 </StackPanel>
@@ -455,7 +455,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Temperature" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_Temperature}" />
                                                 <ui:NumberBox
                                                     Width="130"
                                                     Height="30"
@@ -476,12 +476,12 @@
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
                                                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="API Url (Base)" />
+                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ApiUrlBase}" />
                                                     <ui:Flyout x:Name="LMStudioAPIUrlInfoFlyout">
                                                         <ui:TextBlock Width="250" TextWrapping="Wrap">
-                                                            <Run Text="Base URL ending with" />
+                                                            <Run Text="{DynamicResource SettingWindow_BaseUrlEnding}" />
                                                             <Run FontWeight="Bold" Text="`api/v1`" />
-                                                            <Run Text=". Chat endpoint and models are appended automatically." />
+                                                            <Run Text="{DynamicResource SettingWindow_ChatAppended}" />
                                                         </ui:TextBlock>
                                                     </ui:Flyout>
                                                     <Button
@@ -524,7 +524,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="{DynamicResource SettingWindow_CurrentConfig}" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -546,17 +546,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="{DynamicResource SettingWindow_New}"
                                                     Tag="OpenAI" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="{DynamicResource SettingWindow_Delete}"
                                                     Tag="OpenAI" />
                                                 <ui:Flyout x:Name="OpenAIDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="{DynamicResource SettingWindow_KeepOneConfig}"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -577,7 +577,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Model Name" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ModelName}" />
                                                 <ui:TextBox
                                                     Width="130"
                                                     Height="30"
@@ -590,7 +590,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Temperature" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_Temperature}" />
                                                 <ui:NumberBox
                                                     Width="130"
                                                     Height="30"
@@ -609,14 +609,14 @@
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
                                                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                    <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ApiUrl}" />
                                                     <ui:Flyout x:Name="OpenAIAPIUrlInfoFlyout">
                                                         <ui:TextBlock Width="300" TextWrapping="Wrap">
-                                                            <Run Text="Use Full Url (typically ending with" />
+                                                            <Run Text="{DynamicResource SettingWindow_UseFullUrl}" />
                                                             <Run FontWeight="Bold" Text="`v1/chat/completions`" />
-                                                            <Run Text=") instead of Base Url (typically ending with just" />
+                                                            <Run Text="{DynamicResource SettingWindow_InsteadOfBase}" />
                                                             <Run FontWeight="Bold" Text="`v1`" />
-                                                            <Run Text=")." />
+                                                            <Run Text="{DynamicResource SettingWindow_CloseParen}" />
                                                         </ui:TextBlock>
                                                     </ui:Flyout>
                                                     <Button
@@ -671,7 +671,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="{DynamicResource SettingWindow_CurrentConfig}" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -693,17 +693,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="{DynamicResource SettingWindow_New}"
                                                     Tag="OpenRouter" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="{DynamicResource SettingWindow_Delete}"
                                                     Tag="OpenRouter" />
                                                 <ui:Flyout x:Name="OpenRouterDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="{DynamicResource SettingWindow_KeepOneConfig}"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -724,7 +724,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Model Name" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ModelName}" />
                                                 <ui:TextBox
                                                     Width="130"
                                                     Height="30"
@@ -737,7 +737,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Temperature" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_Temperature}" />
                                                 <ui:NumberBox
                                                     Width="130"
                                                     Height="30"
@@ -782,7 +782,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="{DynamicResource SettingWindow_CurrentConfig}" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -804,17 +804,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="{DynamicResource SettingWindow_New}"
                                                     Tag="DeepL" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="{DynamicResource SettingWindow_Delete}"
                                                     Tag="DeepL" />
                                                 <ui:Flyout x:Name="DeepLDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="{DynamicResource SettingWindow_KeepOneConfig}"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -833,7 +833,7 @@
                                                 Grid.Row="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ApiUrl}" />
                                                 <ui:TextBox
                                                     Width="200"
                                                     Height="30"
@@ -872,7 +872,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="{DynamicResource SettingWindow_CurrentConfig}" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -894,17 +894,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="{DynamicResource SettingWindow_New}"
                                                     Tag="Youdao" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="{DynamicResource SettingWindow_Delete}"
                                                     Tag="Youdao" />
                                                 <ui:Flyout x:Name="YoudaoDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="{DynamicResource SettingWindow_KeepOneConfig}"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -925,7 +925,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ApiUrl}" />
                                                 <ui:TextBox
                                                     Width="200"
                                                     Height="30"
@@ -979,7 +979,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="{DynamicResource SettingWindow_CurrentConfig}" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -1001,17 +1001,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="{DynamicResource SettingWindow_New}"
                                                     Tag="MTranServer" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="{DynamicResource SettingWindow_Delete}"
                                                     Tag="MTranServer" />
                                                 <ui:Flyout x:Name="MTranServerDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="{DynamicResource SettingWindow_KeepOneConfig}"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -1032,7 +1032,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="Source Language" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_LiveCaptionsNote2}" />
                                                 <ComboBox
                                                     Width="130"
                                                     Height="30"
@@ -1052,7 +1052,7 @@
                                                 Grid.Column="1"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ApiUrl}" />
                                                 <ui:TextBox
                                                     Width="200"
                                                     Height="30"
@@ -1092,7 +1092,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="{DynamicResource SettingWindow_CurrentConfig}" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -1114,17 +1114,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="{DynamicResource SettingWindow_New}"
                                                     Tag="Baidu" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="{DynamicResource SettingWindow_Delete}"
                                                     Tag="Baidu" />
                                                 <ui:Flyout x:Name="BaiduDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="{DynamicResource SettingWindow_KeepOneConfig}"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -1145,7 +1145,7 @@
                                                 Grid.Column="0"
                                                 Margin="15,0,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ApiUrl}" />
                                                 <ui:TextBox
                                                     Width="200"
                                                     Height="30"
@@ -1198,7 +1198,7 @@
                                                     Margin="0,0,10,0"
                                                     VerticalAlignment="Center"
                                                     FontWeight="Bold"
-                                                    Text="Current Config: " />
+                                                    Text="{DynamicResource SettingWindow_CurrentConfig}" />
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Padding="8,4,8,4"
@@ -1220,17 +1220,17 @@
                                                 <ui:Button
                                                     Margin="0,0,10,0"
                                                     Click="NewButton_Click"
-                                                    Content="New"
+                                                    Content="{DynamicResource SettingWindow_New}"
                                                     Tag="LibreTranslate" />
                                                 <ui:Button
                                                     Margin="0,0,-10,0"
                                                     Click="DeleteButton_Click"
-                                                    Content="Delete"
+                                                    Content="{DynamicResource SettingWindow_Delete}"
                                                     Tag="LibreTranslate" />
                                                 <ui:Flyout x:Name="LibreTranslateDeleteFlyout">
                                                     <TextBlock
                                                         Width="120"
-                                                        Text="You must keep at least one config."
+                                                        Text="{DynamicResource SettingWindow_KeepOneConfig}"
                                                         TextWrapping="Wrap" />
                                                 </ui:Flyout>
                                             </StackPanel>
@@ -1251,7 +1251,7 @@
                                                 Grid.Column="1"
                                                 Margin="15,10,0,0"
                                                 Orientation="Vertical">
-                                                <ui:TextBlock Margin="2.5,0,0,5" Text="API Url" />
+                                                <ui:TextBlock Margin="2.5,0,0,5" Text="{DynamicResource SettingWindow_ApiUrl}" />
                                                 <ui:TextBox
                                                     Width="200"
                                                     Height="30"

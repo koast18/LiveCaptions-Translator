@@ -103,4 +103,45 @@
     <sys:String x:Key="Overlay_SwapOrder">交换原文与译文的顺序</sys:String>
     <sys:String x:Key="Overlay_ClickThrough">鼠标穿透</sys:String>
 
+    <sys:String x:Key="Welcome_Title">欢迎使用实时字幕翻译！</sys:String>
+    <sys:String x:Key="Welcome_BasedOn">实时字幕翻译基于 Windows 实时字幕（LiveCaptions）。</sys:String>
+    <sys:String x:Key="Welcome_Intro">首次使用前，请按以下步骤完成配置：&#x0A;</sys:String>
+    <sys:String x:Key="Welcome_Step1">&#x0A;1. 打开 Windows 实时字幕，按提示下载本地语音识别所需的文件和语言包。</sys:String>
+    <sys:String x:Key="Welcome_Step2">&#x0A;2. 点击</sys:String>
+    <sys:String x:Key="Welcome_Gear">⚙️ 齿轮</sys:String>
+    <sys:String x:Key="Welcome_Step2b">图标打开 Windows 实时字幕的设置菜单，选择</sys:String>
+    <sys:String x:Key="Welcome_Position">&quot;位置 &gt; 叠加在屏幕上&quot;</sys:String>
+    <sys:String x:Key="Welcome_Step3">.&#x0A;3. 点击</sys:String>
+    <sys:String x:Key="Welcome_Step3b">按钮（位于本程序设置页）来隐藏 Windows 实时字幕。&#x0A;</sys:String>
+    <sys:String x:Key="Welcome_AutoNav">&#x0A;程序已自动跳转到设置页，并打开了 Windows 实时字幕。</sys:String>
+    <sys:String x:Key="Welcome_ShowHint">，请先在设置页点 [显示] 把实时字幕显示出来，再到 Windows 实时字幕里操作。</sys:String>
+    <sys:String x:Key="Welcome_ToChange">如需修改</sys:String>
+    <sys:String x:Key="Welcome_Tip">&#x0A;&#x0A;提示：</sys:String>
+    <sys:String x:Key="Welcome_Wiki">&#x0A;更多细节见 Wiki：</sys:String>
+    <sys:String x:Key="Welcome_Done">配置完成后即可回到主页面，享受实时语音翻译。&#x0A;</sys:String>
+    <sys:String x:Key="Welcome_GettingStarted">开始使用</sys:String>
+    <sys:String x:Key="Welcome_Understood">我已理解并完成配置。</sys:String>
+
+    <sys:String x:Key="SettingWindow_CurrentConfig">当前配置： </sys:String>
+    <sys:String x:Key="SettingWindow_New">新建</sys:String>
+    <sys:String x:Key="SettingWindow_Delete">删除</sys:String>
+    <sys:String x:Key="SettingWindow_LoadModels">加载模型</sys:String>
+    <sys:String x:Key="SettingWindow_KeepOneConfig">至少需要保留一个配置。</sys:String>
+    <sys:String x:Key="SettingWindow_Note1">说明 1：</sys:String>
+    <sys:String x:Key="SettingWindow_Note2">&#x0A;说明 2：</sys:String>
+    <sys:String x:Key="SettingWindow_UseFullUrl">使用完整 URL（通常以</sys:String>
+    <sys:String x:Key="SettingWindow_InsteadOfBase">）而不是 Base URL（通常只填到</sys:String>
+    <sys:String x:Key="SettingWindow_CloseParen">）。</sys:String>
+    <sys:String x:Key="SettingWindow_BaseUrlEnding">Base URL 以</sys:String>
+    <sys:String x:Key="SettingWindow_Suffix">结尾。</sys:String>
+    <sys:String x:Key="SettingWindow_NoNeedToAdd">无需显式添加</sys:String>
+    <sys:String x:Key="SettingWindow_SourceEnclosed">原文用 🔤 包裹。</sys:String>
+    <sys:String x:Key="SettingWindow_PromptPlaceholder">提示词中的 {0} 表示目标语言，请确保提示词里包含 {0}。</sys:String>
+    <sys:String x:Key="SettingWindow_ChatAppended">。聊天接口和模型名会自动补全。</sys:String>
+    <sys:String x:Key="SettingWindow_Prompt">提示词</sys:String>
+    <sys:String x:Key="SettingWindow_Temperature">温度</sys:String>
+    <sys:String x:Key="SettingWindow_ModelName">模型名称</sys:String>
+    <sys:String x:Key="SettingWindow_ApiUrl">API 地址</sys:String>
+    <sys:String x:Key="SettingWindow_ApiUrlBase">API 地址（Base）</sys:String>
+
 </ResourceDictionary>
