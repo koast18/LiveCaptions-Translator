@@ -238,4 +238,10 @@ Please visit GitHub to download the latest release.</sys:String>
 
     <sys:String x:Key="Setting_Saved">Saved</sys:String>
 
+    <sys:String x:Key="Status_Warning">[WARNING] {0}</sys:String>
+
+    <sys:String x:Key="Status_Error">[ERROR] {0}</sys:String>
+
+    <sys:String x:Key="History_AllFiles">All file (*.*)</sys:String>
+
 </ResourceDictionary>

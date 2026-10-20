@@ -44,8 +44,14 @@ namespace LiveCaptionsTranslator
 
         public static event Action? TranslationLogged;
 
+
+        private static Func<string>? captionStatus;
+        private static Func<string>? overlayStatus;
+
         static Translator()
         {
+            LocalizationManager.LanguageChanged += RefreshStatusText;
+
             if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), models.Setting.FILENAME)))
                 FirstUseFlag = true;
 
@@ -113,10 +119,48 @@ namespace LiveCaptionsTranslator
         /// App.InitializeComponent merges the dictionaries, so an eagerly built string would show the
         /// bare resource key.
         /// </summary>
-        public static string? RenderAsrFallbackNotice() =>
-            asrFallback?.Render((key, args) => LocalizationManager.T(key, args));
+        public static string? RenderAsrFallbackNotice()
+        {
+            if (asrFallback is null)
+                return null;
+
+            string why = AsrProviders.TryCreate(asrFallback.RequestedId, out var requested)
+                ? requested.UnavailableReason ?? string.Empty
+                : string.Empty;
+
+            return asrFallback.Render((key, args) => LocalizationManager.T(key, args), why);
+        }
 
         private static AsrFallbackNotice? asrFallback;
+
+        /// <summary>
+        /// Shows text the app generates rather than text the user's audio produced, and remembers how
+        /// to rebuild it: switching language has to re-render it, otherwise the caption keeps the
+        /// previous language until the next status event.
+        /// </summary>
+        private static void SetCaptionStatus(Func<string> caption, Func<string>? overlay = null)
+        {
+            captionStatus = caption;
+            overlayStatus = overlay;
+
+            if (Caption is null)
+                return;
+
+            Caption.DisplayTranslatedCaption = caption();
+            if (overlay is not null)
+                Caption.OverlayNoticePrefix = overlay();
+        }
+
+        private static void RefreshStatusText()
+        {
+            if (Caption is null)
+                return;
+
+            if (captionStatus is not null)
+                Caption.DisplayTranslatedCaption = captionStatus();
+            if (overlayStatus is not null)
+                Caption.OverlayNoticePrefix = overlayStatus();
+        }
 
         /// <summary>Creates the provider instance for <paramref name="providerId"/>.</summary>
         private static void ActivateProvider(string? providerId)
@@ -162,14 +206,11 @@ namespace LiveCaptionsTranslator
                 });
 
                 // Only surfaced once the replacement backend actually started.
-                if (AsrFallbackNotice is { Length: > 0 } notice && Caption != null)
-                    Caption.DisplayTranslatedCaption = $"[WARNING] {notice}";
+                SetCaptionStatus(() => LocalizationManager.T("Status_Warning", RenderAsrFallbackNotice() ?? string.Empty));
             }
             catch (Exception exception)
             {
-                if (Caption != null)
-                    Caption.DisplayTranslatedCaption =
-                        LocalizationManager.T("Error_ProviderStartFailed", provider.DisplayName, exception.Message);
+                SetCaptionStatus(() => LocalizationManager.T("Error_ProviderStartFailed", provider.DisplayName, exception.Message));
             }
         }
 
@@ -211,7 +252,7 @@ namespace LiveCaptionsTranslator
 
             public void OnNotice(string message) => SetNotice(message);
 
-            public void OnError(Exception error) => SetNotice($"[ERROR] {error.Message}");
+            public void OnError(Exception error) => SetNotice(LocalizationManager.T("Status_Error", error.Message));
 
             private static void SetNotice(string message)
             {
@@ -346,8 +387,9 @@ namespace LiveCaptionsTranslator
                 if (LogOnlyFlag)
                 {
                     Caption.TranslatedCaption = string.Empty;
-                    Caption.DisplayTranslatedCaption = LocalizationManager.T("Caption_Paused");
-                    Caption.OverlayNoticePrefix = LocalizationManager.T("Caption_Paused");
+                    SetCaptionStatus(
+                        () => LocalizationManager.T("Caption_Paused"),
+                        () => LocalizationManager.T("Caption_Paused"));
                     Caption.OverlayCurrentTranslation = string.Empty;
                 }
                 else if (!string.IsNullOrEmpty(RegexPatterns.NoticePrefix().Replace(

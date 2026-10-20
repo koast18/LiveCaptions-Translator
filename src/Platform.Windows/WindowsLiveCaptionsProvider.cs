@@ -177,7 +177,7 @@ namespace LiveCaptionsTranslator.Platform.Windows
                 {
                     if (Window == null)
                     {
-                        sink.OnNotice(localize?.Invoke("Asr_LiveCaptionsRestarting", []) ?? "[WARNING] LiveCaptions was unexpectedly closed, restarting...");
+                        sink.OnNotice(localize?.Invoke("Asr_LiveCaptionsRestarting", []) ?? CoreStrings.Get("Asr_LiveCaptionsRestarting"));
                         Window = LiveCaptionsHandler.LaunchLiveCaptions();
                         sink.OnNotice(string.Empty);
                     }

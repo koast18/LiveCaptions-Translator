@@ -32,6 +32,9 @@ namespace LiveCaptionsTranslator.Localization
             new UiLanguage(SimplifiedChinese, "简体中文"),
         };
 
+        /// <summary>Raised after a dictionary swap, so code-assigned text can be re-rendered.</summary>
+        public static event Action? LanguageChanged;
+
         /// <summary>The language currently applied.</summary>
         public static string Current { get; private set; } = Default;
 
@@ -60,19 +63,29 @@ namespace LiveCaptionsTranslator.Localization
 
             try
             {
-                dictionaries.Add(new ResourceDictionary
-                {
-                    Source = new Uri(
-                        $"pack://application:,,,/LiveCaptionsTranslator;component/{DictionaryPrefix}{id}.xaml",
-                        UriKind.Absolute),
-                });
+                // English goes in first and stays: WPF resolves a DynamicResource against the merged
+                // chain, so a key missing from the selected language falls back to English instead of
+                // rendering blank.
+                if (id != Default)
+                    dictionaries.Add(Load(Default));
+
+                dictionaries.Add(Load(id));
             }
             catch (IOException) when (id != Default)
             {
                 // A broken dictionary must never take the window down: keep English instead.
                 Apply(Default);
             }
+
+            LanguageChanged?.Invoke();
         }
+
+        private static ResourceDictionary Load(string id) => new()
+        {
+            Source = new Uri(
+                $"pack://application:,,,/LiveCaptionsTranslator;component/{DictionaryPrefix}{id}.xaml",
+                UriKind.Absolute),
+        };
 
         /// <summary>
         /// Looks a key up for code-behind messages. Falls back to the key itself, so a missing entry
@@ -80,8 +93,64 @@ namespace LiveCaptionsTranslator.Localization
         /// </summary>
         public static string T(string key)
         {
-            object? value = Application.Current?.TryFindResource(key);
-            return value as string ?? key;
+            if (Application.Current?.TryFindResource(key) is string found)
+                return found;
+
+            // Without a merged dictionary (before App.InitializeComponent, or in a test) read the
+            // dictionary off disk so callers never see a key where a sentence belongs.
+            return Fallback(key);
+        }
+
+        /// <summary>The order the dictionaries are merged in: English first, so it backs everything.</summary>
+        public static IReadOnlyList<string> MergeChain(string language)
+        {
+            string id = Normalize(language);
+            return id == English ? new[] { English } : new[] { English, id };
+        }
+
+        private static Dictionary<string, string>? fallback;
+
+        private static string Fallback(string key)
+        {
+            if (fallback is null)
+                fallback = ReadEnglish();
+
+            return fallback.TryGetValue(key, out string? text) ? text : key;
+        }
+
+        private static Dictionary<string, string> ReadEnglish()
+        {
+            var parsed = new Dictionary<string, string>(StringComparer.Ordinal);
+
+            try
+            {
+                var dictionary = Load(Default);
+                foreach (object? entry in dictionary.Keys)
+                {
+                    if (entry is string name && dictionary[name] is string text)
+                        parsed[name] = text;
+                }
+
+                return parsed;
+            }
+            catch (Exception)
+            {
+                // No pack context (unit tests, a headless host): read the same file from disk.
+            }
+
+            string file = Path.Combine(AppContext.BaseDirectory, "Localization", "Strings.en.xaml");
+            if (!File.Exists(file))
+                return parsed;
+
+            var document = System.Xml.Linq.XDocument.Parse(File.ReadAllText(file));
+            foreach (var element in document.Descendants())
+            {
+                string? name = element.Attribute(System.Xml.Linq.XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value;
+                if (name is not null)
+                    parsed[name] = element.Value;
+            }
+
+            return parsed;
         }
 
         /// <summary>Formats a localised template with <see cref="string.Format(string, object?)"/>.</summary>

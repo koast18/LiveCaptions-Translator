@@ -4,22 +4,19 @@ namespace LiveCaptionsTranslator.Core.Asr
     /// <summary>Which backend to run, and whether the configured one had to be replaced.</summary>
     /// <param name="ProviderId">Id of the backend the host should start.</param>
     /// <param name="FellBack">True when <paramref name="ProviderId"/> is not what was asked for.</param>
-    /// <param name="Reason">Explains the fallback, for the settings UI and the first caption.</param>
-    /// <param name="Reason">Rendered text, kept for logs and tests.</param>
-    /// <param name="Fallback">The parts the UI needs to render the explanation in the current
-    /// language. Rendering eagerly would bake in whatever language was installed when the provider
-    /// was activated - which happens before the string dictionary is merged.</param>
-    public sealed record AsrSelection(
-        string ProviderId,
-        bool FellBack,
-        string? Reason,
-        AsrFallbackNotice? Fallback = null);
+    /// <param name="Fallback">Everything the UI needs to explain the switch. No rendered text is
+    /// carried: activation happens before the string dictionary is merged, so anything rendered
+    /// here would freeze the language - or worse, the bare resource key.</param>
+    public sealed record AsrSelection(string ProviderId, bool FellBack, AsrFallbackNotice? Fallback = null);
 
-    /// <summary>The pieces of "X is unavailable (why), using Y instead".</summary>
-    public sealed record AsrFallbackNotice(string Requested, string? Why, string Used)
+    /// <summary>
+    /// "X is unavailable (why), using Y instead", as identities rather than prose. The reason is
+    /// re-read from the provider when the notice is rendered, which is after startup.
+    /// </summary>
+    public sealed record AsrFallbackNotice(string RequestedId, string RequestedName, string UsedName)
     {
-        public string Render(Func<string, object?[], string> translate) =>
-            translate("Asr_FallbackNotice", new object?[] { Requested, Why ?? string.Empty, Used });
+        public string Render(Func<string, object?[], string> translate, string why) =>
+            translate("Asr_FallbackNotice", new object?[] { RequestedName, why, UsedName });
     }
 
     /// <summary>
@@ -53,9 +50,10 @@ namespace LiveCaptionsTranslator.Core.Asr
 
                 var requested = registry.Create(requestedId!);
                 if (requested.IsAvailable)
-                    return new AsrSelection(requestedId!, FellBack: false, Reason: null);
+                    return new AsrSelection(requestedId!, FellBack: false);
 
-                string? reason = requested.UnavailableReason;
+                // The reason is deliberately not read here: activation runs before the string
+                // dictionary is merged, so it would come back as a bare resource key.
 
                 foreach (string id in registry.Ids)
                 {
@@ -66,26 +64,23 @@ namespace LiveCaptionsTranslator.Core.Asr
                     if (!candidate.IsAvailable)
                         continue;
 
-                    var parts = new AsrFallbackNotice(requested.DisplayName, reason, candidate.DisplayName);
-
                     return new AsrSelection(
                         id,
                         FellBack: true,
-                        Reason: CoreStrings.Get("Asr_FallbackNotice", requested.DisplayName, reason ?? string.Empty, candidate.DisplayName),
-                        Fallback: parts);
+                        Fallback: new AsrFallbackNotice(requested.Id, requested.DisplayName, candidate.DisplayName));
                 }
 
-                return new AsrSelection(requestedId!, FellBack: false, Reason: reason);
+                return new AsrSelection(requestedId!, FellBack: false);
             }
 
             foreach (string id in registry.Ids)
             {
                 var candidate = registry.Create(id);
                 if (candidate.IsAvailable)
-                    return new AsrSelection(id, FellBack: false, Reason: null);
+                    return new AsrSelection(id, FellBack: false);
             }
 
-            return new AsrSelection(fallbackId, FellBack: false, Reason: null);
+            return new AsrSelection(fallbackId, FellBack: false);
         }
     }
 }

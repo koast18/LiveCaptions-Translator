@@ -93,4 +93,28 @@ public class UiLanguageSettingTests
             File.Delete(path);
         }
     }
+
+    [Fact]
+    public void English_is_merged_under_every_other_language()
+    {
+        // WPF resolves a DynamicResource against the merged chain in order, so putting English first
+        // is what makes a missing translation fall back to English instead of rendering blank.
+        Assert.Equal(new[] { "en" }, LocalizationManager.MergeChain("en"));
+        Assert.Equal(new[] { "en", "zh-Hans" }, LocalizationManager.MergeChain("zh-Hans"));
+        Assert.Equal(new[] { "en", "zh-Hans" }, LocalizationManager.MergeChain("ZH-HANS"));
+        Assert.Equal(new[] { "en" }, LocalizationManager.MergeChain("fr"));
+    }
+
+    [Fact]
+    public void A_key_resolves_to_english_text_even_with_no_application_resource_dictionary()
+    {
+        // This is the startup path: Translator's static constructor runs before App.InitializeComponent
+        // merges the dictionaries, and it may ask for text.
+        Assert.Equal("Caption", LocalizationManager.T("Nav_Caption"));
+        Assert.Equal("[Paused]", LocalizationManager.T("Caption_Paused"));
+    }
+
+    [Fact]
+    public void An_unknown_key_is_returned_as_is_rather_than_blank()
+        => Assert.Equal("NoSuchKey", LocalizationManager.T("NoSuchKey"));
 }

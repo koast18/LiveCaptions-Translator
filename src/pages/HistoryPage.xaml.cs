@@ -115,7 +115,7 @@ namespace LiveCaptionsTranslator
         {
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
-                Filter = "CSV (*.csv)|*.csv|All file (*.*)|*.*",
+                Filter = $"CSV (*.csv)|*.csv|{LocalizationManager.T("History_AllFiles")}|*.*",
                 DefaultExt = ".csv",
                 FileName = $"exported_{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}.csv",
                 InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)

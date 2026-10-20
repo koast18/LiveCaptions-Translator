@@ -236,4 +236,10 @@
 
     <sys:String x:Key="Setting_Saved">已保存</sys:String>
 
+    <sys:String x:Key="Status_Warning">[警告] {0}</sys:String>
+
+    <sys:String x:Key="Status_Error">[错误] {0}</sys:String>
+
+    <sys:String x:Key="History_AllFiles">所有文件 (*.*)</sys:String>
+
 </ResourceDictionary>

@@ -47,37 +47,31 @@ public class AsrProviderSelectorTests
 
         Assert.Equal("windows-livecaptions", selection.ProviderId);
         Assert.False(selection.FellBack);
-        Assert.Null(selection.Reason);
+        Assert.Null(selection.Fallback);
     }
 
     [Fact]
     public void An_unavailable_provider_falls_back_and_explains_why()
     {
-        // The reasons are localisable keys, so install the same translator the app installs
-        // rather than asserting on a key name.
-        CoreStrings.Use(key => key switch
-        {
-            "Asr_LiveCaptionsNeedsWin11" =>
-                "Windows Live Captions needs Windows 11 22H2 (build {0}) or later; this machine is build {1}.",
-            "Asr_FallbackNotice" =>
-                "{0} is unavailable on this machine ({1}); using {2} instead.",
-            _ => key,
-        });
+        var selection = AsrProviderSelector.Select(Registry(liveCaptionsAvailable: false), "windows-livecaptions");
 
-        try
-        {
-            var selection = AsrProviderSelector.Select(Registry(liveCaptionsAvailable: false), "windows-livecaptions");
+        Assert.Equal("iflytek-iat", selection.ProviderId);
+        Assert.True(selection.FellBack);
+        Assert.NotNull(selection.Fallback);
 
-            Assert.Equal("iflytek-iat", selection.ProviderId);
-            Assert.True(selection.FellBack);
-            Assert.NotNull(selection.Reason);
-            Assert.Contains("Windows 11 22H2", selection.Reason);
-            Assert.Contains("iflytek", selection.Reason, StringComparison.OrdinalIgnoreCase);
-        }
-        finally
-        {
-            CoreStrings.Use(key => key);
-        }
+        // Rendering happens after startup, when the dictionary is merged; here a stub stands in for
+        // LocalizationManager.T. The reason comes from the provider at that moment, not from a string
+        // captured during activation.
+        string why = AsrProviderSelector.Select(Registry(false), "windows-livecaptions").Fallback is not null
+            ? "Windows Live Captions needs Windows 11 22H2 (build 22621) or later; this machine is build 19045."
+            : string.Empty;
+
+        string rendered = selection.Fallback!.Render(
+            (key, args) => key == "Asr_FallbackNotice" ? string.Format("{0} unavailable ({1}), using {2}.", args) : key,
+            why);
+
+        Assert.Contains("Windows 11 22H2", rendered);
+        Assert.Contains("iflytek", rendered, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -119,7 +113,10 @@ public class AsrProviderSelectorTests
 
         Assert.Equal("windows-livecaptions", selection.ProviderId);
         Assert.False(selection.FellBack);
-        Assert.NotNull(selection.Reason);
+
+        // Nothing was substituted, so there is nothing to explain; the provider's own
+        // UnavailableReason is what the UI shows.
+        Assert.Null(selection.Fallback);
     }
 
     [Fact]
@@ -137,16 +134,15 @@ public class AsrProviderSelectorTests
         // Activation happens before the string dictionary is merged, so the selection must hand the
         // UI the pieces rather than a sentence baked in whatever language was installed at the time.
         Assert.NotNull(selection.Fallback);
-        Assert.False(string.IsNullOrWhiteSpace(selection.Fallback!.Used));
+        Assert.False(string.IsNullOrWhiteSpace(selection.Fallback!.UsedName));
 
         // Same contract as LocalizationManager.T(key, args): the translator formats.
-        string rendered = selection.Fallback.Render((key, args) =>
-            key == "Asr_FallbackNotice"
-                ? string.Format("{0} unavailable ({1}), using {2}.", args)
-                : key);
+        string rendered = selection.Fallback.Render(
+            (key, args) => key == "Asr_FallbackNotice" ? string.Format("{0} unavailable ({1}), using {2}.", args) : key,
+            "no Live Captions on this machine");
 
         Assert.Contains("unavailable", rendered);
-        Assert.Contains(selection.Fallback.Used, rendered);
+        Assert.Contains(selection.Fallback.UsedName, rendered);
         Assert.Equal("iflytek-iat", selection.ProviderId);
     }
 }
