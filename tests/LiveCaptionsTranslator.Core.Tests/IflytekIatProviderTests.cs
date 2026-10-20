@@ -287,7 +287,7 @@ public class IflytekIatProviderTests
             await feeder.CancelAsync();
             await feed;
         }
-        Assert.True(harness.Sink.Notices.Any(notice => notice.Contains("重连")),
+        Assert.True(harness.Sink.Notices.Any(notice => notice.Contains("Asr_Reconnecting")),
             "expected a reconnect notice, saw: " + string.Join(" | ", harness.Sink.Notices));
 
         // The new session starts from scratch but must still receive audio.
@@ -397,7 +397,7 @@ public class IflytekIatProviderTests
             await feed;
         }
 
-        Assert.Contains("重连", sink.Errors[0].Message);
+        Assert.Contains("Asr_GaveUp", sink.Errors[0].Message);
         Assert.True(opened >= 3, $"expected at least 3 sessions, saw {opened}");
 
         await provider.StopAsync();
@@ -419,6 +419,6 @@ public class IflytekIatProviderTests
         Assert.Empty(AudioOf(transport.Sent[^1]));
 
         // A graceful stop must not look like a dropped connection.
-        Assert.DoesNotContain(harness.Sink.Notices, notice => notice.Contains("重连"));
+        Assert.DoesNotContain(harness.Sink.Notices, notice => notice.Contains("Asr_Reconnecting"));
     }
 }
