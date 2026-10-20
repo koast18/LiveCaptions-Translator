@@ -144,6 +144,44 @@ public class IflytekIatProviderTests
     }
 
     [Fact]
+    public async Task No_connection_is_opened_while_nothing_is_playing()
+    {
+        // WASAPI loopback emits nothing at all on a silent machine. Opening a session anyway made
+        // the service drop the idle stream and the app spun on "reconnecting 0/5".
+        await using var harness = new Harness();
+        await harness.StartAsync();
+
+        await Task.Delay(700);
+
+        Assert.Equal(0, harness.TransportCount);
+
+        harness.Audio.EmitChunk();
+        await WaitUntil(() => harness.TransportCount >= 1);
+    }
+
+    [Fact]
+    public async Task Silence_keeps_an_idle_stream_alive()
+    {
+        await using var harness = new Harness();
+        await harness.StartAsync();
+
+        harness.Audio.EmitChunk();
+        await WaitUntil(() => harness.SentCount() >= 1);
+
+        int before = harness.SentCount();
+
+        // Nothing more is captured; the provider must still feed the service so it does not close.
+        await WaitUntil(() => harness.SentCount() > before, 5000);
+
+        var transport = harness.Transport();
+        byte[] last = AudioOf(transport.Sent[^1]);
+        Assert.Equal(AudioFormat.ChunkBytes, last.Length);
+        Assert.All(last, value => Assert.Equal(0, value));
+
+        await harness.Provider.StopAsync();
+    }
+
+    [Fact]
     public async Task Audio_is_streamed_as_40ms_frames_with_a_signed_url()
     {
         await using var harness = new Harness();
@@ -180,6 +218,9 @@ public class IflytekIatProviderTests
     {
         await using var harness = new Harness(pad: true);
         await harness.StartAsync();
+
+        // A session is only opened once there is something to recognise.
+        harness.Audio.EmitChunk();
 
         // 200 ms of silence at 16 kHz mono PCM16 is 6400 bytes, i.e. five 40 ms frames.
         await WaitUntil(() => harness.SentCount() >= 5);
@@ -290,14 +331,35 @@ public class IflytekIatProviderTests
 
         var sink = new RecordingSink();
 
+        var audio = new FakeAudioSource();
+
         await provider.StartAsync(new AsrContext
         {
             Sink = sink,
             Options = new AsrOptions(),
-            AudioSource = new FakeAudioSource(),
+            AudioSource = audio,
         });
 
-        await WaitUntil(() => sink.Errors.Count >= 1);
+        // The provider only connects when there is audio, so keep feeding it while it retries.
+        using var feeder = new CancellationTokenSource();
+        var feed = Task.Run(async () =>
+        {
+            while (!feeder.IsCancellationRequested)
+            {
+                audio.EmitChunk();
+                try { await Task.Delay(120, feeder.Token); } catch (OperationCanceledException) { break; }
+            }
+        });
+
+        try
+        {
+            await WaitUntil(() => sink.Errors.Count >= 1);
+        }
+        finally
+        {
+            await feeder.CancelAsync();
+            await feed;
+        }
 
         Assert.Contains("重连", sink.Errors[0].Message);
         Assert.True(opened >= 3, $"expected at least 3 sessions, saw {opened}");

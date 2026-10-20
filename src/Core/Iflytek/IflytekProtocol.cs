@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 
 using LiveCaptionsTranslator.Core.Audio;
@@ -64,6 +64,13 @@ namespace LiveCaptionsTranslator.Core.Iflytek
 
             return chunks;
         }
+
+        /// <summary>
+        /// One frame of silence. Sent while nothing is being captured so the service does not
+        /// close an idle connection and force a pointless reconnect.
+        /// </summary>
+        public static byte[] SilenceChunk(int chunkBytes = AudioFormat.ChunkBytes) =>
+            new byte[chunkBytes];
 
         /// <summary>Silence in the ASR PCM format, used as a lead-in before real audio.</summary>
         public static byte[] LeadingSilence(int milliseconds = LeadingSilenceMs) =>

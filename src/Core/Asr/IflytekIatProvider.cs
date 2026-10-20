@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Threading.Channels;
 
 using LiveCaptionsTranslator.Core.Audio;
@@ -140,6 +140,11 @@ namespace LiveCaptionsTranslator.Core.Asr
 
             while (!token.IsCancellationRequested)
             {
+                // Do not hold a connection open while nothing is playing: WASAPI loopback emits
+                // nothing at all when the machine is silent, and the service closes an empty stream.
+                if (!await WaitForInputAsync(channel, token))
+                    break;
+
                 var session = new IflytekIatSession(settings, transportFactory());
                 using var sessionCts = CancellationTokenSource.CreateLinkedTokenSource(token);
                 Task<bool>? pump = null;
@@ -210,10 +215,17 @@ namespace LiveCaptionsTranslator.Core.Asr
                 // Keep whatever was recognised so the transcript does not restart on reconnect.
                 committed.Append(session.Transcript.Text);
 
+                // Nothing was ever streamed, so the socket closed on an idle stream rather than
+                // on a real failure. Wait for audio again instead of alarming the user.
+                if (session.SentFrames == 0)
+                    continue;
+
+                failures++;
+
                 if (failures > settings.MaxReconnectAttempts)
                 {
                     context.Sink.OnError(new IflytekIatException(
-                        -1, $"重连 {failures} 次仍未成功，已停止讯飞识别"));
+                        -1, $"重连 {failures - 1} 次仍未成功，已停止讯飞识别"));
                     break;
                 }
 
@@ -271,11 +283,30 @@ namespace LiveCaptionsTranslator.Core.Asr
                 }
                 catch (OperationCanceledException) when (!token.IsCancellationRequested)
                 {
-                    // Poll interval elapsed; loop round to notice a dead receive side.
+                    // Nothing captured for one interval: keep the stream alive with silence.
+                    // Otherwise the service closes the idle connection and we reconnect in a loop.
+                    await session.SendAudioAsync(IflytekProtocol.SilenceChunk(), token);
                 }
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Blocks until at least one captured chunk is queued. Returns <c>false</c> when the input
+        /// has ended (the host completed the channel).
+        /// </summary>
+        private static async Task<bool> WaitForInputAsync(Channel<byte[]> channel, CancellationToken token)
+        {
+            try
+            {
+                // WaitToReadAsync does not consume, so the send loop still sees the chunk.
+                return await channel.Reader.WaitToReadAsync(token);
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
         }
 
         private static async Task<bool> TryDrainAsync(Task<bool> pump, TimeSpan timeout)
