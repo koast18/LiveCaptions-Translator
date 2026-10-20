@@ -515,7 +515,10 @@ public class DoubaoProviderStreamingTests
     /// <summary>Replays canned responses and records everything the provider sends.</summary>
     private sealed class CapturingTransport : IDoubaoTransport
     {
-        private readonly Queue<byte[]?> incoming = new();
+        // A real socket blocks until a message arrives; a queue that returns null when empty made the
+        // receive side "finish" instantly, which is not what happens in production.
+        private readonly System.Threading.Channels.Channel<byte[]?> incoming =
+            System.Threading.Channels.Channel.CreateUnbounded<byte[]?>();
 
         public List<byte[]> Sent { get; } = [];
 
@@ -533,16 +536,26 @@ public class DoubaoProviderStreamingTests
             return Task.CompletedTask;
         }
 
-        public Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken)
-            => Task.FromResult(incoming.Count > 0 ? incoming.Dequeue() : null);
+        public async Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await incoming.Reader.ReadAsync(cancellationToken);
+            }
+            catch (System.Threading.Channels.ChannelClosedException)
+            {
+                return null;
+            }
+        }
 
         public ValueTask DisposeAsync()
         {
             IsOpen = false;
+            incoming.Writer.TryComplete();
             return ValueTask.CompletedTask;
         }
 
-        public void Enqueue(byte[] data) => incoming.Enqueue(data);
+        public void Enqueue(byte[] data) => incoming.Writer.TryWrite(data);
     }
 
     private static byte[] Response(string messageType, int status = DoubaoStatusCodes.Ok)
@@ -596,13 +609,22 @@ public class DoubaoProviderStreamingTests
         }
     }
 
+    private static async Task StopGracefullyAsync(DoubaoAsrProvider provider, CapturingTransport transport)
+    {
+        var stop = provider.StopAsync();
+
+        await WaitUntil(() => transport.Sent.Any(frame => Decode(frame).Method == "FinishSession"));
+        transport.Enqueue(Response("SessionFinished"));
+
+        await stop;
+    }
+
     [Fact]
     public async Task The_streaming_path_sends_first_middle_and_last()
     {
         var transport = new CapturingTransport();
         transport.Enqueue(Response("TaskStarted"));
         transport.Enqueue(Response("SessionStarted"));
-        transport.Enqueue(Response("SessionFinished"));
 
         var audio = new FakeAudioSource();
 
@@ -623,7 +645,7 @@ public class DoubaoProviderStreamingTests
 
         await WaitUntil(() => transport.Sent.Count >= 4);
 
-        await provider.StopAsync();
+        await StopGracefullyAsync(provider, transport);
 
         var frames = transport.Sent.Select(Decode).ToList();
 
@@ -710,7 +732,7 @@ public class DoubaoProviderStreamingTests
         string sessionFrame = System.Text.Encoding.UTF8.GetString(transport.Sent[1]);
         Assert.Contains($"\"end_smooth_window_ms\":{expected}", sessionFrame);
 
-        await provider.StopAsync();
+        await StopGracefullyAsync(provider, transport);
     }
 }
 
@@ -718,7 +740,10 @@ public class DoubaoProviderStallTests
 {
     private sealed class ScriptedTransport : IDoubaoTransport
     {
-        private readonly Queue<byte[]?> incoming = new();
+        // A real socket blocks until a message arrives; a queue that returns null when empty made the
+        // receive side "finish" instantly, which is not what happens in production.
+        private readonly System.Threading.Channels.Channel<byte[]?> incoming =
+            System.Threading.Channels.Channel.CreateUnbounded<byte[]?>();
 
         public List<byte[]> Sent { get; } = [];
 
@@ -736,16 +761,26 @@ public class DoubaoProviderStallTests
             return Task.CompletedTask;
         }
 
-        public Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken)
-            => Task.FromResult(incoming.Count > 0 ? incoming.Dequeue() : null);
+        public async Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await incoming.Reader.ReadAsync(cancellationToken);
+            }
+            catch (System.Threading.Channels.ChannelClosedException)
+            {
+                return null;
+            }
+        }
 
         public ValueTask DisposeAsync()
         {
             IsOpen = false;
+            incoming.Writer.TryComplete();
             return ValueTask.CompletedTask;
         }
 
-        public void Enqueue(byte[] data) => incoming.Enqueue(data);
+        public void Enqueue(byte[] data) => incoming.Writer.TryWrite(data);
     }
 
     private static byte[] Response(string messageType, int status = DoubaoStatusCodes.Ok)
