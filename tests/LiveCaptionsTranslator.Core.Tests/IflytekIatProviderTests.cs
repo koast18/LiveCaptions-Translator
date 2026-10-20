@@ -267,7 +267,26 @@ public class IflytekIatProviderTests
 
         harness.Transport(0).Drop();
 
-        await WaitUntil(() => harness.TransportCount >= 2);
+        // The provider only connects when there is audio, so keep feeding it while it retries.
+        using var feeder = new CancellationTokenSource();
+        var feed = Task.Run(async () =>
+        {
+            while (!feeder.IsCancellationRequested)
+            {
+                harness.Audio.EmitChunk();
+                try { await Task.Delay(100, feeder.Token); } catch (OperationCanceledException) { break; }
+            }
+        });
+
+        try
+        {
+            await WaitUntil(() => harness.TransportCount >= 2);
+        }
+        finally
+        {
+            await feeder.CancelAsync();
+            await feed;
+        }
         Assert.True(harness.Sink.Notices.Any(notice => notice.Contains("重连")),
             "expected a reconnect notice, saw: " + string.Join(" | ", harness.Sink.Notices));
 
@@ -292,10 +311,27 @@ public class IflytekIatProviderTests
         await WaitUntil(() => harness.Sink.Partials.Count >= 1);
 
         harness.Transport(0).Drop();
-        await WaitUntil(() => harness.TransportCount >= 2);
 
-        harness.Audio.EmitChunk();
-        await WaitUntil(() => harness.SentCount(1) >= 1);
+        using var feeder = new CancellationTokenSource();
+        var feed = Task.Run(async () =>
+        {
+            while (!feeder.IsCancellationRequested)
+            {
+                harness.Audio.EmitChunk();
+                try { await Task.Delay(100, feeder.Token); } catch (OperationCanceledException) { break; }
+            }
+        });
+
+        try
+        {
+            await WaitUntil(() => harness.TransportCount >= 2);
+            await WaitUntil(() => harness.SentCount(1) >= 1);
+        }
+        finally
+        {
+            await feeder.CancelAsync();
+            await feed;
+        }
 
         harness.Transport(1).Enqueue(PartialJson);
         await WaitUntil(() => harness.Sink.Partials.Count >= 2);
