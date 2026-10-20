@@ -1,3 +1,4 @@
+﻿using System.IO;
 using System.Windows;
 
 namespace LiveCaptionsTranslator.Localization
@@ -17,7 +18,12 @@ namespace LiveCaptionsTranslator.Localization
 
         public const string Default = English;
 
-        private const string DictionaryPrefix = "Localization/Strings.";
+        /// <summary>
+        /// Path inside the assembly. The dictionaries live under src/ and the project sits at the
+        /// repository root, so the compiled resource keeps that prefix - a Uri without it throws
+        /// IOException at startup.
+        /// </summary>
+        private const string DictionaryPrefix = "src/Localization/Strings.";
 
         /// <summary>Languages offered in the settings page, in display order.</summary>
         public static IReadOnlyList<UiLanguage> Available { get; } = new[]
@@ -52,12 +58,20 @@ namespace LiveCaptionsTranslator.Localization
                     dictionaries.RemoveAt(index);
             }
 
-            dictionaries.Add(new ResourceDictionary
+            try
             {
-                Source = new Uri(
-                    $"pack://application:,,,/LiveCaptionsTranslator;component/{DictionaryPrefix}{id}.xaml",
-                    UriKind.Absolute),
-            });
+                dictionaries.Add(new ResourceDictionary
+                {
+                    Source = new Uri(
+                        $"pack://application:,,,/LiveCaptionsTranslator;component/{DictionaryPrefix}{id}.xaml",
+                        UriKind.Absolute),
+                });
+            }
+            catch (IOException) when (id != Default)
+            {
+                // A broken dictionary must never take the window down: keep English instead.
+                Apply(Default);
+            }
         }
 
         /// <summary>
