@@ -387,7 +387,24 @@ jobs:
 
             Write-Host "$language : ${width}x${height}, $($elements.Count) elements, $($overflow.Count) past the edge"
             foreach ($o in ($overflow | Select-Object -First 5)) { Write-Host "    $o" }
+            # A missing translation must never surface as its key. Anything shaped like
+            # Area_Name and present as a dictionary key is a wiring bug, not a user-facing string.
+            $keyLike = @()
+            $dictionaryKeys = @()
+            $english = Join-Path $PWD 'src/Localization/Strings.en.xaml'
+            if (Test-Path $english) {
+              foreach ($match in [regex]::Matches((Get-Content $english -Raw), 'x:Key="([^"]+)"')) {
+                $dictionaryKeys += $match.Groups[1].Value
+              }
+            }
+            foreach ($e in $elements) {
+              $name = $e.Current.Name
+              if (-not $name) { continue }
+              if ($dictionaryKeys -ccontains $name.Trim()) { $keyLike += $name.Trim() }
+            }
+
             if ($overflow.Count -gt 0) { return "$language : $($overflow.Count) elements extend past the window" }
+            if ($keyLike.Count -gt 0) { return ("$language : resource keys shown as text - " + (($keyLike | Select-Object -Unique) -join ', ')) }
             return $null
           }
 
