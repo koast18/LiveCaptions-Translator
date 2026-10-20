@@ -26,7 +26,10 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Column="0" Orientation="Vertical">
+        <!--  WrapPanel, not five grid columns: at the default window size five columns overflowed
+              the page and left wide gaps between the controls. Wrapping keeps every item on screen.  -->
+        <WrapPanel Grid.Row="0" Grid.ColumnSpan="5" Orientation="Horizontal">
+        <StackPanel Margin="0,0,22,14" Orientation="Vertical">
             <StackPanel Margin="15,0,0,0" Orientation="Vertical">
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
                     <TextBlock Margin="2.5,0,0,5" Text="LiveCaptions" />
@@ -104,7 +107,7 @@
             </StackPanel>
         </StackPanel>
 
-        <StackPanel Grid.Column="1" Orientation="Vertical">
+        <StackPanel Margin="0,0,22,14" Orientation="Vertical">
             <StackPanel Margin="15,0,0,0" Orientation="Vertical">
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
                     <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_TranslateApi}" />
@@ -182,7 +185,7 @@
             </StackPanel>
         </StackPanel>
 
-        <StackPanel Grid.Column="2" Orientation="Vertical">
+        <StackPanel Margin="0,0,22,14" Orientation="Vertical">
             <StackPanel Margin="15,0,0,0" Orientation="Vertical">
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
                     <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_ApiSetting}" />
@@ -210,7 +213,7 @@
             </StackPanel>
         </StackPanel>
 
-        <StackPanel Grid.Column="3" Orientation="Vertical">
+        <StackPanel Margin="0,0,22,14" Orientation="Vertical">
             <StackPanel Margin="15,0,0,0" Orientation="Vertical">
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
                     <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_Contexts}" />
@@ -281,7 +284,7 @@
             </StackPanel>
         </StackPanel>
 
-        <StackPanel Grid.Column="4" Orientation="Vertical">
+        <StackPanel Margin="0,0,22,14" Orientation="Vertical">
             <StackPanel Margin="15,0,0,0" Orientation="Vertical">
                 <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_ContextAware}" />
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
@@ -315,6 +318,7 @@
                 </StackPanel>
             </StackPanel>
         </StackPanel>
+        </WrapPanel>
 
         <!--  Speech recognition backend. Spans every column so it reads as one row below the
               existing settings and does not disturb the upstream three-column layout.  -->
@@ -481,7 +485,7 @@
             Margin="15,15,0,0"
             Orientation="Vertical">
             <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_NetworkProxy}" />
-            <StackPanel Orientation="Horizontal">
+            <WrapPanel Orientation="Horizontal">
                 <TextBox
                     x:Name="ProxyBox"
                     Width="260"
@@ -495,7 +499,7 @@
                     VerticalAlignment="Center"
                     FontSize="11.5"
                     Opacity="0.7" />
-            </StackPanel>
+            </WrapPanel>
             <WrapPanel
                 x:Name="ProxyTargetsPanel"
                 Margin="0,8,0,0"
@@ -510,7 +514,7 @@
             Margin="15,15,0,0"
             Orientation="Vertical">
             <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_MachineTranslation}" />
-            <StackPanel Orientation="Horizontal">
+            <WrapPanel Orientation="Horizontal">
                 <TextBlock
                     Margin="2.5,0,0,0"
                     VerticalAlignment="Center"
@@ -518,7 +522,7 @@
                     Text="app_id" />
                 <TextBox
                     x:Name="IflytekMtAppIdBox"
-                    Width="160"
+                    Width="140"
                     Height="30"
                     Margin="8,0,0,0"
                     Padding="8,4,8,4"
@@ -530,7 +534,7 @@
                     Text="api_key" />
                 <TextBox
                     x:Name="IflytekMtApiKeyBox"
-                    Width="180"
+                    Width="140"
                     Height="30"
                     Margin="8,0,0,0"
                     Padding="8,4,8,4"
@@ -542,7 +546,7 @@
                     Text="api_secret" />
                 <TextBox
                     x:Name="IflytekMtApiSecretBox"
-                    Width="180"
+                    Width="140"
                     Height="30"
                     Margin="8,0,0,0"
                     Padding="8,4,8,4"
@@ -555,7 +559,7 @@
                     Click="IflytekMtApplyButton_click">
                     <TextBlock Text="{DynamicResource Setting_Apply}" />
                 </ui:Button>
-            </StackPanel>
+            </WrapPanel>
         </StackPanel>
     </Grid>
 </Page>
