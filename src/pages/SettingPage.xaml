@@ -32,13 +32,13 @@
                     <TextBlock Margin="2.5,0,0,5" Text="LiveCaptions" />
                     <ui:Flyout x:Name="LiveCaptionsInfoFlyout">
                         <TextBlock Width="300" TextWrapping="Wrap">
-                            <Run Text="After Windows 11 version 24H2, you can only change the" />
-                            <Run FontWeight="DemiBold" TextDecorations="Underline" Text="Source Language" />
-                            <Run Text="in LiveCaptions." />
-                            <Run FontWeight="Bold" Text="&#x0A;&#x0A;Note:" />
-                            <Run Text="Please click" />
-                            <Run FontWeight="Bold" Text="&quot;Hide&quot;" />
-                            <Run Text="to hide LiveCaptions instead of closing it directly." />
+                            <Run Text="{DynamicResource Setting_LiveCaptionsNote1}" />
+                            <Run FontWeight="DemiBold" TextDecorations="Underline" Text="{DynamicResource Setting_LiveCaptionsNote2}" />
+                            <Run Text="{DynamicResource Setting_LiveCaptionsNote3}" />
+                            <Run FontWeight="Bold" Text="{DynamicResource Setting_Note}" />
+                            <Run Text="{DynamicResource Setting_PleaseClick}" />
+                            <Run FontWeight="Bold" Text="{DynamicResource Setting_HideQuoted}" />
+                            <Run Text="{DynamicResource Setting_HideHint}" />
                         </TextBlock>
                     </ui:Flyout>
                     <Button
@@ -60,19 +60,19 @@
                     Height="30"
                     Padding="11,4,11,4"
                     Click="LiveCaptionsButton_click">
-                    <TextBlock x:Name="ButtonText" Text="Show" />
+                    <TextBlock x:Name="ButtonText" Text="{DynamicResource Setting_Show}" />
                 </ui:Button>
             </StackPanel>
 
             <StackPanel Margin="15,10,0,0" Orientation="Vertical">
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                    <TextBlock Margin="2.5,0,0,5" Text="API Interval" />
+                    <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_ApiInterval}" />
                     <ui:Flyout x:Name="FrequencyInfoFlyout">
                         <TextBlock Width="300" TextWrapping="Wrap">
-                            <Run Text="Determines the frequency of translate API calls. The smaller it is, the more frequent API calls." />
-                            <Run Text="&#x0A;The translate API is called once after the caption changes" />
-                            <Run FontWeight="SemiBold" Text="[API Interval]" />
-                            <Run Text="times." />
+                            <Run Text="{DynamicResource Setting_ApiIntervalHint1}" />
+                            <Run Text="{DynamicResource Setting_ApiIntervalHint2}" />
+                            <Run FontWeight="SemiBold" Text="{DynamicResource Setting_ApiIntervalHint3}" />
+                            <Run Text="{DynamicResource Setting_ApiIntervalHint4}" />
                         </TextBlock>
                     </ui:Flyout>
                     <Button
@@ -103,11 +103,11 @@
         <StackPanel Grid.Column="1" Orientation="Vertical">
             <StackPanel Margin="15,0,0,0" Orientation="Vertical">
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                    <TextBlock Margin="2.5,0,0,5" Text="Translate API" />
+                    <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_TranslateApi}" />
                     <ui:Flyout x:Name="TranslateAPIInfoFlyout">
                         <TextBlock
                             Width="300"
-                            Text="Except for Google and Google2, all other APIs require configuring before they can be used."
+                            Text="{DynamicResource Setting_TranslateApiHint}"
                             TextWrapping="Wrap" />
                     </ui:Flyout>
                     <Button
@@ -138,15 +138,15 @@
                     <TextBlock
                         Margin="2.5,0,0,5"
                         VerticalAlignment="Center"
-                        Text="Target Language" />
+                        Text="{DynamicResource Setting_TargetLanguage}" />
                     <ui:Flyout x:Name="TargetLangInfoFlyout">
                         <TextBlock Width="350" TextWrapping="Wrap">
-                            <Run FontWeight="DemiBold" TextDecorations="Underline" Text="&quot;There isn’t the target language I expect!&quot;" />
-                            <Run Text="&#x0A;You can directly edit the content of this combobox to customize the language, and it is recommended to follow the" />
-                            <Run FontWeight="Bold" Text="BCP 47 language tag." />
-                            <Run FontWeight="Bold" Text="&#x0A;&#x0A;Note:" />
-                            <Run Text="Some of APIs (such as DeepL) needs another way to define target language, see their official docs for more details." />
-                            <Run Text="&#x0A;No need to consider this for included target languages, since we've built in tag mappings. But if your expected language isn't in the list, keep this in mind." />
+                            <Run FontWeight="DemiBold" TextDecorations="Underline" Text="{DynamicResource Setting_TargetLangHint1}" />
+                            <Run Text="{DynamicResource Setting_TargetLangHint2}" />
+                            <Run FontWeight="Bold" Text="{DynamicResource Setting_TargetLangHint3}" />
+                            <Run FontWeight="Bold" Text="{DynamicResource Setting_Note}" />
+                            <Run Text="{DynamicResource Setting_TargetLangHint4}" />
+                            <Run Text="{DynamicResource Setting_TargetLangHint5}" />
                         </TextBlock>
                     </ui:Flyout>
                     <Button
@@ -177,7 +177,7 @@
         <StackPanel Grid.Column="2" Orientation="Vertical">
             <StackPanel Margin="15,0,0,0" Orientation="Vertical">
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                    <TextBlock Margin="2.5,0,0,5" Text="API Setting" />
+                    <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_ApiSetting}" />
                 </StackPanel>
                 <ui:Button
                     x:Name="APISettingButton"
@@ -185,39 +185,39 @@
                     Height="30"
                     Padding="11,4,11,4"
                     Click="APISettingButton_click">
-                    <TextBlock Text="Open" />
+                    <TextBlock Text="{DynamicResource Setting_Open}" />
                 </ui:Button>
             </StackPanel>
             <StackPanel Margin="15,10,0,0" Orientation="Vertical">
-                <TextBlock Margin="2.5,0,0,5" Text="Show Latency" />
+                <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_ShowLatency}" />
                 <ui:ToggleSwitch
                     Width="100"
                     Height="30"
                     Padding="10,4,10,7"
                     IsChecked="{Binding MainWindow.LatencyShow, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    OffContent="Off"
-                    OnContent="On" />
+                    OffContent="{DynamicResource Setting_Off}"
+                    OnContent="{DynamicResource Setting_On}" />
             </StackPanel>
         </StackPanel>
 
         <StackPanel Grid.Column="3" Orientation="Vertical">
             <StackPanel Margin="15,0,0,0" Orientation="Vertical">
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                    <TextBlock Margin="2.5,0,0,5" Text="Contexts" />
+                    <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_Contexts}" />
                     <ui:Flyout x:Name="CaptionLogMaxInfoFlyout">
                         <TextBlock Width="300" TextWrapping="Wrap">
-                            <Run FontWeight="Bold" Text="Contexts:" />
-                            <Run Text="Determines the number of context sentences when" />
-                            <Run FontWeight="Bold" Text="Context Aware" />
-                            <Run Text="is enabled." />
-                            <Run FontWeight="Bold" Text="&#x0A;Overlay Sentences:" />
-                            <Run Text="Determines the number of displayed cards when" />
-                            <Run FontWeight="Bold" Text="Log Cards" />
-                            <Run Text="is enabled, as well as the max number of sentences displayed in the Overlay Window." />
-                            <Run FontWeight="Bold" Text="&#x0A;&#x0A;Note:" />
-                            <Run Text="Contexts must be" />
-                            <Run FontWeight="Bold" Text="greater than or equal" />
-                            <Run Text="Display Sentences. If not met, the program will automatically adjust them." />
+                            <Run FontWeight="Bold" Text="{DynamicResource Setting_ContextsLabel}" />
+                            <Run Text="{DynamicResource Setting_ContextsHint1}" />
+                            <Run FontWeight="Bold" Text="{DynamicResource Setting_ContextAware}" />
+                            <Run Text="{DynamicResource Setting_ContextsHint2}" />
+                            <Run FontWeight="Bold" Text="{DynamicResource Setting_OverlaySentencesLabel}" />
+                            <Run Text="{DynamicResource Setting_ContextsHint3}" />
+                            <Run FontWeight="Bold" Text="{DynamicResource Setting_LogCards}" />
+                            <Run Text="{DynamicResource Setting_ContextsHint4}" />
+                            <Run FontWeight="Bold" Text="{DynamicResource Setting_Note}" />
+                            <Run Text="{DynamicResource Setting_ContextsHint5}" />
+                            <Run FontWeight="Bold" Text="{DynamicResource Setting_GreaterOrEqual}" />
+                            <Run Text="{DynamicResource Setting_ContextsHint6}" />
                         </TextBlock>
                     </ui:Flyout>
                     <Button
@@ -250,7 +250,7 @@
             </StackPanel>
 
             <StackPanel Margin="15,10,0,0" Orientation="Vertical">
-                <TextBlock Margin="2.5,0,0,5" Text="Display Sentences" />
+                <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_DisplaySentences}" />
                 <ui:NumberBox
                     Width="135"
                     Height="30"
@@ -270,15 +270,15 @@
 
         <StackPanel Grid.Column="4" Orientation="Vertical">
             <StackPanel Margin="15,0,0,0" Orientation="Vertical">
-                <TextBlock Margin="2.5,0,0,5" Text="Context Aware" />
+                <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_ContextAware}" />
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
                     <ui:ToggleSwitch
                         Width="90"
                         Height="30"
                         Padding="10,4,10,7"
                         IsChecked="{Binding ContextAware, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        OffContent="Off"
-                        OnContent="On" />
+                        OffContent="{DynamicResource Setting_Off}"
+                        OnContent="{DynamicResource Setting_On}" />
                     <Button
                         x:Name="ContextAwareInfo"
                         Width="15"
@@ -293,8 +293,8 @@
                     </Button>
                     <ui:Flyout x:Name="ContextAwareInfoFlyout">
                         <TextBlock Width="300" TextWrapping="Wrap">
-                            <Run Text="Translate in context." />
-                            <Run Text="&#x0A;It can improve translation accuracy, but will consume more tokens." />
+                            <Run Text="{DynamicResource Setting_ContextAwareHint1}" />
+                            <Run Text="{DynamicResource Setting_ContextAwareHint2}" />
                         </TextBlock>
                     </ui:Flyout>
                 </StackPanel>
@@ -308,7 +308,7 @@
             Grid.ColumnSpan="5"
             Margin="15,15,0,0"
             Orientation="Vertical">
-            <TextBlock Margin="2.5,0,0,5" Text="Speech Recognition" />
+            <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_SpeechRecognition}" />
             <StackPanel Orientation="Horizontal">
                 <ComboBox
                     x:Name="AsrProviderBox"
@@ -369,7 +369,7 @@
                     Margin="10,0,0,0"
                     Padding="11,4,11,4"
                     Click="AsrApplyButton_click">
-                    <TextBlock Text="Apply" />
+                    <TextBlock Text="{DynamicResource Setting_Apply}" />
                 </ui:Button>
             </StackPanel>
             <StackPanel
@@ -407,7 +407,7 @@
                     Margin="10,0,0,0"
                     Padding="11,4,11,4"
                     Click="DoubaoRegisterButton_click">
-                    <TextBlock Text="Register" />
+                    <TextBlock Text="{DynamicResource Setting_Register}" />
                 </ui:Button>
                 <ui:Button
                     x:Name="DoubaoApplyButton"
@@ -415,13 +415,13 @@
                     Margin="8,0,0,0"
                     Padding="11,4,11,4"
                     Click="DoubaoApplyButton_click">
-                    <TextBlock Text="Apply" />
+                    <TextBlock Text="{DynamicResource Setting_Apply}" />
                 </ui:Button>
                 <TextBlock
                     Margin="12,0,0,0"
                     VerticalAlignment="Center"
                     FontSize="12.5"
-                    Text="gap(ms)" />
+                    Text="{DynamicResource Setting_GapMs}" />
                 <TextBox
                     x:Name="DoubaoVadBox"
                     Width="60"
@@ -429,7 +429,7 @@
                     Margin="8,0,0,0"
                     Padding="8,4,8,4"
                     FontSize="12.5"
-                    ToolTip="Silence before Doubao ends a sentence. 200 is the service default and chops at every breath; 500-800 reads better." />
+                    ToolTip="{DynamicResource Setting_GapTooltip}" />
             </StackPanel>
 
             <TextBlock
@@ -464,7 +464,7 @@
             Grid.ColumnSpan="5"
             Margin="15,15,0,0"
             Orientation="Vertical">
-            <TextBlock Margin="2.5,0,0,5" Text="Network / Proxy" />
+            <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_NetworkProxy}" />
             <StackPanel Orientation="Horizontal">
                 <TextBox
                     x:Name="ProxyBox"
@@ -493,7 +493,7 @@
             Grid.ColumnSpan="5"
             Margin="15,15,0,0"
             Orientation="Vertical">
-            <TextBlock Margin="2.5,0,0,5" Text="iFlytek Machine Translation" />
+            <TextBlock Margin="2.5,0,0,5" Text="{DynamicResource Setting_MachineTranslation}" />
             <StackPanel Orientation="Horizontal">
                 <TextBlock
                     Margin="2.5,0,0,0"
@@ -537,7 +537,7 @@
                     Margin="10,0,0,0"
                     Padding="11,4,11,4"
                     Click="IflytekMtApplyButton_click">
-                    <TextBlock Text="Apply" />
+                    <TextBlock Text="{DynamicResource Setting_Apply}" />
                 </ui:Button>
             </StackPanel>
         </StackPanel>
