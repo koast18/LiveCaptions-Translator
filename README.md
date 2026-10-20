@@ -311,8 +311,10 @@ proxy settings apply, which is exactly what upstream did.
 
 - **The GUI.** CI builds it and unit tests the logic behind it, but no automated test drives the
   WPF windows. Layout and interaction need a human.
-- **Real audio capture.** CI has no sound card; the resampler and the WAV writer are unit tested
-  with synthetic data, and the NAudio wiring is only proven to compile.
+- **Real audio capture in CI.** CI has no sound card; the resampler and the WAV writer are unit
+  tested with synthetic data. It *has* been exercised once by hand on Windows 10: a WAV played
+  through the default output device was captured with WASAPI loopback, recognised by iFlytek and
+  logged to the history database.
 - **iFlytek machine translation.** Implemented and unit tested against a stubbed transport, but
   never called with real credentials.
 - **Proxy connectivity.** The resolution logic is unit tested; whether your proxy actually works
@@ -320,3 +322,14 @@ proxy settings apply, which is exactly what upstream did.
 - **Windows 11.** Every end-to-end run so far happened on Windows 10 22H2 (build 19045), which
   is the only machine this was developed on. The Windows 11 path - and the Live Captions
   backend with it - has never been executed.
+
+### What was actually observed on Windows 10
+
+On a Windows 10 22H2 machine where `LiveCaptions.exe` does not exist:
+
+1. `setting.json` said `AsrProviderName = windows-livecaptions` (the default).
+2. The app started without errors and rewrote it to `AsrProviderName = iflytek-iat`.
+3. A Chinese WAV played through the default speakers was captured with WASAPI loopback,
+   recognised by iFlytek, and written to `translation_history.db` as
+   `今天天气不错，我们一起去公园散步吧` — with `SourceText == TranslatedText`, because the
+   Chinese-input policy correctly skipped the translation API.
