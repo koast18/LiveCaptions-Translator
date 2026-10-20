@@ -240,6 +240,14 @@ namespace LiveCaptionsTranslator
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
+            RefreshAsrHint();
+        }
+
+        /// <summary>Rebuilds the hint below the speech controls from the current provider.</summary>
+        private void RefreshAsrHint()
+        {
+            var provider = CreateSelectedProvider();
+
             string hint = provider switch
             {
                 null => string.Empty,
@@ -253,10 +261,12 @@ namespace LiveCaptionsTranslator
             };
 
             if (provider is { IsAvailable: false })
-                hint = $"⚠ {provider.UnavailableReason}\n{hint}";
+                hint = "⚠ " + provider.UnavailableReason + "
+" + hint;
 
             if (Translator.AsrFallbackNotice is { Length: > 0 } fallback)
-                hint = $"{fallback}\n{hint}";
+                hint = fallback + "
+" + hint;
 
             AsrHintText.Text = hint;
         }
