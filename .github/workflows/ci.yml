@@ -304,6 +304,7 @@ jobs:
               [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
               [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
               [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint f);
+              [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr h, int x, int y, int w, int hh, bool repaint);
               [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
           }
           "@
@@ -389,44 +390,39 @@ jobs:
             $g.Dispose()
             $bmp.Save((Join-Path $PWD "settings-$language.png"), [System.Drawing.Imaging.ImageFormat]::Png)
             $bmp.Dispose()
-            # Also cover the bottom of the page: the interface-language picker lives there, and a
-            # screenshot of the top of a 775x170 window never showed the thing this change is about.
-            $scroller = $null
+            # The content below the fold is only reachable in a taller window. Grow it and look
+            # again, so the interface-language picker is actually in the evidence.
+            [void][Ui]::MoveWindow($handle, $bounds.Left, $bounds.Top, 1000, 900, $true)
+            Start-Sleep -Milliseconds 1500
+
+            $bounds = New-Object Ui+RECT
+            [void][Ui]::GetWindowRect($handle, [ref]$bounds)
+            $width = $bounds.Right - $bounds.Left
+            $height = $bounds.Bottom - $bounds.Top
+
+            $elements = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+              [System.Windows.Automation.Condition]::TrueCondition)
             foreach ($e in $elements) {
-              $pattern = $null
-              if ($e.TryGetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern, [ref]$pattern) -and $pattern.Current.VerticallyScrollable) {
-                $scroller = $pattern
-                break
+              $rect = $e.Current.BoundingRectangle
+              if ($rect.Width -le 0 -or $rect.Height -le 0) { continue }
+              if (($rect.X + $rect.Width) -gt ($bounds.Right + 1)) {
+                $overflow += ("tall: {0} '{1}'" -f $e.Current.ControlType.ProgrammaticName.Replace('ControlType.',''), $e.Current.Name)
+              }
+              if ($e.Current.Name -and ($keyLike -notcontains $e.Current.Name.Trim()) -and
+                  ($dictionaryKeys -ccontains $e.Current.Name.Trim())) {
+                $keyLike += $e.Current.Name.Trim()
               }
             }
 
-            if ($scroller) {
-              $scroller.SetScrollPercent([System.Windows.Automation.ScrollPattern]::NoScroll, 100)
-              Start-Sleep -Milliseconds 1200
-
-              $elements = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants,
-                [System.Windows.Automation.Condition]::TrueCondition)
-              foreach ($e in $elements) {
-                $rect = $e.Current.BoundingRectangle
-                if ($rect.Width -le 0 -or $rect.Height -le 0) { continue }
-                if (($rect.X + $rect.Width) -gt ($bounds.Right + 1)) {
-                  $overflow += ("bottom: {0} '{1}'" -f $e.Current.ControlType.ProgrammaticName.Replace('ControlType.',''), $e.Current.Name)
-                }
-                if ($e.Current.Name -and ($dictionaryKeys -ccontains $e.Current.Name.Trim())) {
-                  $keyLike += $e.Current.Name.Trim()
-                }
-              }
-
-              $bmp2 = New-Object System.Drawing.Bitmap $width, $height
-              $g2 = [System.Drawing.Graphics]::FromImage($bmp2)
-              $dc2 = $g2.GetHdc()
-              [void][Ui]::PrintWindow($handle, $dc2, 2)
-              $g2.ReleaseHdc($dc2)
-              $g2.Dispose()
-              $bmp2.Save((Join-Path $PWD "settings-$language-bottom.png"), [System.Drawing.Imaging.ImageFormat]::Png)
-              $bmp2.Dispose()
-              Write-Host "$language : also checked the bottom of the page"
-            }
+            $bmp2 = New-Object System.Drawing.Bitmap $width, $height
+            $g2 = [System.Drawing.Graphics]::FromImage($bmp2)
+            $dc2 = $g2.GetHdc()
+            [void][Ui]::PrintWindow($handle, $dc2, 2)
+            $g2.ReleaseHdc($dc2)
+            $g2.Dispose()
+            $bmp2.Save((Join-Path $PWD "settings-$language-tall.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp2.Dispose()
+            Write-Host "$language : also checked a 1000x900 window"
             if (-not $p.HasExited) { $p.Kill() }
 
             Write-Host "$language : ${width}x${height}, $($elements.Count) elements, $($overflow.Count) past the edge"
