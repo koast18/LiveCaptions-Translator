@@ -261,12 +261,10 @@ namespace LiveCaptionsTranslator
             };
 
             if (provider is { IsAvailable: false })
-                hint = "⚠ " + provider.UnavailableReason + "
-" + hint;
+                hint = "\u26a0 " + provider.UnavailableReason + "\n" + hint;
 
             if (Translator.AsrFallbackNotice is { Length: > 0 } fallback)
-                hint = fallback + "
-" + hint;
+                hint = fallback + "\n" + hint;
 
             AsrHintText.Text = hint;
         }
