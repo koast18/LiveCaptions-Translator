@@ -520,7 +520,18 @@ public class DoubaoProviderStreamingTests
         private readonly System.Threading.Channels.Channel<byte[]?> incoming =
             System.Threading.Channels.Channel.CreateUnbounded<byte[]?>();
 
-        public List<byte[]> Sent { get; } = [];
+        private readonly List<byte[]> sent = [];
+        private readonly object gate = new();
+
+        /// <summary>Snapshot: the provider appends on its own thread.</summary>
+        public IReadOnlyList<byte[]> Sent
+        {
+            get
+            {
+                lock (gate)
+                    return sent.ToArray();
+            }
+        }
 
         public bool IsOpen { get; private set; } = true;
 
@@ -532,7 +543,9 @@ public class DoubaoProviderStreamingTests
 
         public Task SendAsync(ReadOnlyMemory<byte> payload, CancellationToken cancellationToken)
         {
-            Sent.Add(payload.ToArray());
+            lock (gate)
+                sent.Add(payload.ToArray());
+
             return Task.CompletedTask;
         }
 
@@ -750,7 +763,17 @@ public class DoubaoProviderStallTests
         private readonly System.Threading.Channels.Channel<byte[]?> incoming =
             System.Threading.Channels.Channel.CreateUnbounded<byte[]?>();
 
-        public List<byte[]> Sent { get; } = [];
+        private readonly List<byte[]> sent = [];
+        private readonly object gate = new();
+
+        public IReadOnlyList<byte[]> Sent
+        {
+            get
+            {
+                lock (gate)
+                    return sent.ToArray();
+            }
+        }
 
         public bool IsOpen { get; private set; } = true;
 
@@ -762,7 +785,9 @@ public class DoubaoProviderStallTests
 
         public Task SendAsync(ReadOnlyMemory<byte> payload, CancellationToken cancellationToken)
         {
-            Sent.Add(payload.ToArray());
+            lock (gate)
+                sent.Add(payload.ToArray());
+
             return Task.CompletedTask;
         }
 
