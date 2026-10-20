@@ -325,7 +325,7 @@ two are tracked separately:
 | English (`en_us`) | Parameters accepted only | not exercised with real speech |
 | Japanese (`ja`) | Parameters accepted only | not exercised with real speech |
 | Korean (`ko`) | Parameters accepted only | not exercised with real speech |
-| Doubao (`doubao-asr`, auto-detected) | **Verified** | the CI integration job registers a device and recognises `tests/fixtures/iflytek-zh-cn-16k.wav` through the real endpoint; the session configuration has no language field, so this is the only claim that can be made |
+| Doubao (`doubao-asr`, auto-detected) | **Verified** | the integration test registers a device and recognises `tests/fixtures/iflytek-zh-cn-16k.wav` through the real endpoint; the session configuration has no language field, so this is the only claim that can be made. That test runs **advisory** in CI: the endpoint answers `50700000` (`service discovery failure`) for whole stretches from cloud IPs, so it reports but does not gate a release |
 
 `AsrLanguage.Verified` carries this flag into the code, and the settings UI shows the same
 caveat. Windows Live Captions picks its own language, so none of its entries are marked verified.

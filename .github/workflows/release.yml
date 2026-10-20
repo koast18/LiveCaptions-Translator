@@ -41,8 +41,16 @@ jobs:
       - name: Test (App)
         run: dotnet test tests/LiveCaptionsTranslator.App.Tests/LiveCaptionsTranslator.App.Tests.csproj -c Release
 
-      - name: Integration (real iFlytek endpoint)
-        run: dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj -c Release --logger "console;verbosity=detailed"
+      - name: Integration (real iFlytek endpoint, blocking)
+        run: >
+          dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj
+          -c Release --filter "Category!=Doubao" --logger "console;verbosity=detailed"
+
+      - name: Integration (real Doubao endpoint, advisory)
+        continue-on-error: true
+        run: >
+          dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj
+          -c Release --filter "Category=Doubao" --logger "console;verbosity=detailed"
 
   release:
     name: Publish win-x64 assets
