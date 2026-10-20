@@ -713,3 +713,102 @@ public class DoubaoProviderStreamingTests
         await provider.StopAsync();
     }
 }
+
+public class DoubaoProviderStallTests
+{
+    private sealed class ScriptedTransport : IDoubaoTransport
+    {
+        private readonly Queue<byte[]?> incoming = new();
+
+        public List<byte[]> Sent { get; } = [];
+
+        public bool IsOpen { get; private set; } = true;
+
+        public Task ConnectAsync(Uri uri, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken)
+        {
+            IsOpen = true;
+            return Task.CompletedTask;
+        }
+
+        public Task SendAsync(ReadOnlyMemory<byte> payload, CancellationToken cancellationToken)
+        {
+            Sent.Add(payload.ToArray());
+            return Task.CompletedTask;
+        }
+
+        public Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken)
+            => Task.FromResult(incoming.Count > 0 ? incoming.Dequeue() : null);
+
+        public ValueTask DisposeAsync()
+        {
+            IsOpen = false;
+            return ValueTask.CompletedTask;
+        }
+
+        public void Enqueue(byte[] data) => incoming.Enqueue(data);
+    }
+
+    private static byte[] Response(string messageType, int status = DoubaoStatusCodes.Ok)
+    {
+        var buffer = new List<byte>();
+        DoubaoProtoWriter.WriteString(buffer, 4, messageType);
+        DoubaoProtoWriter.WriteTag(buffer, 5, DoubaoWireType.Varint);
+        DoubaoProtoWriter.WriteVarint(buffer, (ulong)status);
+        return buffer.ToArray();
+    }
+
+    [Fact]
+    public async Task A_session_that_dies_mid_stream_does_not_leave_the_provider_spinning()
+    {
+        var transports = new List<ScriptedTransport>();
+
+        ScriptedTransport Factory()
+        {
+            var transport = new ScriptedTransport();
+            transport.Enqueue(Response("TaskStarted"));
+            transport.Enqueue(Response("SessionStarted"));
+            transports.Add(transport);
+            return transport;
+        }
+
+        var audio = new FakeAudioSource();
+        var sink = new RecordingSink();
+
+        await using var provider = new DoubaoAsrProvider(
+            new DoubaoCredentials("1782778396951964", "app-key", string.Empty, string.Empty),
+            () =>
+            {
+                var transport = Factory();
+                // The first session dies as soon as it starts; the second is healthy.
+                if (transports.Count == 1)
+                {
+                    transport.Enqueue(Response("SessionFailed", 45000001));
+                }
+
+                return transport;
+            },
+            new DoubaoStreamOptions { MaxConsecutiveFailures = 5, ReconnectDelay = TimeSpan.FromMilliseconds(50) });
+
+        await provider.StartAsync(new AsrContext
+        {
+            Sink = sink,
+            Options = new AsrOptions(),
+            AudioSource = audio,
+        });
+
+        audio.EmitChunk();
+
+        // The send loop must notice the dead receive side and reconnect rather than streaming into
+        // a dead socket forever (that is the "audio keeps playing, captions stop" hang).
+        var started = Environment.TickCount64;
+        while (transports.Count < 2 && Environment.TickCount64 - started < 8000)
+        {
+            audio.EmitChunk();
+            await Task.Delay(50);
+        }
+
+        Assert.True(transports.Count >= 2, "the provider never reconnected after the session died");
+
+        await provider.StopAsync();
+    }
+}

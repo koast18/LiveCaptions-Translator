@@ -483,7 +483,7 @@ namespace LiveCaptionsTranslator
         /// Chinese and the policy skipped the API. Trailing punctuation and the notice prefixes are
         /// ignored so "今天天气不错。" and "今天天气不错" still count as the same line.
         /// </summary>
-        internal static bool IsTranslationRedundant(string? originalCaption, string? translatedCaption)
+        public static bool IsTranslationRedundant(string? originalCaption, string? translatedCaption)
         {
             string original = NormalizeForComparison(originalCaption);
             return original.Length > 0 && original == NormalizeForComparison(translatedCaption);

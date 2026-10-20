@@ -36,6 +36,8 @@ namespace LiveCaptionsTranslator.Core.Doubao
     {
         public const string ProviderId = "doubao-asr";
 
+        private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(200);
+
         /// <summary>
         /// The service auto-detects the language (the session configuration has no language field),
         /// so the host's language setting does not drive recognition here.
@@ -221,7 +223,7 @@ namespace LiveCaptionsTranslator.Core.Doubao
                     try
                     {
                         bool ended = await SendLoopAsync(
-                            session, channel, framer, encoder, context.Sink, token, sessionCts.Token,
+                            session, channel, framer, encoder, pump, token, sessionCts.Token,
                             () => timestampMs, value => timestampMs = value);
 
                         if (ended)
@@ -272,7 +274,7 @@ namespace LiveCaptionsTranslator.Core.Doubao
             Channel<byte[]> channel,
             DoubaoPcmFramer framer,
             DoubaoOpusEncoder encoder,
-            IAsrSink sink,
+            Task pump,
             CancellationToken token,
             CancellationToken sessionToken,
             Func<long> readTimestamp,
@@ -283,6 +285,15 @@ namespace LiveCaptionsTranslator.Core.Doubao
 
             while (!token.IsCancellationRequested)
             {
+                // The receive side is the only thing that produces text. If it died or the service
+                // ended the session, stop pushing audio into a dead socket and let the caller
+                // reconnect - otherwise captions silently stop while the audio keeps flowing.
+                if (pump.IsFaulted)
+                    await pump;
+
+                if (pump.IsCompleted)
+                    return false;
+
                 if (channel.Reader.TryRead(out var pcm))
                 {
                     any = true;
@@ -308,18 +319,25 @@ namespace LiveCaptionsTranslator.Core.Doubao
                 // Nothing captured: keep the stream alive with silence rather than idling out.
                 if (any)
                 {
+                    long keepAliveAt = readTimestamp();
+
                     await session.SendAudioAsync(
                         encoder.EncodeFrame(new short[DoubaoOpusEncoder.FrameSamples]),
                         DoubaoFrameState.Middle,
-                        readTimestamp(),
+                        keepAliveAt,
                         sessionToken);
 
-                    writeTimestamp(readTimestamp() + DoubaoOpusEncoder.FrameMilliseconds);
+                    writeTimestamp(keepAliveAt + DoubaoOpusEncoder.FrameMilliseconds);
                 }
 
                 try
                 {
-                    if (!await channel.Reader.WaitToReadAsync(sessionToken))
+                    // Poll instead of blocking forever, so a dead pump is noticed even during a
+                    // long silence.
+                    using var poll = CancellationTokenSource.CreateLinkedTokenSource(sessionToken);
+                    poll.CancelAfter(PollInterval);
+
+                    if (!await channel.Reader.WaitToReadAsync(poll.Token))
                     {
                         // The input ended: flush the tail and mark it LAST, the way the reference
                         // client closes a stream. Without it the service never sees a final frame.
@@ -350,9 +368,9 @@ namespace LiveCaptionsTranslator.Core.Doubao
                         return true;
                     }
                 }
-                catch (OperationCanceledException) when (!token.IsCancellationRequested)
+                catch (OperationCanceledException) when (!token.IsCancellationRequested && !sessionToken.IsCancellationRequested)
                 {
-                    return false;
+                    // Just the poll interval: loop round and re-check the pump.
                 }
                 catch (OperationCanceledException)
                 {
