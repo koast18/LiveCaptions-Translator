@@ -24,14 +24,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
         with:
-          dotnet-version: "8.0.x"
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/Directory.Packages.props
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # windows-latest already ships a .NET 8 SDK; setup-dotnet downloaded a second 285 MB copy.
 
       - name: Build
         run: dotnet build LiveCaptionsTranslator.sln -c Release
@@ -65,14 +65,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
         with:
-          dotnet-version: "8.0.x"
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/Directory.Packages.props
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # windows-latest already ships a .NET 8 SDK; setup-dotnet downloaded a second 285 MB copy.
 
       - name: Stamp the release tag into the assembly version
         shell: pwsh

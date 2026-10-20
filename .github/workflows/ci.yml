@@ -6,6 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Pushing twice in a row would otherwise queue a second full run behind the first.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build (windows-latest)
@@ -15,16 +20,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      # Restores a previous cache even when a project file changed, so adding a package does not
+      # cost a full 30 s of downloads. NuGet tolerates a stale cache.
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
         with:
-          dotnet-version: "8.0.x"
-          # Caches ~/.nuget/packages keyed on the project files. Without it every job re-downloads
-          # Concentus, NAudio, protobuf and the test SDK from nuget.org on each push.
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/Directory.Packages.props
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # windows-latest already ships a .NET 8 SDK. setup-dotnet downloaded a second one (285 MB)
+      # on every job, which was the single largest cost of the build.
 
       - name: Restore
         run: dotnet restore LiveCaptionsTranslator.sln
@@ -74,16 +80,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      # Restores a previous cache even when a project file changed, so adding a package does not
+      # cost a full 30 s of downloads. NuGet tolerates a stale cache.
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
         with:
-          dotnet-version: "8.0.x"
-          # Caches ~/.nuget/packages keyed on the project files. Without it every job re-downloads
-          # Concentus, NAudio, protobuf and the test SDK from nuget.org on each push.
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/Directory.Packages.props
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # windows-latest already ships a .NET 8 SDK. setup-dotnet downloaded a second one (285 MB)
+      # on every job, which was the single largest cost of the build.
 
       # Blocking: proves the hand-rolled protocol against a service we can rely on.
       - name: Integration tests (blocking)
@@ -113,16 +120,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      # Restores a previous cache even when a project file changed, so adding a package does not
+      # cost a full 30 s of downloads. NuGet tolerates a stale cache.
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
         with:
-          dotnet-version: "8.0.x"
-          # Caches ~/.nuget/packages keyed on the project files. Without it every job re-downloads
-          # Concentus, NAudio, protobuf and the test SDK from nuget.org on each push.
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/Directory.Packages.props
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # windows-latest already ships a .NET 8 SDK. setup-dotnet downloaded a second one (285 MB)
+      # on every job, which was the single largest cost of the build.
 
       - name: Publish
         run: >
