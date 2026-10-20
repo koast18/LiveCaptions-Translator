@@ -36,7 +36,7 @@ public class XamlLocalizationTests
 
     // The leading whitespace matters: "SizeToContent="Height"" must not look like Content="Height".
     private static readonly Regex Attribute = new(
-        "(?<=\s)(Text|Content|Title|ToolTip|Header|OffContent|OnContent|PlaceholderText)=\"([^\"{}][^\"]*)\"",
+        "(?<=\\s)(Text|Content|Title|ToolTip|Header|OffContent|OnContent|PlaceholderText)=\"([^\"{}][^\"]*)\"",
         RegexOptions.Compiled);
 
     private static IEnumerable<string> XamlFiles() =>
