@@ -162,6 +162,49 @@ namespace LiveCaptionsTranslator.models
                                 !entry.TranslatedText.Contains("[WARNING]"));
         }
 
+        /// <summary>
+        /// Rebuilds the rolling view from the recent history plus the line being spoken now, marking
+        /// the newest one so the template can highlight it.
+        /// </summary>
+        public void RebuildRollingLines(int previousCount)
+        {
+            string current = translationRedundant ? DisplayOriginalCaption : DisplayTranslatedCaption;
+
+            var lines = new List<CaptionLine>(previousCount + 1);
+            var previous = Contexts.Reverse().Take(Math.Max(0, previousCount)).Reverse().ToList();
+
+            foreach (var entry in previous)
+            {
+                string text = LineFor(entry.SourceText, entry.TranslatedText);
+                if (!string.IsNullOrWhiteSpace(text))
+                    lines.Add(new CaptionLine(text, false));
+            }
+
+            if (!string.IsNullOrWhiteSpace(current))
+                lines.Add(new CaptionLine(current, true));
+
+            if (RollingLines.Count == lines.Count && RollingLines.SequenceEqual(lines))
+                return;
+
+            RollingLines.Clear();
+            foreach (var line in lines)
+                RollingLines.Add(line);
+        }
+
+        /// <summary>One text per entry, so a skipped translation is never shown twice.</summary>
+        private static string LineFor(string? source, string? translated)
+        {
+            if (string.IsNullOrWhiteSpace(translated) || translated == "N/A")
+                return source?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(source))
+                return translated.Trim();
+
+            return string.Equals(source.Trim(), translated.Trim(), StringComparison.Ordinal)
+                ? source.Trim()
+                : translated.Trim();
+        }
+
         public void OnPropertyChanged([CallerMemberName] string propName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
