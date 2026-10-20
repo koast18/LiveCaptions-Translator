@@ -244,6 +244,18 @@ Where a backend auto-detects the language instead of taking one, the README says
 offering a choice the protocol cannot honour. Only behaviour covered by the CI integration job is
 described as verified.
 
+### Interface language
+
+*Settings → Interface Language* switches the UI between English and Simplified Chinese. The change
+applies immediately — no restart — and is remembered in `setting.json` (`"UiLanguage": "zh-Hans"`).
+Only the interface is translated: your subtitles, history, logs and prompt text are left exactly as
+they are. English stays the default, and a missing translation falls back to English rather than to
+a blank control.
+
+界面语言：*设置 → 界面语言* 可以在 English 与简体中文之间切换，**切换后立即生效、不用重启**，选择会写进
+`setting.json`（`"UiLanguage": "zh-Hans"`），下次启动保持。只翻译界面本身——字幕正文、历史记录、日志和
+提示词都保持原样；英文仍是默认语言，某个键缺失时回退到英文而不是显示空白。
+
 ### Proxies
 
 Google, OpenAI, OpenRouter and DeepL are unreachable from some networks. *Settings → Network /
