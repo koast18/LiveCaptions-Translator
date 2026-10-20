@@ -12,6 +12,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<!-- Pure managed Opus encoder/decoder; no native binaries are shipped. -->
+		<PackageReference Include="Concentus" Version="2.2.2" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<!-- The protobuf reader/writer are internal; the codec tests drive them directly. -->
 		<InternalsVisibleTo Include="LiveCaptionsTranslator.Core.Tests" />
 	</ItemGroup>
