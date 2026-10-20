@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
+		<!-- The project sits at the repository root, so the default globs reach into
+		     tests/**/bin. Keep test output out of the app assembly. -->
+		<DefaultItemExcludes>$(DefaultItemExcludes);tests\**</DefaultItemExcludes>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
@@ -34,7 +37,6 @@
 		<!-- The app project sits at the repository root, so the WPF page glob would otherwise
 		     compile XAML that test output copied under tests/**/bin into the real assembly. -->
 		<Page Remove="tests\**" />
-		<DefaultItemExcludes>$(DefaultItemExcludes);tests\**</DefaultItemExcludes>
 	</ItemGroup>
 
 	<!-- Text helpers live in the UI-independent Core library; make them visible everywhere. -->
