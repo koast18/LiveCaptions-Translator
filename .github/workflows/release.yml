@@ -114,11 +114,25 @@ jobs:
             **not** official 开放平台 credentials and are **not** covered by any public API agreement.
           * iFlytek can rotate or revoke them at any time, which would break that provider until the
             credentials are updated in *Settings → Speech Recognition*.
+          * The GitHub Actions runners are outside mainland China, so reaching the endpoint from CI
+            is not guaranteed by iFlytek's SLA. (The integration job did reach it on this build.)
           * Using them may violate iFlytek's terms of service. Use the Windows Live Captions
             provider if that matters to you.
           * ``iflytek-mt`` (machine translation) is a **separate** service and needs your own
             开放平台 ``app_id`` / ``api_key`` / ``api_secret``. It stays unusable until you fill them
             in, which does not affect any other engine.
+
+          ### Windows 10
+
+          ``windows-livecaptions`` needs Windows 11 22H2 or later. On Windows 10 the app detects
+          that the component is missing, selects ``iflytek-iat`` instead and tells you so in the
+          first caption and in *Settings → Speech Recognition*, instead of refusing to start.
+
+          ### Network
+
+          Google, OpenAI, OpenRouter and DeepL are unreachable from some networks. *Settings →
+          Network / Proxy* routes the engines you tick through a proxy while the rest go direct;
+          leaving it empty follows the machine's own proxy settings.
 
           ### Language support
 
