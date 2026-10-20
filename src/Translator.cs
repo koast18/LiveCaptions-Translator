@@ -51,7 +51,7 @@ namespace LiveCaptionsTranslator
             caption = Caption.GetInstance();
             setting = Setting.Load();
 
-            ProviderCatalog.RegisterAll(AsrProviders, () => setting?.DoubaoCredentials);
+            ProviderCatalog.RegisterAll(AsrProviders, () => setting?.DoubaoCredentials, LocalizationManager.T);
             TranslationProviderCatalog.RegisterAll(TranslationProviders);
             AudioSourceCatalog.RegisterAll(AudioSources);
 

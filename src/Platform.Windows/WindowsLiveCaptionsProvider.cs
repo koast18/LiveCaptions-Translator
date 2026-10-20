@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows.Automation;
 
 using LiveCaptionsTranslator.Core.Asr;
@@ -61,8 +61,15 @@ namespace LiveCaptionsTranslator.Platform.Windows
             new("nb", "Norsk"),
         };
 
+        private readonly Func<string, object?[], string>? localize;
+
         private CancellationTokenSource? cancellation;
         private Task? pollLoop;
+
+        public WindowsLiveCaptionsProvider(Func<string, object?[], string>? localize = null)
+        {
+            this.localize = localize;
+        }
 
         public string Id => ProviderId;
 
@@ -170,7 +177,7 @@ namespace LiveCaptionsTranslator.Platform.Windows
                 {
                     if (Window == null)
                     {
-                        sink.OnNotice("[WARNING] LiveCaptions was unexpectedly closed, restarting...");
+                        sink.OnNotice(localize?.Invoke("Asr_LiveCaptionsRestarting", []) ?? "[WARNING] LiveCaptions was unexpectedly closed, restarting...");
                         Window = LiveCaptionsHandler.LaunchLiveCaptions();
                         sink.OnNotice(string.Empty);
                     }

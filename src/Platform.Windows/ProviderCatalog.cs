@@ -18,13 +18,14 @@ namespace LiveCaptionsTranslator.Platform.Windows
         /// </param>
         public static void RegisterAll(
             AsrProviderRegistry registry,
-            Func<DoubaoCredentials?>? doubaoCredentials = null)
+            Func<DoubaoCredentials?>? doubaoCredentials = null,
+            Func<string, object?[], string>? localize = null)
         {
             ArgumentNullException.ThrowIfNull(registry);
 
             registry.Register(
                 WindowsLiveCaptionsProvider.ProviderId,
-                () => new WindowsLiveCaptionsProvider());
+                () => new WindowsLiveCaptionsProvider(localize));
 
             registry.Register(
                 IflytekIatProvider.ProviderId,
