@@ -1,4 +1,4 @@
-using LiveCaptionsTranslator.Core.Asr;
+﻿using LiveCaptionsTranslator.Core.Asr;
 using LiveCaptionsTranslator.Platform.Windows;
 
 namespace LiveCaptionsTranslator.Platform.Tests;
@@ -22,12 +22,54 @@ public class ProviderCatalogTests
     }
 
     [Fact]
-    public void Catalog_registers_both_asr_backends()
+    public void Catalog_registers_all_asr_backends()
     {
         var registry = BuildRegistry();
 
-        Assert.Equal(new[] { "windows-livecaptions", "iflytek-iat" }, registry.Ids);
+        Assert.Equal(new[] { "windows-livecaptions", "iflytek-iat", "doubao-asr" }, registry.Ids);
         Assert.True(registry.IsRegistered("iflytek-iat"));
+        Assert.True(registry.IsRegistered("doubao-asr"));
+    }
+
+    [Fact]
+    public void Doubao_is_listed_but_unavailable_without_credentials()
+    {
+        var provider = BuildRegistry().Create("doubao-asr");
+
+        Assert.Equal("doubao-asr", provider.Id);
+        Assert.True(provider.RequiresAudioSource);
+        Assert.False(provider.LanguageIsHostControlled);
+
+        // Selecting it in the picker must not blow up; it just explains what is missing.
+        Assert.False(provider.IsAvailable);
+        Assert.False(string.IsNullOrWhiteSpace(provider.UnavailableReason));
+        Assert.Contains("device_id", provider.UnavailableReason);
+    }
+
+    [Fact]
+    public void Doubao_becomes_available_once_credentials_exist()
+    {
+        var registry = new AsrProviderRegistry();
+        ProviderCatalog.RegisterAll(
+            registry,
+            () => new LiveCaptionsTranslator.Core.Doubao.DoubaoCredentials("1782778396951964", "key", "", ""));
+
+        var provider = registry.Create("doubao-asr");
+
+        Assert.True(provider.IsAvailable);
+        Assert.Null(provider.UnavailableReason);
+    }
+
+    [Fact]
+    public void A_provider_factory_that_returns_null_keeps_the_picker_working()
+    {
+        var registry = new AsrProviderRegistry();
+        ProviderCatalog.RegisterAll(registry, () => null);
+
+        var provider = registry.Create("doubao-asr");
+
+        Assert.False(provider.IsAvailable);
+        Assert.NotNull(provider.UnavailableReason);
     }
 
     [Fact]

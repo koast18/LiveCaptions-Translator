@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -40,6 +40,8 @@ namespace LiveCaptionsTranslator.models
         private string iflytekMtAppId;
         private string iflytekMtApiKey;
         private string iflytekMtApiSecret;
+        private string doubaoDeviceId;
+        private string doubaoAppKey;
 
         private MainWindowState mainWindowState;
         private OverlayWindowState overlayWindowState;
@@ -298,6 +300,35 @@ namespace LiveCaptionsTranslator.models
             }
         }
 
+        /// <summary>Doubao device fingerprint returned by the registration endpoint.</summary>
+        public string DoubaoDeviceId
+        {
+            get => doubaoDeviceId;
+            set
+            {
+                doubaoDeviceId = value;
+                OnPropertyChanged("DoubaoDeviceId");
+            }
+        }
+
+        /// <summary>Doubao ASR token (`app_key`) issued for <see cref="DoubaoDeviceId"/>.</summary>
+        public string DoubaoAppKey
+        {
+            get => doubaoAppKey;
+            set
+            {
+                doubaoAppKey = value;
+                OnPropertyChanged("DoubaoAppKey");
+            }
+        }
+
+        /// <summary>The registered pair, or <c>null</c> when the provider has not been set up yet.</summary>
+        [JsonIgnore]
+        public DoubaoCredentials? DoubaoCredentials =>
+            string.IsNullOrWhiteSpace(doubaoDeviceId) || string.IsNullOrWhiteSpace(doubaoAppKey)
+                ? null
+                : new DoubaoCredentials(doubaoDeviceId, doubaoAppKey, string.Empty, string.Empty);
+
         /// <summary>Machine-translation credentials, kept apart from the IAT ones.</summary>
         [JsonIgnore]
         public IReadOnlyDictionary<string, string> IflytekMtSettings => new Dictionary<string, string>
@@ -387,6 +418,8 @@ namespace LiveCaptionsTranslator.models
             iflytekMtAppId = string.Empty;
             iflytekMtApiKey = string.Empty;
             iflytekMtApiSecret = string.Empty;
+            doubaoDeviceId = string.Empty;
+            doubaoAppKey = string.Empty;
             proxyApiNames =
             [
                 "Google",

@@ -1,4 +1,5 @@
-using LiveCaptionsTranslator.Core.Asr;
+﻿using LiveCaptionsTranslator.Core.Asr;
+using LiveCaptionsTranslator.Core.Doubao;
 using LiveCaptionsTranslator.Core.Iflytek;
 
 namespace LiveCaptionsTranslator.Platform.Windows
@@ -10,7 +11,14 @@ namespace LiveCaptionsTranslator.Platform.Windows
     public static class ProviderCatalog
     {
         /// <summary>Registers every built-in ASR provider on <paramref name="registry"/>.</summary>
-        public static void RegisterAll(AsrProviderRegistry registry)
+        /// <param name="doubaoCredentials">
+        /// The device_id/app_key pair registered for the Doubao provider, or a factory returning
+        /// <c>null</c> when none exists yet - in which case the provider reports itself unavailable
+        /// instead of breaking the picker.
+        /// </param>
+        public static void RegisterAll(
+            AsrProviderRegistry registry,
+            Func<DoubaoCredentials?>? doubaoCredentials = null)
         {
             ArgumentNullException.ThrowIfNull(registry);
 
@@ -21,6 +29,10 @@ namespace LiveCaptionsTranslator.Platform.Windows
             registry.Register(
                 IflytekIatProvider.ProviderId,
                 () => new IflytekIatProvider());
+
+            registry.Register(
+                DoubaoAsrProvider.ProviderId,
+                () => new DoubaoAsrProvider(doubaoCredentials?.Invoke()));
         }
     }
 }
