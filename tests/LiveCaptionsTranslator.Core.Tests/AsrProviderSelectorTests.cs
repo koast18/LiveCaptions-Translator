@@ -128,4 +128,21 @@ public class AsrProviderSelectorTests
         Assert.Throws<InvalidOperationException>(
             () => AsrProviderSelector.Select(new AsrProviderRegistry(), "anything"));
     }
+
+    [Fact]
+    public void The_fallback_explanation_is_carried_as_parts_so_it_can_be_rendered_later()
+    {
+        var selection = AsrProviderSelector.Select(Registry(liveCaptionsAvailable: false), "windows-livecaptions");
+
+        // Activation happens before the string dictionary is merged, so the selection must hand the
+        // UI the pieces rather than a sentence baked in whatever language was installed at the time.
+        Assert.NotNull(selection.Fallback);
+        Assert.Equal("iflytek-iat", selection.Fallback!.Used);
+
+        string rendered = selection.Fallback.Render((key, args) =>
+            key == "Asr_FallbackNotice" ? "{0} unavailable ({1}), using {2}." : key);
+
+        Assert.Contains("unavailable", rendered);
+        Assert.Contains("iflytek-iat", rendered);
+    }
 }
