@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Threading;
+using System.IO;
 using System.Text.Json;
 
 using LiveCaptionsTranslator.Localization;
@@ -131,5 +132,27 @@ public class UiLanguageSettingTests
 
         string warning = LocalizationManager.T("Status_Warning", "careful");
         Assert.True(StatusText.IsWarning(warning), $"not recognised: {warning}");
+    }
+
+    [Fact]
+    public void Text_can_be_read_from_a_background_thread()
+    {
+        // The translation and ASR loops run on the thread pool. Reading a string there used to go
+        // through Application.TryFindResource, a DispatcherObject access, which threw - and that took
+        // the whole translation task down, so no caption ever reached the window.
+        string? text = null;
+        Exception? failure = null;
+
+        var thread = new Thread(() =>
+        {
+            try { text = LocalizationManager.T("Caption_Paused"); }
+            catch (Exception error) { failure = error; }
+        });
+
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(failure);
+        Assert.Equal("[Paused]", text);
     }
 }
