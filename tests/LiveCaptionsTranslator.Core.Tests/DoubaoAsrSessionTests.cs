@@ -728,8 +728,13 @@ public class DoubaoProviderStreamingTests
         audio.EmitChunk();
         await WaitUntil(() => transport.Sent.Count >= 3);
 
-        // The StartSession payload carries the window.
-        string sessionFrame = System.Text.Encoding.UTF8.GetString(transport.Sent[1]);
+        // The StartSession payload carries the window; find it by content rather than by index so a
+        // reconnect cannot shift what we are looking at.
+        string? sessionFrame = transport.Sent
+            .Select(frame => System.Text.Encoding.UTF8.GetString(frame))
+            .FirstOrDefault(text => text.Contains("end_smooth_window_ms"));
+
+        Assert.NotNull(sessionFrame);
         Assert.Contains($"\"end_smooth_window_ms\":{expected}", sessionFrame);
 
         await StopGracefullyAsync(provider, transport);
