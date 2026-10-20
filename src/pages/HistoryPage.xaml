@@ -35,7 +35,7 @@
                     Icon="{ui:SymbolIcon chevronLeft12,
                                          Filled=False}"
                     MouseOverBackground="#07000000"
-                    ToolTip="Previous " />
+                    ToolTip="{DynamicResource History_Previous}" />
 
                 <ui:TextBlock
                     x:Name="PageNumber"
@@ -51,7 +51,7 @@
                     Icon="{ui:SymbolIcon chevronRight12,
                                          Filled=False}"
                     MouseOverBackground="#07000000"
-                    ToolTip="Next Page" />
+                    ToolTip="{DynamicResource History_NextPage}" />
 
                 <ComboBox
                     x:Name="HistoryMaxRow"
@@ -60,10 +60,10 @@
                     Padding="10,4,10,7"
                     VerticalAlignment="Stretch"
                     SelectedIndex="1">
-                    <ComboBoxItem Content="20/page" Tag="20" />
-                    <ComboBoxItem Content="30/page" Tag="30" />
-                    <ComboBoxItem Content="50/page" Tag="50" />
-                    <ComboBoxItem Content="100/page" Tag="100" />
+                    <ComboBoxItem Content="{DynamicResource History_PerPage20}" Tag="20" />
+                    <ComboBoxItem Content="{DynamicResource History_PerPage30}" Tag="30" />
+                    <ComboBoxItem Content="{DynamicResource History_PerPage50}" Tag="50" />
+                    <ComboBoxItem Content="{DynamicResource History_PerPage100}" Tag="100" />
                 </ComboBox>
 
                 <ui:AutoSuggestBox
@@ -92,7 +92,7 @@
                     Icon="{ui:SymbolIcon ArrowDown12,
                                          Filled=False}"
                     MouseOverBackground="#07000000"
-                    ToolTip="Export" />
+                    ToolTip="{DynamicResource History_Export}" />
                 <ui:Button
                     x:Name="Delete"
                     Margin="5,0,0,0"
@@ -102,7 +102,7 @@
                     Icon="{ui:SymbolIcon Delete12,
                                          Filled=False}"
                     MouseOverBackground="#07000000"
-                    ToolTip="Delete All" />
+                    ToolTip="{DynamicResource History_DeleteAll}" />
 
                 <ui:Button
                     x:Name="Refresh"
@@ -113,7 +113,7 @@
                     Icon="{ui:SymbolIcon ArrowClockwise12,
                                          Filled=False}"
                     MouseOverBackground="#07000000"
-                    ToolTip="Refresh" />
+                    ToolTip="{DynamicResource History_Refresh}" />
             </StackPanel>
         </Grid>
 
@@ -148,7 +148,7 @@
                 </LinearGradientBrush>
             </DataGrid.BorderBrush>
             <DataGrid.Columns>
-                <DataGridTemplateColumn Width="0.4*" Header="Time">
+                <DataGridTemplateColumn Width="0.4*" Header="{DynamicResource History_Time}">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock
@@ -159,7 +159,7 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn Width="*" Header="Caption">
+                <DataGridTemplateColumn Width="*" Header="{DynamicResource Nav_Caption}">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding SourceText}" TextWrapping="Wrap" />
@@ -167,7 +167,7 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn Width="*" Header="Translated">
+                <DataGridTemplateColumn Width="*" Header="{DynamicResource History_Translated}">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding TranslatedText}" TextWrapping="Wrap" />

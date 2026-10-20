@@ -70,4 +70,39 @@
     <sys:String x:Key="Setting_MachineTranslation">Machine Translation</sys:String>
     <sys:String x:Key="Setting_AppId">app_id</sys:String>
 
+    <sys:String x:Key="Main_AlwaysOnTop">Always on Top</sys:String>
+    <sys:String x:Key="Main_LogCards">Log Cards of Captions</sys:String>
+    <sys:String x:Key="Main_OverlayWindow">Overlay Window</sys:String>
+    <sys:String x:Key="Main_PauseTranslation">Pause Translation (Log Only)</sys:String>
+    <sys:String x:Key="History_Refresh">Refresh</sys:String>
+    <sys:String x:Key="History_Export">Export</sys:String>
+    <sys:String x:Key="History_DeleteAll">Delete All</sys:String>
+    <sys:String x:Key="History_Previous">Previous </sys:String>
+    <sys:String x:Key="History_NextPage">Next Page</sys:String>
+    <sys:String x:Key="History_PerPage100">100/page</sys:String>
+    <sys:String x:Key="History_PerPage50">50/page</sys:String>
+    <sys:String x:Key="History_PerPage30">30/page</sys:String>
+    <sys:String x:Key="History_PerPage20">20/page</sys:String>
+    <sys:String x:Key="History_Time">Time</sys:String>
+    <sys:String x:Key="History_Translated">Translated</sys:String>
+    <sys:String x:Key="Info_Contribution">We welcome any form of contribution! You can provide suggestions or report bugs via GitHub issues, or contribute code directly by submitting Pull Requests.</sys:String>
+    <sys:String x:Key="Info_Star">&#x0A;If this program is helpful to you, please consider giving us a star ✨!</sys:String>
+    <sys:String x:Key="Info_Repository">Repository:</sys:String>
+    <sys:String x:Key="Info_Wiki">Wiki:</sys:String>
+    <sys:String x:Key="Info_Maintainer">Maintainer:</sys:String>
+    <sys:String x:Key="Info_AuthorAnd">(Author) and</sys:String>
+    <sys:String x:Key="Info_Version">Version:</sys:String>
+    <sys:String x:Key="Overlay_FontSizeIncrease">Font Size Increase</sys:String>
+    <sys:String x:Key="Overlay_FontSizeDecrease">Font Size Decrease</sys:String>
+    <sys:String x:Key="Overlay_FontStrokeIncrease">Font Stroke Increase</sys:String>
+    <sys:String x:Key="Overlay_FontStrokeDecrease">Font Stroke Decrease</sys:String>
+    <sys:String x:Key="Overlay_FontBold">Font Bold</sys:String>
+    <sys:String x:Key="Overlay_FontColor">Font Color</sys:String>
+    <sys:String x:Key="Overlay_BgOpacityIncrease">Background Opacity Increase</sys:String>
+    <sys:String x:Key="Overlay_BgOpacityDecrease">Background Opacity Decrease</sys:String>
+    <sys:String x:Key="Overlay_BgColor">Background Color</sys:String>
+    <sys:String x:Key="Overlay_OnlyTranslation">Show only subtitles or translations</sys:String>
+    <sys:String x:Key="Overlay_SwapOrder">Switch the order of subtitles and translations</sys:String>
+    <sys:String x:Key="Overlay_ClickThrough">Click Through</sys:String>
+
 </ResourceDictionary>

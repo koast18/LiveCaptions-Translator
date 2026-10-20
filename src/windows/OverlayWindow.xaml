@@ -6,7 +6,7 @@
     xmlns:local="clr-namespace:LiveCaptionsTranslator"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="Overlay Window"
+    Title="{DynamicResource Main_OverlayWindow}"
     Width="650"
     Height="135"
     MinWidth="650"
@@ -117,7 +117,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon fontIncrease20,
                                              Filled=False}"
-                        ToolTip="Font Size Increase" />
+                        ToolTip="{DynamicResource Overlay_FontSizeIncrease}" />
                     <ui:Button
                         x:Name="FontSizeDecrease"
                         Background="#FFAAAAAA"
@@ -125,7 +125,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon fontDecrease20,
                                              Filled=False}"
-                        ToolTip="Font Size Decrease" />
+                        ToolTip="{DynamicResource Overlay_FontSizeDecrease}" />
                     <ui:Button
                         x:Name="FontStrokeIncrease"
                         Background="#FFAAAAAA"
@@ -133,7 +133,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon InkStroke20,
                                              Filled=True}"
-                        ToolTip="Font Stroke Increase" />
+                        ToolTip="{DynamicResource Overlay_FontStrokeIncrease}" />
                     <ui:Button
                         x:Name="FontStrokeDecrease"
                         Background="#FFAAAAAA"
@@ -141,7 +141,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon InkStrokeArrowDown20,
                                              Filled=False}"
-                        ToolTip="Font Stroke Decrease" />
+                        ToolTip="{DynamicResource Overlay_FontStrokeDecrease}" />
                     <ui:Button
                         x:Name="FontBold"
                         Background="#FFAAAAAA"
@@ -149,7 +149,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon textBold16,
                                              Filled=False}"
-                        ToolTip="Font Bold" />
+                        ToolTip="{DynamicResource Overlay_FontBold}" />
                     <ui:Button
                         x:Name="FontColorCycle"
                         Background="#FFAAAAAA"
@@ -157,7 +157,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon color16,
                                              Filled=False}"
-                        ToolTip="Font Color" />
+                        ToolTip="{DynamicResource Overlay_FontColor}" />
 
                     <ui:Button
                         x:Name="OpacityIncrease"
@@ -167,7 +167,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon arrowAutofitUp20,
                                              Filled=False}"
-                        ToolTip="Background Opacity Increase" />
+                        ToolTip="{DynamicResource Overlay_BgOpacityIncrease}" />
                     <ui:Button
                         x:Name="OpacityDecrease"
                         Background="#FFAAAAAA"
@@ -175,7 +175,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon arrowAutofitDown20,
                                              Filled=False}"
-                        ToolTip="Background Opacity Decrease" />
+                        ToolTip="{DynamicResource Overlay_BgOpacityDecrease}" />
                     <ui:Button
                         x:Name="BackgroundColorCycle"
                         Background="#FFAAAAAA"
@@ -183,7 +183,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon color16,
                                              Filled=False}"
-                        ToolTip="Background Color" />
+                        ToolTip="{DynamicResource Overlay_BgColor}" />
 
                     <ui:Button
                         x:Name="OnlyModeButton"
@@ -193,7 +193,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon PanelBottom20,
                                              Filled=False}"
-                        ToolTip="Show only subtitles or translations" />
+                        ToolTip="{DynamicResource Overlay_OnlyTranslation}" />
                     <ui:Button
                         x:Name="SwitchModeButton"
                         Background="#FFAAAAAA"
@@ -201,7 +201,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon ArrowSyncCircle20,
                                              Filled=False}"
-                        ToolTip="Switch the order of subtitles and translations" />
+                        ToolTip="{DynamicResource Overlay_SwapOrder}" />
                     <ui:Button
                         x:Name="ClickThrough"
                         Background="#FFAAAAAA"
@@ -209,7 +209,7 @@
                         Cursor="Hand"
                         Icon="{ui:SymbolIcon lockClosed16,
                                              Filled=False}"
-                        ToolTip="Click Through" />
+                        ToolTip="{DynamicResource Overlay_ClickThrough}" />
                 </StackPanel>
             </Grid>
         </Border>

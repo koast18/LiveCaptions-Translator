@@ -68,4 +68,39 @@
     <sys:String x:Key="Setting_MachineTranslation">机器翻译</sys:String>
     <sys:String x:Key="Setting_AppId">app_id</sys:String>
 
+    <sys:String x:Key="Main_AlwaysOnTop">窗口置顶</sys:String>
+    <sys:String x:Key="Main_LogCards">字幕日志卡片</sys:String>
+    <sys:String x:Key="Main_OverlayWindow">悬浮窗</sys:String>
+    <sys:String x:Key="Main_PauseTranslation">暂停翻译（仅记录）</sys:String>
+    <sys:String x:Key="History_Refresh">刷新</sys:String>
+    <sys:String x:Key="History_Export">导出</sys:String>
+    <sys:String x:Key="History_DeleteAll">全部删除</sys:String>
+    <sys:String x:Key="History_Previous">上一页 </sys:String>
+    <sys:String x:Key="History_NextPage">下一页</sys:String>
+    <sys:String x:Key="History_PerPage100">100/页</sys:String>
+    <sys:String x:Key="History_PerPage50">50/页</sys:String>
+    <sys:String x:Key="History_PerPage30">30/页</sys:String>
+    <sys:String x:Key="History_PerPage20">20/页</sys:String>
+    <sys:String x:Key="History_Time">时间</sys:String>
+    <sys:String x:Key="History_Translated">译文</sys:String>
+    <sys:String x:Key="Info_Contribution">欢迎任何形式的贡献！你可以通过 GitHub 提出建议或反馈问题</sys:String>
+    <sys:String x:Key="Info_Star">&#x0A;如果这个程序对你有帮助，欢迎给个 star ✨！</sys:String>
+    <sys:String x:Key="Info_Repository">仓库：</sys:String>
+    <sys:String x:Key="Info_Wiki">Wiki：</sys:String>
+    <sys:String x:Key="Info_Maintainer">维护者：</sys:String>
+    <sys:String x:Key="Info_AuthorAnd">（作者）与</sys:String>
+    <sys:String x:Key="Info_Version">版本：</sys:String>
+    <sys:String x:Key="Overlay_FontSizeIncrease">增大字号</sys:String>
+    <sys:String x:Key="Overlay_FontSizeDecrease">减小字号</sys:String>
+    <sys:String x:Key="Overlay_FontStrokeIncrease">加深描边</sys:String>
+    <sys:String x:Key="Overlay_FontStrokeDecrease">减淡描边</sys:String>
+    <sys:String x:Key="Overlay_FontBold">粗体</sys:String>
+    <sys:String x:Key="Overlay_FontColor">字体颜色</sys:String>
+    <sys:String x:Key="Overlay_BgOpacityIncrease">提高背景不透明度</sys:String>
+    <sys:String x:Key="Overlay_BgOpacityDecrease">降低背景不透明度</sys:String>
+    <sys:String x:Key="Overlay_BgColor">背景颜色</sys:String>
+    <sys:String x:Key="Overlay_OnlyTranslation">仅显示原文或译文</sys:String>
+    <sys:String x:Key="Overlay_SwapOrder">交换原文与译文的顺序</sys:String>
+    <sys:String x:Key="Overlay_ClickThrough">鼠标穿透</sys:String>
+
 </ResourceDictionary>

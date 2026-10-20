@@ -12,34 +12,34 @@
     <Grid Margin="10">
         <StackPanel>
             <TextBlock TextAlignment="Left" TextWrapping="Wrap">
-                <Run Text="We welcome any form of contribution! You can provide suggestions or report bugs via GitHub issues, or contribute code directly by submitting Pull Requests." />
-                <Run Text="&#x0A;If this program is helpful to you, please consider giving us a star ✨!" />
+                <Run Text="{DynamicResource Info_Contribution}" />
+                <Run Text="{DynamicResource Info_Star}" />
             </TextBlock>
             <Separator Margin="0,5,0,5" />
             <TextBlock Margin="0,0,0,3">
-                <Run FontWeight="SemiBold" Text="Repository:" />
+                <Run FontWeight="SemiBold" Text="{DynamicResource Info_Repository}" />
                 <Hyperlink NavigateUri="https://github.com/SakiRinn/LiveCaptions-Translator" RequestNavigate="Hyperlink_RequestNavigate">
                     <Run Text="https://github.com/SakiRinn/LiveCaptions-Translator" />
                 </Hyperlink>
             </TextBlock>
             <TextBlock Margin="0,0,0,3">
-                <Run FontWeight="SemiBold" Text="Wiki:" />
+                <Run FontWeight="SemiBold" Text="{DynamicResource Info_Wiki}" />
                 <Hyperlink NavigateUri="https://github.com/SakiRinn/LiveCaptions-Translator/wiki" RequestNavigate="Hyperlink_RequestNavigate">
                     <Run x:Name="Wiki" Text="https://github.com/SakiRinn/LiveCaptions-Translator/wiki" />
                 </Hyperlink>
             </TextBlock>
             <TextBlock Margin="0,0,0,3">
-                <Run FontWeight="SemiBold" Text="Maintainer:" />
+                <Run FontWeight="SemiBold" Text="{DynamicResource Info_Maintainer}" />
                 <Hyperlink NavigateUri="https://github.com/SakiRinn" RequestNavigate="Hyperlink_RequestNavigate">
                     <Run Text="@SakiRinn" />
                 </Hyperlink>
-                <Run Text="(Author) and" />
+                <Run Text="{DynamicResource Info_AuthorAnd}" />
                 <Hyperlink NavigateUri="https://github.com/A-nony-mous" RequestNavigate="Hyperlink_RequestNavigate">
                     <Run Text="@A-nony-mous" />
                 </Hyperlink>
             </TextBlock>
             <TextBlock>
-                <Run FontWeight="SemiBold" Text="Version:" />
+                <Run FontWeight="SemiBold" Text="{DynamicResource Info_Version}" />
                 <Hyperlink NavigateUri="https://github.com/SakiRinn/LiveCaptions-Translator/releases" RequestNavigate="Hyperlink_RequestNavigate">
                     <Run x:Name="Version" Text="1.1.1.1" />
                 </Hyperlink>

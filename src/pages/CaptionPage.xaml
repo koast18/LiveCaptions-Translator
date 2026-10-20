@@ -31,7 +31,7 @@
                             Cursor="Hand"
                             MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
                             Text="{Binding Text}"
-                            ToolTip="Click to Copy">
+                            ToolTip="{DynamicResource Caption_CopyTooltip}">
                             <TextBlock.Style>
                                 <Style BasedOn="{StaticResource CaptionBlockStyle}" TargetType="TextBlock">
                                     <Setter Property="FontSize" Value="13" />
