@@ -78,10 +78,10 @@ jobs:
           dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj
           -c Release --logger "console;verbosity=detailed"
 
-  # Runs the real application in both Windows themes on an ephemeral runner and checks that the
-  # theme it applies (and the brushes it resolves) actually follow the setting. This is the only
-  # automated coverage for light/dark mode: it needs a desktop session and it changes the registry,
-  # which is fine on a throwaway runner but not on a developer machine.
+  # Runs the real application in both Windows themes on an ephemeral runner, checks the brushes it
+  # resolved, and measures the pixels it actually drew. This is the only automated coverage for
+  # light/dark mode: it needs a desktop session and it writes the registry, which is fine on a
+  # throwaway runner but never on a developer machine.
   ui-theme:
     name: UI theme (light + dark)
     runs-on: windows-latest
@@ -103,50 +103,92 @@ jobs:
           -p:PublishSingleFile=true
           -o ./publish/ui
 
-      - name: Probe both themes
+      - name: Verify both themes render correctly
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName System.Drawing
+          Add-Type @"
+          using System;
+          using System.Runtime.InteropServices;
+          public class Shot {
+              [StructLayout(LayoutKind.Sequential)]
+              public struct RECT { public int Left, Top, Right, Bottom; }
+              [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+              [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint f);
+          }
+          "@
+
           $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
           $exe = Join-Path $PWD 'publish/ui/LiveCaptionsTranslator.exe'
           $work = Join-Path $PWD 'publish/ui'
 
-          function Probe([int] $light) {
+          function Run([int] $light) {
             Set-ItemProperty $key -Name AppsUseLightTheme -Value $light
             Set-ItemProperty $key -Name SystemUsesLightTheme -Value $light
             Start-Sleep -Seconds 1
 
-            $out = Join-Path $PWD "theme-$light.txt"
-            Remove-Item $out -ErrorAction SilentlyContinue
-            $env:LCT_THEME_PROBE = $out
+            $probe = Join-Path $PWD "theme-$light.txt"
+            Remove-Item $probe -ErrorAction SilentlyContinue
+            $env:LCT_THEME_PROBE = $probe
 
             $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
             Start-Sleep -Seconds 10
+
+            $p.Refresh()
+            $h = $p.MainWindowHandle
+            if ($h -eq [IntPtr]::Zero) { throw 'the app never created a window' }
+
+            $r = New-Object Shot+RECT
+            [Shot]::GetWindowRect($h, [ref]$r) | Out-Null
+            $w = $r.Right - $r.Left
+            $hh = $r.Bottom - $r.Top
+            $bmp = New-Object System.Drawing.Bitmap $w, $hh
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $hdc = $g.GetHdc()
+            [Shot]::PrintWindow($h, $hdc, 2) | Out-Null
+            $g.ReleaseHdc($hdc)
+            $g.Dispose()
+            $bmp.Save((Join-Path $PWD "render-$light.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+
+            # Sample a grid rather than every pixel: GetPixel is slow.
+            $sum = 0.0
+            $n = 0
+            for ($y = 2; $y -lt $hh; $y += 4) {
+              for ($x = 2; $x -lt $w; $x += 4) {
+                $c = $bmp.GetPixel($x, $y)
+                $sum += 0.2126 * $c.R + 0.7152 * $c.G + 0.0722 * $c.B
+                $n++
+              }
+            }
+            $bmp.Dispose()
+
             if (-not $p.HasExited) { $p.Kill() }
 
-            if (-not (Test-Path $out)) { throw "the app never wrote $out (did it start?)" }
-            Write-Output "--- AppsUseLightTheme=$light ---"
-            Get-Content $out | ForEach-Object { Write-Output $_ }
-            return (Get-Content $out)
+            $lines = Get-Content $probe
+            [pscustomobject]@{
+              Theme   = ($lines | Select-String '^AppsUseLightTheme=' | Select-Object -First 1).Line
+              Bg      = ($lines | Select-String '^ApplicationBackgroundBrush=' | Select-Object -First 1).Line
+              Text    = ($lines | Select-String '^TextFillColorPrimaryBrush=' | Select-Object -First 1).Line
+              Luma    = [math]::Round($sum / $n, 1)
+              Size    = "${w}x${hh}"
+            }
           }
 
-          $dark = Probe 0
-          $light = Probe 1
+          $dark = Run 0
+          $light = Run 1
 
-          function Value($lines, $name) {
-            ($lines | Select-String "^$name=" | Select-Object -First 1).Line
-          }
+          Write-Output "dark : $($dark.Theme) | $($dark.Bg) | $($dark.Text) | luma=$($dark.Luma) | $($dark.Size)"
+          Write-Output "light: $($light.Theme) | $($light.Bg) | $($light.Text) | luma=$($light.Luma) | $($light.Size)"
 
-          $darkBg = Value $dark 'ApplicationBackgroundBrush'
-          $lightBg = Value $light 'ApplicationBackgroundBrush'
-          $darkText = Value $dark 'TextFillColorPrimaryBrush'
-          $lightText = Value $light 'TextFillColorPrimaryBrush'
+          if ($dark.Theme -ne 'AppsUseLightTheme=0') { throw "dark run read the wrong registry value: $($dark.Theme)" }
+          if ($light.Theme -ne 'AppsUseLightTheme=1') { throw "light run read the wrong registry value: $($light.Theme)" }
+          if ($dark.Bg -eq $light.Bg) { throw "background brush did not change: $($dark.Bg)" }
+          if ($dark.Text -eq $light.Text) { throw "text brush did not change: $($dark.Text)" }
 
-          if ((Value $dark 'AppsUseLightTheme') -ne 'AppsUseLightTheme=0') { throw "dark run read the wrong registry value: $(Value $dark 'AppsUseLightTheme')" }
-          if ((Value $light 'AppsUseLightTheme') -ne 'AppsUseLightTheme=1') { throw "light run read the wrong registry value: $(Value $light 'AppsUseLightTheme')" }
-          if (-not $darkBg) { throw 'the app could not resolve ApplicationBackgroundBrush' }
-          if ($darkBg -eq $lightBg) { throw "the background brush did not change between themes: $darkBg" }
-          if ($darkText -eq $lightText) { throw "the text brush did not change between themes: $darkText" }
+          # The rendered pixels are the point: a correct dictionary on a transparent window still
+          # looks wrong, which is exactly the Windows 10 bug this job exists to catch.
+          if ($dark.Luma -ge 100) { throw "dark theme rendered bright (mean luma $($dark.Luma))" }
+          if ($light.Luma -le 120) { throw "light theme rendered dark (mean luma $($light.Luma))" }
 
-          Write-Output "OK dark:  $darkBg  $darkText"
-          Write-Output "OK light: $lightBg  $lightText"
+          Write-Output "OK: dark renders at luma $($dark.Luma), light at $($light.Luma)"

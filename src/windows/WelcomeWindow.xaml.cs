@@ -16,7 +16,7 @@ namespace LiveCaptionsTranslator
             {
                 SystemThemeWatcher.Watch(
                     this,
-                    WindowBackdropType.Auto,
+                    WindowBackdropType.None,
                     true
                 );
             };
