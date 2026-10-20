@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 
 using LiveCaptionsTranslator.utils;
+using LiveCaptionsTranslator.Localization;
 
 namespace LiveCaptionsTranslator.models
 {
@@ -126,7 +127,7 @@ namespace LiveCaptionsTranslator.models
             var prev = Contexts
                 .Reverse().Take(count).Reverse()
                 .Select(entry => entry == null || string.CompareOrdinal(entry.TranslatedText, "N/A") == 0 ||
-                                 entry.TranslatedText.Contains("[ERROR]") || entry.TranslatedText.Contains("[WARNING]") ?
+                                 StatusText.IsStatus(entry.TranslatedText) ?
                     "" : (textType == TextType.Caption ? entry.SourceText : entry.TranslatedText))
                 .Aggregate((accu, cur) =>
                 {
@@ -158,8 +159,7 @@ namespace LiveCaptionsTranslator.models
             return Contexts
                 .Reverse().Take(count).Reverse()
                 .Where(entry => entry != null && string.CompareOrdinal(entry.TranslatedText, "N/A") != 0 &&
-                                !entry.TranslatedText.Contains("[ERROR]") &&
-                                !entry.TranslatedText.Contains("[WARNING]"));
+                                !StatusText.IsStatus(entry.TranslatedText));
         }
 
         /// <summary>

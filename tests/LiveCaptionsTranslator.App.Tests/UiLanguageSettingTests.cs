@@ -117,4 +117,19 @@ public class UiLanguageSettingTests
     [Fact]
     public void An_unknown_key_is_returned_as_is_rather_than_blank()
         => Assert.Equal("NoSuchKey", LocalizationManager.T("NoSuchKey"));
+
+    [Fact]
+    public void Status_markers_are_recognised_in_english_and_in_chinese()
+    {
+        // The markers are part of the translated text, so the check cannot hardcode "[ERROR]".
+        Assert.True(StatusText.IsError("[ERROR] Translation Failed: boom"));
+        Assert.False(StatusText.IsStatus("我只是在说今天天气不错。"));
+        Assert.False(StatusText.IsStatus(null));
+
+        string english = LocalizationManager.T("Error_TranslationFailed", "boom");
+        Assert.True(StatusText.IsError(english), $"not recognised: {english}");
+
+        string warning = LocalizationManager.T("Status_Warning", "careful");
+        Assert.True(StatusText.IsWarning(warning), $"not recognised: {warning}");
+    }
 }

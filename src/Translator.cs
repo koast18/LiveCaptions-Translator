@@ -7,6 +7,7 @@ using LiveCaptionsTranslator.models;
 using LiveCaptionsTranslator.translation;
 using LiveCaptionsTranslator.utils;
 using LiveCaptionsTranslator.Core.Asr;
+using LiveCaptionsTranslator.Localization;
 
 namespace LiveCaptionsTranslator
 {
@@ -408,7 +409,7 @@ namespace LiveCaptionsTranslator
                         TextUtil.ShortenDisplaySentence(Caption.TranslatedCaption, TextUtil.VERYLONG_THRESHOLD);
 
                     // Overlay window
-                    if (Caption.TranslatedCaption.Contains("[ERROR]") || Caption.TranslatedCaption.Contains("[WARNING]"))
+                    if (StatusText.IsStatus(Caption.TranslatedCaption))
                         Caption.OverlayCurrentTranslation = Caption.TranslatedCaption;
                     else
                     {

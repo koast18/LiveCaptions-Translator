@@ -103,7 +103,7 @@ namespace LiveCaptionsTranslator.apis
                 foreach (var entry in Translator.Caption.AwareContexts)
                 {
                     string translatedText = entry.TranslatedText;
-                    if (translatedText.Contains("[ERROR]") || translatedText.Contains("[WARNING]"))
+                    if (StatusText.IsStatus(translatedText))
                         continue;
                     translatedText = RegexPatterns.NoticePrefix().Replace(translatedText, "");
 
@@ -181,7 +181,7 @@ namespace LiveCaptionsTranslator.apis
                 foreach (var entry in Translator.Caption.AwareContexts)
                 {
                     string translatedText = entry.TranslatedText;
-                    if (translatedText.Contains("[ERROR]") || translatedText.Contains("[WARNING]"))
+                    if (StatusText.IsStatus(translatedText))
                         continue;
                     translatedText = RegexPatterns.NoticePrefix().Replace(translatedText, "");
 
@@ -242,7 +242,7 @@ namespace LiveCaptionsTranslator.apis
                 foreach (var entry in Translator.Caption.AwareContexts)
                 {
                     string translatedText = entry.TranslatedText;
-                    if (translatedText.Contains("[ERROR]") || translatedText.Contains("[WARNING]"))
+                    if (StatusText.IsStatus(translatedText))
                         continue;
                     translatedText = RegexPatterns.NoticePrefix().Replace(translatedText, "");
                     contextLines.Add($"🔤 {entry.SourceText} 🔤 → {translatedText}");
@@ -328,7 +328,7 @@ namespace LiveCaptionsTranslator.apis
                 foreach (var entry in Translator.Caption.AwareContexts)
                 {
                     string translatedText = entry.TranslatedText;
-                    if (translatedText.Contains("[ERROR]") || translatedText.Contains("[WARNING]"))
+                    if (StatusText.IsStatus(translatedText))
                         continue;
                     translatedText = RegexPatterns.NoticePrefix().Replace(translatedText, "");
 
