@@ -42,6 +42,7 @@ namespace LiveCaptionsTranslator.models
         private string iflytekMtApiSecret;
         private string doubaoDeviceId;
         private string doubaoAppKey;
+        private int doubaoVadWindowMs;
 
         private MainWindowState mainWindowState;
         private OverlayWindowState overlayWindowState;
@@ -231,6 +232,7 @@ namespace LiveCaptionsTranslator.models
             [IflytekSettingKeys.Host] = iflytekHost,
             [IflytekSettingKeys.Path] = iflytekPath,
             [IflytekSettingKeys.AppId] = iflytekAppId,
+            [DoubaoSettingKeys.VadWindowMs] = doubaoVadWindowMs.ToString(System.Globalization.CultureInfo.InvariantCulture),
         };
 
         /// <summary>
@@ -319,6 +321,20 @@ namespace LiveCaptionsTranslator.models
             {
                 doubaoAppKey = value;
                 OnPropertyChanged("DoubaoAppKey");
+            }
+        }
+
+        /// <summary>
+        /// Silence in milliseconds before Doubao ends a segment. The service default of 200 chops
+        /// sentences at every breath, so the app asks for something calmer.
+        /// </summary>
+        public int DoubaoVadWindowMs
+        {
+            get => doubaoVadWindowMs;
+            set
+            {
+                doubaoVadWindowMs = value;
+                OnPropertyChanged("DoubaoVadWindowMs");
             }
         }
 
@@ -420,6 +436,7 @@ namespace LiveCaptionsTranslator.models
             iflytekMtApiSecret = string.Empty;
             doubaoDeviceId = string.Empty;
             doubaoAppKey = string.Empty;
+            doubaoVadWindowMs = 600;
             proxyApiNames =
             [
                 "Google",

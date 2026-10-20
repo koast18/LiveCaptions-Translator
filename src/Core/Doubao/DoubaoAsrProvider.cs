@@ -15,6 +15,12 @@ namespace LiveCaptionsTranslator.Core.Doubao
         public const string InstallId = "doubao_install_id";
 
         public const string Cdid = "doubao_cdid";
+
+        /// <summary>
+        /// Silence in milliseconds before the service closes a segment. Larger values give longer,
+        /// calmer sentences; the reference client defaults to 200, which chops at every breath.
+        /// </summary>
+        public const string VadWindowMs = "doubao_vad_window_ms";
     }
 
     /// <summary>
@@ -45,6 +51,8 @@ namespace LiveCaptionsTranslator.Core.Doubao
         private readonly DoubaoCredentials? credentials;
         private readonly Func<IDoubaoTransport>? transportFactory;
         private readonly DoubaoStreamOptions streamOptions;
+
+        private int vadWindowMs;
 
         private CancellationTokenSource? cancellation;
         private Task? worker;
@@ -90,6 +98,8 @@ namespace LiveCaptionsTranslator.Core.Doubao
 
             if (credentials is not { IsComplete: true })
                 throw new InvalidOperationException(UnavailableReason);
+
+            vadWindowMs = ResolveVadWindowMs(context.Options);
 
             audioSource = context.AudioSource;
             queue = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(512)
@@ -154,11 +164,24 @@ namespace LiveCaptionsTranslator.Core.Doubao
 
         public async ValueTask DisposeAsync() => await StopAsync();
 
+        /// <summary>Reads the segmentation window from the host settings, clamped to a sane range.</summary>
+        private int ResolveVadWindowMs(AsrOptions options)
+        {
+            if (options.Settings.TryGetValue(DoubaoSettingKeys.VadWindowMs, out string? raw) &&
+                int.TryParse(raw, out int configured) &&
+                configured is >= 100 and <= 5000)
+            {
+                return configured;
+            }
+
+            return streamOptions.VadWindowMs;
+        }
+
         private async Task RunAsync(AsrContext context, CancellationToken token)
         {
             var channel = queue!;
             var streamer = new DoubaoAsrStreamer(
-                () => new DoubaoAsrSession(credentials!.DeviceId, credentials.AppKey, transportFactory, vadWindowMs: streamOptions.VadWindowMs),
+                () => new DoubaoAsrSession(credentials!.DeviceId, credentials.AppKey, transportFactory, vadWindowMs: vadWindowMs),
                 streamOptions);
 
             using var encoder = new DoubaoOpusEncoder();

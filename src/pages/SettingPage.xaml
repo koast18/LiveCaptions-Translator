@@ -416,6 +416,19 @@
                     Click="DoubaoApplyButton_click">
                     <TextBlock Text="Apply" />
                 </ui:Button>
+                <TextBlock
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="12.5"
+                    Text="gap(ms)" />
+                <TextBox
+                    x:Name="DoubaoVadBox"
+                    Width="60"
+                    Height="30"
+                    Margin="8,0,0,0"
+                    Padding="8,4,8,4"
+                    FontSize="12.5"
+                    ToolTip="Silence before Doubao ends a sentence. 200 is the service default and chops at every breath; 500-800 reads better." />
             </StackPanel>
 
             <TextBlock

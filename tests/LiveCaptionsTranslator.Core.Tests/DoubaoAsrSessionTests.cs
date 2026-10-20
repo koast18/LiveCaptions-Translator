@@ -672,4 +672,44 @@ public class DoubaoProviderStreamingTests
             AudioSource = new FakeAudioSource(),
         }));
     }
+
+    [Theory]
+    [InlineData("600", 600)]
+    [InlineData("200", 200)]
+    [InlineData("5000", 5000)]
+    [InlineData("50", 200)]      // too small: ignored
+    [InlineData("9000", 200)]    // too large: ignored
+    [InlineData("abc", 200)]     // garbage: ignored
+    public async Task The_segmentation_window_comes_from_the_host_settings(string configured, int expected)
+    {
+        var transport = new CapturingTransport();
+        transport.Enqueue(Response("TaskStarted"));
+        transport.Enqueue(Response("SessionStarted"));
+
+        var audio = new FakeAudioSource();
+
+        await using var provider = new DoubaoAsrProvider(
+            new DoubaoCredentials("1782778396951964", "app-key", string.Empty, string.Empty),
+            () => transport,
+            new DoubaoStreamOptions { VadWindowMs = 200 });
+
+        await provider.StartAsync(new AsrContext
+        {
+            Sink = new RecordingSink(),
+            Options = new AsrOptions
+            {
+                Settings = new Dictionary<string, string> { [DoubaoSettingKeys.VadWindowMs] = configured },
+            },
+            AudioSource = audio,
+        });
+
+        audio.EmitChunk();
+        await WaitUntil(() => transport.Sent.Count >= 3);
+
+        // The StartSession payload carries the window.
+        string sessionFrame = System.Text.Encoding.UTF8.GetString(transport.Sent[1]);
+        Assert.Contains($"\"end_smooth_window_ms\":{expected}", sessionFrame);
+
+        await provider.StopAsync();
+    }
 }

@@ -51,6 +51,7 @@ namespace LiveCaptionsTranslator
 
                 DoubaoDeviceIdBox.Text = Translator.Setting?.DoubaoDeviceId ?? string.Empty;
                 DoubaoAppKeyBox.Text = Translator.Setting?.DoubaoAppKey ?? string.Empty;
+                DoubaoVadBox.Text = (Translator.Setting?.DoubaoVadWindowMs ?? 600).ToString();
 
                 BuildProxyTargets();
             }
@@ -302,6 +303,9 @@ namespace LiveCaptionsTranslator
 
             Translator.Setting.DoubaoDeviceId = DoubaoDeviceIdBox.Text.Trim();
             Translator.Setting.DoubaoAppKey = DoubaoAppKeyBox.Text.Trim();
+
+            if (int.TryParse(DoubaoVadBox.Text.Trim(), out int gap) && gap is >= 100 and <= 5000)
+                Translator.Setting.DoubaoVadWindowMs = gap;
 
             await Translator.SwitchAsrProviderAsync(DoubaoAsrProvider.ProviderId);
 
