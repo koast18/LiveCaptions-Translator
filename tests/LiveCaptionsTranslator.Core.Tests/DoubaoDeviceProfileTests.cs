@@ -37,8 +37,8 @@ public class DoubaoDeviceProfileTests
         Assert.Equal("clientudid-value", header.GetProperty("clientudid").GetString());
 
         // The registration body carries zeros; the real ids only exist after the response.
-        Assert.Equal("0", header.GetProperty("device_id").GetString());
-        Assert.Equal("0", header.GetProperty("install_id").GetString());
+        Assert.Equal(0, header.GetProperty("device_id").GetInt32());
+        Assert.Equal(0, header.GetProperty("install_id").GetInt32());
     }
 
     [Fact]
