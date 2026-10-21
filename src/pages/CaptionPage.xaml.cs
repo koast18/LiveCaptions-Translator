@@ -22,6 +22,8 @@ namespace LiveCaptionsTranslator
             // Lyrics style: always keep the newest line in view.
             Translator.Caption.RollingLines.CollectionChanged += OnRollingLinesChanged;
 
+            RollingScroll.SizeChanged += (s, e) => ScrollToLatest();
+
             Loaded += (s, e) =>
             {
                 AutoHeight();
@@ -45,9 +47,17 @@ namespace LiveCaptionsTranslator
             if (!IsLoaded)
                 return;
 
+            // At Background priority this ran before the new line had been laid out, so it scrolled to
+            // the previous extent and the newest line ended up below the fold. Scroll at Render, then
+            // once more after a layout pass, and clamp to the real maximum.
             Dispatcher.BeginInvoke(
-                System.Windows.Threading.DispatcherPriority.Background,
-                new Action(() => RollingScroll.ScrollToEnd()));
+                System.Windows.Threading.DispatcherPriority.Render,
+                new Action(() =>
+                {
+                    RollingScroll.ScrollToVerticalOffset(double.MaxValue);
+                    RollingScroll.UpdateLayout();
+                    RollingScroll.ScrollToVerticalOffset(double.MaxValue);
+                }));
         }
 
         private async void TextBlock_MouseLeftButtonDown(object sender, RoutedEventArgs e)
