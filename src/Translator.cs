@@ -356,36 +356,74 @@ namespace LiveCaptionsTranslator
             }
         }
 
+
+        /// <summary>Kept deliberately tiny: the loops only need somewhere to report a broken frame.</summary>
+        private static void Log(string message)
+        {
+            try { Console.Error.WriteLine(message); }
+            catch (Exception) { /* nowhere to report it to */ }
+        }
+
         public static async Task TranslateLoop()
         {
             while (true)
             {
-                // Translate
-                if (pendingTextQueue.Count > 0)
+                try
                 {
-                    var originalSnapshot = pendingTextQueue.Dequeue();
-
-                    if (LogOnlyFlag)
-                    {
-                        bool isOverwrite = await IsOverwrite(originalSnapshot);
-                        await LogOnly(originalSnapshot, isOverwrite);
-                    }
-                    else
-                    {
-                        translationTaskQueue.Enqueue(token => Task.Run(
-                            () => Translate(originalSnapshot, token), token), originalSnapshot);
-                    }
+                    await TranslateOnce();
                 }
-
-                Thread.Sleep(40);
+                catch (Exception exception)
+                {
+                    Log($"[ERROR] translate: {exception.Message}");
+                    await Task.Delay(200);
+                }
             }
+        }
+
+        private static async Task TranslateOnce()
+        {
+            // Translate
+            if (pendingTextQueue.Count > 0)
+            {
+                var originalSnapshot = pendingTextQueue.Dequeue();
+
+                if (LogOnlyFlag)
+                {
+                    bool isOverwrite = await IsOverwrite(originalSnapshot);
+                    await LogOnly(originalSnapshot, isOverwrite);
+                }
+                else
+                {
+                    translationTaskQueue.Enqueue(token => Task.Run(
+                        () => Translate(originalSnapshot, token), token), originalSnapshot);
+                }
+            }
+
+            Thread.Sleep(40);
         }
 
         public static async Task DisplayLoop()
         {
             while (true)
             {
-                var (translatedText, isChoke) = translationTaskQueue.Output;
+                try
+                {
+                    await DisplayOnce();
+                }
+                catch (Exception exception)
+                {
+                    // One bad frame must not stop captions for the rest of the session: before this,
+                    // a single exception took the loop down and the page stayed blank while the
+                    // history, written on another path, kept filling.
+                    Log($"[ERROR] display: {exception.Message}");
+                    await Task.Delay(200);
+                }
+            }
+        }
+
+        private static async Task DisplayOnce()
+        {
+            var (translatedText, isChoke) = translationTaskQueue.Output;
 
                 if (LogOnlyFlag)
                 {
@@ -424,11 +462,10 @@ namespace LiveCaptionsTranslator
                     }
                 }
 
-                // If the original sentence is a complete sentence, choke for better visual experience.
-                if (isChoke)
-                    Thread.Sleep(720);
-                Thread.Sleep(40);
-            }
+            // If the original sentence is a complete sentence, choke for better visual experience.
+            if (isChoke)
+                Thread.Sleep(720);
+            Thread.Sleep(40);
         }
 
         public static async Task<(string, bool)> Translate(string text, CancellationToken token = default)
