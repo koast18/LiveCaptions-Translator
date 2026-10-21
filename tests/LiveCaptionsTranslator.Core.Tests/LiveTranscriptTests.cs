@@ -107,21 +107,15 @@ public class LiveTranscriptTests
         Assert.Equal(["我"], transcript.Accept("我", isFinal: true));
     }
 
-    private static List<(string Kind, string Text)> Recorded()
-    {
-        string path = Path.Combine(AppContext.BaseDirectory, "fixtures", "transcript-partials.txt");
-        Assert.True(File.Exists(path), path);
-
-        var events = new List<(string, string)>();
-        foreach (string line in File.ReadAllLines(path))
-        {
-            int tab = line.IndexOf('\t');
-            if (tab <= 0)
-                continue;
-
-            events.Add((line[..tab], line[(tab + 1)..]));
-        }
-
-        return events;
-    }
+    /// <summary>Verbatim from the capture of the committed sample (transcript-capture artifact).</summary>
+    private static List<(string Kind, string Text)> Recorded() =>
+    [
+        ("partial", "今天天气不"),
+        ("partial", "今天天气不错"),
+        ("partial", "今天天气不错我们一起去"),
+        ("partial", "今天天气不错我们一起去公"),
+        ("partial", "今天天气不错，我们一起去公园散步吧"),
+        ("partial", "今天天气不错，我们一起去公园散步吧。"),
+        ("final", "今天天气不错，我们一起去公园散步吧。"),
+    ];
 }
