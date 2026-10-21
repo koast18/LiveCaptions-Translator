@@ -5,8 +5,8 @@
         private readonly object _lock = new object();
         private readonly List<TranslationTask> tasks;
 
-        private (string translatedText, bool isChoke, bool interim) output;
-        public (string translatedText, bool isChoke, bool interim) Output => output;
+        private (string translatedText, bool isChoke, bool interim, string sourceText) output;
+        public (string translatedText, bool isChoke, bool interim, string sourceText) Output => output;
 
         /// <summary>Released whenever <see cref="Output"/> changes, so the display loop need not poll.</summary>
         private readonly SemaphoreSlim available = new(0);
@@ -14,7 +14,7 @@
         public TranslationTaskQueue()
         {
             tasks = new List<TranslationTask>();
-            output = (string.Empty, false, false);
+            output = (string.Empty, false, false, string.Empty);
         }
 
         public void Enqueue(Func<CancellationToken, Task<(string, bool)>> worker, string originalText, bool interim = false)
@@ -46,7 +46,7 @@
             }
 
             var result = translationTask.Task.Result;
-            output = (result.Item1, result.Item2, translationTask.Interim);
+            output = (result.Item1, result.Item2, translationTask.Interim, translationTask.OriginalText);
             available.Release();
 
             // An interim translation is a preview: it is replaced by the final one, so it must not be

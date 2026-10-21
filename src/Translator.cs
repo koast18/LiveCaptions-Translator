@@ -291,9 +291,6 @@ namespace LiveCaptionsTranslator
             return true;
         }
 
-        /// <summary>What the previous final translation replaced, for in-place correction.</summary>
-        private static string lastShownFinal = string.Empty;
-
 
 
         /// <summary>
@@ -324,13 +321,14 @@ namespace LiveCaptionsTranslator
                 lock (pendingLock)
                     pendingTextQueue.Enqueue((sentence, false));
 
+            // The live line is the sentence being spoken. OriginalCaption stays what it always meant -
+            // the sentence being translated - so the "translation repeats the source" check is not
+            // comparing a finished translation with a half-heard sentence.
             string live = transcript.Pending;
-            Caption.DisplayOriginalCaption = live;
-            Caption.OriginalCaption = live;
-
-            // The live line is the sentence being spoken: it grows with the buffer and is cleared the
-            // moment that sentence is committed.
             Caption.InterimText = live.Length > 0 ? live : null;
+            if (live.Length > 0)
+                Caption.DisplayOriginalCaption = live;
+
             Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
         }
 
@@ -416,7 +414,7 @@ namespace LiveCaptionsTranslator
             if (!translationTaskQueue.WaitForResult(250))
                 return;
 
-            var (translatedText, isChoke, isInterim) = translationTaskQueue.Output;
+            var (translatedText, isChoke, isInterim, sourceText) = translationTaskQueue.Output;
 
             if (isInterim)
             {
@@ -426,16 +424,8 @@ namespace LiveCaptionsTranslator
                 return;
             }
 
-            // The final version replaces whatever is on screen for this sentence - the live line if it
-            // has not been committed yet, or the history entry it already became.
-            string shown = Caption.InterimText ?? string.Empty;
-            if (shown.Length > 0)
-                Caption.InterimText = null;
-
-            if (!Caption.UpdateRecentLine(shown, translatedText))
-                Caption.UpdateRecentLine(lastShownFinal, translatedText);
-
-            Caption.RebuildRollingLines(Setting.NumContexts);
+            // The live line belonged to the sentence that just finished, so it goes away with it.
+            Caption.InterimText = null;
 
                 if (LogOnlyFlag)
                 {
@@ -449,15 +439,18 @@ namespace LiveCaptionsTranslator
                              translatedText, string.Empty).Trim()) &&
                          string.CompareOrdinal(Caption.TranslatedCaption, translatedText) != 0)
                 {
-                    // Main page: the sentence that was on screen becomes history.
+                    // Main page: the sentence that was on screen becomes history, once.
                     Caption.InterimText = null;
-                    lastShownFinal = Caption.DisplayTranslatedCaption;
                     Caption.AddRecentLine(Caption.DisplayTranslatedCaption);
+
+                    // The source text travels with the translation, so "the translation repeats the
+                    // source" is judged against the sentence this text actually came from - not against
+                    // whatever the live line happens to hold now.
+                    Caption.OriginalCaption = sourceText;
                     Caption.TranslatedCaption = translatedText;
 
                     // Nothing to show twice when the translation is the source text.
-                    Caption.TranslationRedundant = IsTranslationRedundant(
-                        Caption.OriginalCaption, Caption.TranslatedCaption);
+                    Caption.TranslationRedundant = IsTranslationRedundant(sourceText, Caption.TranslatedCaption);
 
                     // Order matters: the rolling view starts from DisplayTranslatedCaption, so the
                     // new sentence has to be assigned before the view is rebuilt - otherwise it always
