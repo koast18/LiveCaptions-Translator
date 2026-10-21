@@ -3,6 +3,7 @@ using System.Threading.Channels;
 
 using LiveCaptionsTranslator.Core.Audio;
 using LiveCaptionsTranslator.Core.Iflytek;
+using LiveCaptionsTranslator.Core.Asr;
 
 namespace LiveCaptionsTranslator.Core.Asr
 {
@@ -179,6 +180,12 @@ namespace LiveCaptionsTranslator.Core.Asr
                 {
                     break;
                 }
+                catch (AsrSessionStalledException)
+                {
+                    // Planned recycle: the session served its span, so replace it and keep going.
+                    failed = true;
+                    context.Sink.OnNotice(Localize(context, "Asr_SessionRecycled"));
+                }
                 catch (Exception exception)
                 {
                     failed = true;
@@ -266,8 +273,13 @@ namespace LiveCaptionsTranslator.Core.Asr
             Task<bool> pump,
             CancellationToken token)
         {
+            long startedAt = Environment.TickCount64;
+
             while (!token.IsCancellationRequested)
             {
+                if (Environment.TickCount64 - startedAt > settings.MaxSessionDuration.TotalMilliseconds)
+                    throw new AsrSessionStalledException("session age");
+
                 if (pump.IsFaulted)
                     await pump;
 

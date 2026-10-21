@@ -218,6 +218,9 @@ namespace LiveCaptionsTranslator.Core.Doubao
                         continue;
                     }
 
+                    Volatile.Write(ref lastServerActivity, Environment.TickCount64);
+                    long sessionStartedAt = Environment.TickCount64;
+
                     using var sessionCts = CancellationTokenSource.CreateLinkedTokenSource(token);
                     var pump = PumpAsync(session, context.Sink, sessionCts.Token);
 
@@ -225,7 +228,7 @@ namespace LiveCaptionsTranslator.Core.Doubao
                     {
                         bool ended = await SendLoopAsync(
                             session, channel, framer, encoder, pump, token, sessionCts.Token,
-                            () => timestampMs, value => timestampMs = value);
+                            () => timestampMs, value => timestampMs = value, sessionStartedAt);
 
                         if (ended)
                         {
@@ -236,6 +239,14 @@ namespace LiveCaptionsTranslator.Core.Doubao
                     catch (OperationCanceledException) when (token.IsCancellationRequested)
                     {
                         break;
+                    }
+                    catch (AsrSessionStalledException)
+                    {
+                        // Planned recycle: say so, then open a new session straight away.
+                        context.Sink.OnNotice(Localize(context, "Asr_SessionRecycled"));
+                        await streamer.InvalidateAsync();
+                        await DelayAsync(streamOptions.ReconnectDelay, token);
+                        continue;
                     }
                     catch (Exception exception)
                     {
@@ -279,7 +290,8 @@ namespace LiveCaptionsTranslator.Core.Doubao
             CancellationToken token,
             CancellationToken sessionToken,
             Func<long> readTimestamp,
-            Action<long> writeTimestamp)
+            Action<long> writeTimestamp,
+            long sessionStartedAt)
         {
             bool first = true;
             bool any = false;
@@ -294,6 +306,16 @@ namespace LiveCaptionsTranslator.Core.Doubao
 
                 if (pump.IsCompleted)
                     return false;
+
+                // A session that has lived its span, or one that has gone quiet while we keep sending
+                // audio, is dead even though the socket still looks open. Hand it back to the caller so
+                // it opens a fresh one instead of letting captions stop silently.
+                if (Environment.TickCount64 - sessionStartedAt > streamOptions.MaxSessionDuration.TotalMilliseconds)
+                    throw new AsrSessionStalledException("session age");
+
+                if (Environment.TickCount64 - Volatile.Read(ref lastServerActivity) >
+                    streamOptions.ServerSilenceTimeout.TotalMilliseconds)
+                    throw new AsrSessionStalledException("no server activity");
 
                 if (channel.Reader.TryRead(out var pcm))
                 {
@@ -386,13 +408,16 @@ namespace LiveCaptionsTranslator.Core.Doubao
         /// Reads results and republishes them as an accumulated transcript: the service sends one
         /// segment at a time, and the caption pipeline expects the whole transcript.
         /// </summary>
-        private static async Task PumpAsync(DoubaoAsrSession session, IAsrSink sink, CancellationToken token)
+        private long lastServerActivity;
+
+        private async Task PumpAsync(DoubaoAsrSession session, IAsrSink sink, CancellationToken token)
         {
             var transcript = new DoubaoTranscriptBuilder();
 
             await session.PumpAsync(
                 segment =>
                 {
+                    Volatile.Write(ref lastServerActivity, Environment.TickCount64);
                     var (text, isFinal) = transcript.Append(segment);
 
                     if (isFinal)

@@ -8,6 +8,15 @@
         public TimeSpan ReconnectDelay { get; init; } = TimeSpan.FromSeconds(1);
 
         public int VadWindowMs { get; init; } = DoubaoSessionConfig.DefaultVadWindowMs;
+
+        /// <summary>
+        /// How long one session may live before it is replaced. The service ages sessions out, and a
+        /// planned reconnect is invisible to the user while a surprise one is not.
+        /// </summary>
+        public TimeSpan MaxSessionDuration { get; init; } = TimeSpan.FromMinutes(4);
+
+        /// <summary>Silence from the peer, while we keep sending audio, that means the stream is dead.</summary>
+        public TimeSpan ServerSilenceTimeout { get; init; } = TimeSpan.FromSeconds(30);
     }
 
     /// <summary>

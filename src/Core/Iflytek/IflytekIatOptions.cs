@@ -1,4 +1,4 @@
-using LiveCaptionsTranslator.Core.Asr;
+﻿using LiveCaptionsTranslator.Core.Asr;
 using LiveCaptionsTranslator.Core.Audio;
 
 namespace LiveCaptionsTranslator.Core.Iflytek
@@ -52,6 +52,12 @@ namespace LiveCaptionsTranslator.Core.Iflytek
 
         /// <summary>How long to wait for the next server message before giving up on a session.</summary>
         public TimeSpan ReceiveTimeout { get; init; } = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        /// How long one session may live before it is replaced, so a service-side timeout never
+        /// surprises the user mid-sentence.
+        /// </summary>
+        public TimeSpan MaxSessionDuration { get; init; } = TimeSpan.FromMinutes(4);
 
         /// <summary>Delay between reconnect attempts.</summary>
         public TimeSpan ReconnectDelay { get; init; } = TimeSpan.FromSeconds(1);

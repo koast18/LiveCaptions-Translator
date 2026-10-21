@@ -242,4 +242,6 @@
 
     <sys:String x:Key="History_AllFiles">所有文件 (*.*)</sys:String>
 
+    <sys:String x:Key="Asr_SessionRecycled">连接无响应，正在重新建立。</sys:String>
+
 </ResourceDictionary>

@@ -244,4 +244,6 @@ Please visit GitHub to download the latest release.</sys:String>
 
     <sys:String x:Key="History_AllFiles">All file (*.*)</sys:String>
 
+    <sys:String x:Key="Asr_SessionRecycled">Connection went quiet, reconnecting.</sys:String>
+
 </ResourceDictionary>
