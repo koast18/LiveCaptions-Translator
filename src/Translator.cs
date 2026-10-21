@@ -16,7 +16,7 @@ namespace LiveCaptionsTranslator
         private static Caption? caption = null;
         private static Setting? setting = null;
 
-        private static readonly Queue<string> pendingTextQueue = new();
+        private static readonly Queue<(string Text, bool Interim)> pendingTextQueue = new();
         private static readonly TranslationTaskQueue translationTaskQueue = new();
 
         private static int idleCount = 0;
@@ -396,7 +396,7 @@ namespace LiveCaptionsTranslator
                 if (Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) != -1)
                 {
                     syncCount = 0;
-                    pendingTextQueue.Enqueue(Caption.OriginalCaption);
+                    pendingTextQueue.Enqueue((Caption.OriginalCaption, false));
                 }
                 else if (Encoding.UTF8.GetByteCount(Caption.OriginalCaption) >= TextUtil.SHORT_THRESHOLD)
                     syncCount++;
@@ -410,7 +410,11 @@ namespace LiveCaptionsTranslator
                 idleCount == Setting.MaxIdleInterval)
             {
                 syncCount = 0;
-                pendingTextQueue.Enqueue(Caption.OriginalCaption);
+                // A sentence that is still being spoken: translating it now is a preview, replaced by
+                // the final translation once the sentence ends.
+                bool complete = Caption.OriginalCaption.Length > 0 &&
+                                Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) != -1;
+                pendingTextQueue.Enqueue((Caption.OriginalCaption, !complete));
             }
         }
 
@@ -443,7 +447,7 @@ namespace LiveCaptionsTranslator
             // Translate
             if (pendingTextQueue.Count > 0)
             {
-                var originalSnapshot = pendingTextQueue.Dequeue();
+                var (originalSnapshot, interim) = pendingTextQueue.Dequeue();
 
                 if (LogOnlyFlag)
                 {
@@ -452,12 +456,14 @@ namespace LiveCaptionsTranslator
                 }
                 else
                 {
-                    translationTaskQueue.Enqueue(token => Task.Run(
-                        () => Translate(originalSnapshot, token), token), originalSnapshot);
+                    translationTaskQueue.Enqueue(
+                        token => Task.Run(() => Translate(originalSnapshot, token), token),
+                        originalSnapshot,
+                        interim);
                 }
             }
 
-            Thread.Sleep(40);
+            await Task.Delay(20);
         }
 
         public static async Task DisplayLoop()
@@ -481,7 +487,21 @@ namespace LiveCaptionsTranslator
 
         private static async Task DisplayOnce()
         {
-            var (translatedText, isChoke) = translationTaskQueue.Output;
+            // Wait for a result instead of spinning: the queue releases this the moment a translation
+            // completes.
+            if (!translationTaskQueue.WaitForResult(250))
+                return;
+
+            var (translatedText, isChoke, isInterim) = translationTaskQueue.Output;
+
+            if (isInterim)
+            {
+                // Preview of a sentence that is still being spoken: it belongs in the interim slot and
+                // must not become history.
+                Caption.InterimText = translatedText;
+                Caption.RebuildRollingLines(Setting.NumContexts);
+                return;
+            }
 
                 if (LogOnlyFlag)
                 {
@@ -522,10 +542,10 @@ namespace LiveCaptionsTranslator
                     }
                 }
 
-            // If the original sentence is a complete sentence, choke for better visual experience.
-            if (isChoke)
-                Thread.Sleep(720);
-            Thread.Sleep(40);
+            // No choke. It used to hold the next sentence back for 720 ms "for a better visual
+            // experience", which is a long time when the point is live captions: the interim line
+            // already keeps the page moving while the next sentence is translated.
+            _ = isChoke;
         }
 
         public static async Task<(string, bool)> Translate(string text, CancellationToken token = default)
