@@ -101,6 +101,14 @@ jobs:
       # Advisory: the second endpoint answers 50700000 ("service discovery failure") for whole
       # stretches of time from cloud IPs, which is their outage, not a regression here. It still
       # runs and reports, it just cannot block a build.
+      - name: Upload the recorded transcript stream
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transcript-capture
+          path: tests/LiveCaptionsTranslator.Integration.Tests/bin/**/capture/*.txt
+          if-no-files-found: warn
+
       - name: Integration tests (the secondary provider, advisory)
         continue-on-error: true
         run: >
