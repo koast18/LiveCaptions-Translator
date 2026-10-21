@@ -1,0 +1,7 @@
+partial	今天天气不
+partial	今天天气不错
+partial	今天天气不错我们一起去
+partial	今天天气不错我们一起去公
+partial	今天天气不错，我们一起去公园散步吧
+partial	今天天气不错，我们一起去公园散步吧。
+final	今天天气不错，我们一起去公园散步吧。
