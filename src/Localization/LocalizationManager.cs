@@ -135,16 +135,13 @@ namespace LiveCaptionsTranslator.Localization
         /// </summary>
         public static string T(string key)
         {
-            // A plain dictionary, not Application.Resources: T is called from the translation and ASR
-            // loops, and touching a WPF object from those threads throws.
+            // Only a plain dictionary, never Application.Resources: T is called from the translation
+            // and ASR loops, and touching a WPF object from those threads throws. The snapshot is
+            // built when the dictionaries are applied and preloaded from disk before that, so it is
+            // the single source for anyone asking for text.
             if (Volatile.Read(ref snapshot) is { } current && current.TryGetValue(key, out string? text))
                 return text;
 
-            if (Application.Current?.TryFindResource(key) is string found)
-                return found;
-
-            // Without a merged dictionary (before App.InitializeComponent, or in a test) read the
-            // dictionary off disk so callers never see a key where a sentence belongs.
             return Fallback(key);
         }
 

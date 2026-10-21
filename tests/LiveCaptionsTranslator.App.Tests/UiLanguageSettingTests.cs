@@ -145,7 +145,11 @@ public class UiLanguageSettingTests
 
         var thread = new Thread(() =>
         {
-            try { text = LocalizationManager.T("Caption_Paused"); }
+            try
+            {
+                text = LocalizationManager.T("Caption_Paused");
+                Assert.True(StatusText.IsError(LocalizationManager.T("Error_TranslationFailed", "x")));
+            }
             catch (Exception error) { failure = error; }
         });
 
