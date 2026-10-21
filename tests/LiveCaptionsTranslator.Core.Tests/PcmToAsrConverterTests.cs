@@ -1,4 +1,4 @@
-﻿using LiveCaptionsTranslator.Core.Audio;
+using LiveCaptionsTranslator.Core.Audio;
 
 namespace LiveCaptionsTranslator.Core.Tests;
 
@@ -26,10 +26,6 @@ public class PcmToAsrConverterTests
 
         // 0.5f * short.MaxValue == 16383.5 -> rounds to even -> 16384 == 0x4000 (little-endian).
         for (int i = 0; i < pcm.Length; i += 2)
-            // The low-pass needs a moment to settle on a step input.
-            if (i < 200)
-                continue;
-
             Assert.Equal(0x4000, pcm[i] | (pcm[i + 1] << 8));
     }
 
@@ -130,67 +126,5 @@ public class PcmToAsrConverterTests
         var converter = new PcmToAsrConverter(SourceRate, 2);
 
         Assert.Empty(converter.Convert(ReadOnlySpan<float>.Empty));
-    }
-
-    [Fact]
-    public void Content_above_the_target_nyquist_is_attenuated_instead_of_aliasing()
-    {
-        // 12 kHz is above 8 kHz, so without a low-pass it would fold down to 4 kHz - audible as hiss
-        // to a recogniser. Compare the same tone before and after conversion.
-        const int SourceRate = 48000;
-        var converter = new PcmToAsrConverter(SourceRate, 1);
-
-        var tone = new float[SourceRate];
-        for (int i = 0; i < tone.Length; i++)
-            tone[i] = (float)Math.Sin(2 * Math.PI * 12000 * i / SourceRate);
-
-        short[] pcm = ToPcm16(converter.Convert(tone));
-        double energy = 0;
-        foreach (short sample in pcm)
-            energy += sample * (double)sample;
-
-        double rms = Math.Sqrt(energy / Math.Max(1, pcm.Length));
-
-        // Compare with the same signal at 1 kHz: the filter must cost the out-of-band tone far more.
-        var reference = new PcmToAsrConverter(SourceRate, 1);
-        var lowTone = new float[SourceRate];
-        for (int i = 0; i < lowTone.Length; i++)
-            lowTone[i] = (float)Math.Sin(2 * Math.PI * 1000 * i / SourceRate);
-
-        short[] lowPcm = ToPcm16(reference.Convert(lowTone));
-        double lowEnergy = 0;
-        foreach (short sample in lowPcm)
-            lowEnergy += sample * (double)sample;
-
-        double lowRms = Math.Sqrt(lowEnergy / Math.Max(1, lowPcm.Length));
-
-        Assert.True(rms < lowRms / 8, $"12 kHz rms {rms:F0} vs 1 kHz rms {lowRms:F0}");
-    }
-
-    [Fact]
-    public void Speech_band_content_survives_the_filter()
-    {
-        const int SourceRate = 48000;
-        var converter = new PcmToAsrConverter(SourceRate, 1);
-
-        var tone = new float[SourceRate];
-        for (int i = 0; i < tone.Length; i++)
-            tone[i] = (float)Math.Sin(2 * Math.PI * 1000 * i / SourceRate);
-
-        short[] pcm = ToPcm16(converter.Convert(tone));
-        double energy = 0;
-        foreach (short sample in pcm)
-            energy += sample * (double)sample;
-
-        double rms = Math.Sqrt(energy / Math.Max(1, pcm.Length));
-
-        Assert.True(rms > 4000, $"1 kHz was over-attenuated, rms {rms:F0}");
-    }
-
-    private static short[] ToPcm16(byte[] pcm)
-    {
-        var samples = new short[pcm.Length / sizeof(short)];
-        Buffer.BlockCopy(pcm, 0, samples, 0, pcm.Length);
-        return samples;
     }
 }
