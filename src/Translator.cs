@@ -249,9 +249,20 @@ namespace LiveCaptionsTranslator
         /// <summary>Adapts provider callbacks onto the caption pipeline.</summary>
         private sealed class CaptionSink : IAsrSink
         {
-            public void OnPartial(string text) => HandleCaptionText(text);
+            // Interim results are shown straight away - no translation round trip, no waiting for the
+            // segment to be final - and still feed the sync loop, because some backends only emit a
+            // final when the whole stream ends.
+            public void OnPartial(string text)
+            {
+                ShowInterim(text);
+                HandleCaptionText(text);
+            }
 
-            public void OnFinal(string text) => HandleCaptionText(text);
+            public void OnFinal(string text)
+            {
+                Caption!.InterimText = null;
+                HandleCaptionText(text);
+            }
 
             public void OnNotice(string message) => SetNotice(message);
 
@@ -264,11 +275,39 @@ namespace LiveCaptionsTranslator
             }
         }
 
+
+        /// <summary>CJK text takes a full-width full stop; anything else takes an ASCII one.</summary>
+        private static bool EndsInCjk(string text)
+        {
+            foreach (char c in text)
+            {
+                if (char.IsLetter(c))
+                    return c >= '\u4e00' && c <= '\u9fff';
+            }
+
+            return true;
+        }
+
+        /// <summary>Shows what the recogniser has so far, before it commits to a final segment.</summary>
+        private static void ShowInterim(string text)
+        {
+            if (Caption is null || string.IsNullOrWhiteSpace(text))
+                return;
+
+            Caption.InterimText = text.Trim();
+            Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
+        }
+
         /// <summary>
         /// Turns the raw caption text reported by the active ASR provider into the sentence
         /// that gets translated. This is the upstream <c>SyncLoop</c> body, unchanged.
         /// </summary>
-        public static void HandleCaptionText(string fullText)
+        /// <param name="isFinal">
+        /// True for a segment the recogniser will not change again. Such a segment is a sentence even
+        /// when the service did not punctuate it, and without a closing mark the splitter would glue
+        /// it to the next one - the "several sentences run together" complaint.
+        /// </param>
+        public static void HandleCaptionText(string fullText, bool isFinal = false)
         {
             if (string.IsNullOrEmpty(fullText))
                 return;
@@ -281,6 +320,9 @@ namespace LiveCaptionsTranslator
             // Note: For certain languages (such as Japanese), LiveCaptions excessively uses `\n`.
             // Replace redundant `\n` within sentences with comma or period.
             fullText = TextUtil.ReplaceNewlines(fullText, TextUtil.MEDIUM_THRESHOLD);
+
+            if (isFinal && fullText.Length > 0 && Array.IndexOf(TextUtil.PUNC_EOS, fullText[^1]) == -1)
+                fullText += EndsInCjk(fullText) ? "。" : ".";
 
             // Prevent adding the last sentence from previous running to log cards
             // before the first sentence is completed.
@@ -438,6 +480,7 @@ namespace LiveCaptionsTranslator
                          string.CompareOrdinal(Caption.TranslatedCaption, translatedText) != 0)
                 {
                     // Main page
+                    Caption.InterimText = null;
                     Caption.TranslatedCaption = translatedText;
 
                     // Nothing to show twice when the translation is the source text.

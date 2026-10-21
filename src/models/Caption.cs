@@ -24,6 +24,26 @@ namespace LiveCaptionsTranslator.models
 
         /// <summary>The rolling view: previous lines dimmed, the newest one highlighted.</summary>
         public ObservableCollection<CaptionLine> RollingLines { get; } = [];
+
+        /// <summary>
+        /// What the recogniser believes it heard right now, before the segment is final. Shown as the
+        /// newest line straight away so the page reacts to speech instead of waiting for both the
+        /// final result and its translation.
+        /// </summary>
+        public string? InterimText
+        {
+            get => interimText;
+            set
+            {
+                if (interimText == value)
+                    return;
+
+                interimText = value;
+                OnPropertyChanged(nameof(InterimText));
+            }
+        }
+
+        private string? interimText;
         private string overlayOriginalCaption = " ";
         private string overlayCurrentTranslation = " ";
         private string overlayNoticePrefix = " ";
@@ -186,7 +206,10 @@ namespace LiveCaptionsTranslator.models
 
         private List<CaptionLine> BuildRollingLines(int previousCount)
         {
-            string current = translationRedundant ? DisplayOriginalCaption : DisplayTranslatedCaption;
+            // The interim line wins: it is the only text that exists while the recogniser is still
+            // deciding what the sentence is.
+            string current = InterimText
+                             ?? (translationRedundant ? DisplayOriginalCaption : DisplayTranslatedCaption);
 
             var lines = new List<CaptionLine>(previousCount + 1);
             var previous = Contexts.Reverse().Take(Math.Max(0, previousCount)).Reverse().ToList();
