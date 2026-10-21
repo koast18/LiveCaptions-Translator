@@ -26,6 +26,10 @@ public class PcmToAsrConverterTests
 
         // 0.5f * short.MaxValue == 16383.5 -> rounds to even -> 16384 == 0x4000 (little-endian).
         for (int i = 0; i < pcm.Length; i += 2)
+            // The low-pass needs a moment to settle on a step input.
+            if (i < 200)
+                continue;
+
             Assert.Equal(0x4000, pcm[i] | (pcm[i + 1] << 8));
     }
 
@@ -160,7 +164,7 @@ public class PcmToAsrConverterTests
 
         double lowRms = Math.Sqrt(lowEnergy / Math.Max(1, lowPcm.Length));
 
-        Assert.True(rms < lowRms / 4, $"12 kHz rms {rms:F0} vs 1 kHz rms {lowRms:F0}");
+        Assert.True(rms < lowRms / 8, $"12 kHz rms {rms:F0} vs 1 kHz rms {lowRms:F0}");
     }
 
     [Fact]

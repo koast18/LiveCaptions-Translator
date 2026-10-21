@@ -29,7 +29,8 @@
         private double position;
 
         /// <summary>Anti-aliasing low-pass, applied before the samples are decimated.</summary>
-        private readonly Biquad lowPass;
+        private readonly Biquad lowPass1;
+        private readonly Biquad lowPass2;
 
         public PcmToAsrConverter(int sourceSampleRate, int sourceChannels)
         {
@@ -41,7 +42,8 @@
             step = (double)sourceSampleRate / AudioFormat.SampleRate;
 
             // Anything above half the target rate must go before it can fold back into the signal.
-            lowPass = Biquad.LowPass(sourceSampleRate, AudioFormat.SampleRate * 0.45, 0.7071);
+            lowPass1 = Biquad.LowPass(sourceSampleRate, AudioFormat.SampleRate * 0.42, 0.5412);
+            lowPass2 = Biquad.LowPass(sourceSampleRate, AudioFormat.SampleRate * 0.42, 1.3066);
         }
 
         public int SourceSampleRate { get; }
@@ -91,7 +93,7 @@
         {
             var span = mono.AsSpan(monoCount - frames, frames);
             for (int index = 0; index < span.Length; index++)
-                span[index] = lowPass.Process(span[index]);
+                span[index] = lowPass2.Process(lowPass1.Process(span[index]));
         }
 
         private byte[] Resample()
