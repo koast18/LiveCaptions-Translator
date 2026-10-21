@@ -204,6 +204,16 @@ namespace LiveCaptionsTranslator.models
             ApplyRollingLines(lines);
         }
 
+        /// <summary>
+        /// Longest a single displayed line may get before it is broken at a natural pause. A
+        /// recogniser that never punctuates would otherwise pile several sentences into one very long
+        /// highlighted line that keeps changing length.
+        /// </summary>
+        public const int DisplayLineChars = 42;
+
+        /// <summary>Characters a line may be broken after; breaking anywhere else would cut a word.</summary>
+        private static readonly char[] BreakChars = [' ', '　', '，', '。', '、', '；', '：', '！', '？', ',', '.', ';', ':', '!', '?'];
+
         private List<CaptionLine> BuildRollingLines(int previousCount)
         {
             // The interim line wins: it is the only text that exists while the recogniser is still
@@ -216,15 +226,55 @@ namespace LiveCaptionsTranslator.models
 
             foreach (var entry in previous)
             {
-                string text = LineFor(entry.SourceText, entry.TranslatedText);
-                if (!string.IsNullOrWhiteSpace(text))
-                    lines.Add(new CaptionLine(text, false));
+                foreach (string part in SplitForDisplay(LineFor(entry.SourceText, entry.TranslatedText), DisplayLineChars))
+                    lines.Add(new CaptionLine(part, false));
             }
 
             if (!string.IsNullOrWhiteSpace(current))
-                lines.Add(new CaptionLine(current, true));
+            {
+                var parts = SplitForDisplay(current, DisplayLineChars);
+                for (int i = 0; i < parts.Count; i++)
+                    lines.Add(new CaptionLine(parts[i], i == parts.Count - 1));
+            }
 
             return lines;
+        }
+
+
+        /// <summary>
+        /// Breaks text into readable lines at the last pause within <paramref name="limit"/>. Nothing is
+        /// dropped: when no pause is close enough the remainder is moved forward until one is found, so
+        /// the text is split rather than truncated.
+        /// </summary>
+        public static IReadOnlyList<string> SplitForDisplay(string? text, int limit)
+        {
+            var parts = new List<string>();
+            if (string.IsNullOrWhiteSpace(text))
+                return parts;
+
+            string rest = text.Trim();
+            if (limit < 8)
+                limit = 8;
+
+            while (rest.Length > limit)
+            {
+                int cut = rest.LastIndexOfAny(BreakChars, limit - 1, limit);
+                if (cut < limit / 3)
+                {
+                    // No pause near the limit: look ahead for the next one instead of cutting a word.
+                    cut = rest.IndexOfAny(BreakChars, limit);
+                    if (cut == -1)
+                        break;
+                }
+
+                parts.Add(rest[..(cut + 1)].Trim());
+                rest = rest[(cut + 1)..].TrimStart();
+            }
+
+            if (rest.Length > 0)
+                parts.Add(rest);
+
+            return parts;
         }
 
         private void ApplyRollingLines(List<CaptionLine> lines)
