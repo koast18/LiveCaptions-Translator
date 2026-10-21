@@ -294,7 +294,23 @@ namespace LiveCaptionsTranslator
             if (Caption is null || string.IsNullOrWhiteSpace(text))
                 return;
 
-            Caption.InterimText = text.Trim();
+            string interim = text.Trim();
+
+            // Show only what is new. A cumulative transcript still contains the sentences that are
+            // already up as previous lines, which made the highlighted line grow and shrink as the
+            // recogniser re-reported them.
+            string? committed = Caption.OriginalCaption;
+            if (!string.IsNullOrEmpty(committed))
+            {
+                int at = interim.LastIndexOf(committed, StringComparison.Ordinal);
+                if (at >= 0)
+                    interim = interim[(at + committed.Length)..].TrimStart(' ', '　', '，', '。', '、', ',', '.');
+            }
+
+            if (interim.Length == 0)
+                return;
+
+            Caption.InterimText = interim;
             Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
         }
 

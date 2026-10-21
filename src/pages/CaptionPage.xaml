@@ -11,9 +11,12 @@
 
     <Grid Margin="4,4,4,0">
         <Grid.Resources>
+            <!--  A local Style replaces the implicit one, so Foreground has to be set here or the
+                  previous lines fall back to black and vanish on a dark background.  -->
             <Style x:Key="CaptionBlockStyle" TargetType="TextBlock">
                 <Setter Property="TextWrapping" Value="Wrap" />
                 <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
             </Style>
         </Grid.Resources>
 
