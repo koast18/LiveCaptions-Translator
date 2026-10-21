@@ -313,7 +313,7 @@ jobs:
           $work = Join-Path $PWD 'publish/settings'
           $failures = @()
 
-          function Check([string] $language) {
+          function Check([string] $language, [string] $theme) {
             # The language is read from setting.json at startup, so switching it here is the same
             # path a user takes.
             Set-Content -Path (Join-Path $work 'setting.json') -Value ("{ `"UiLanguage`": `"$language`" }") -Encoding utf8
@@ -388,7 +388,7 @@ jobs:
             [void][Ui]::PrintWindow($handle, $dc, 2)
             $g.ReleaseHdc($dc)
             $g.Dispose()
-            $bmp.Save((Join-Path $PWD "settings-$language.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp.Save((Join-Path $PWD "settings-$theme-$language.png"), [System.Drawing.Imaging.ImageFormat]::Png)
             $bmp.Dispose()
             # The content below the fold is only reachable in a taller window. Grow it and look
             # again, so the interface-language picker is actually in the evidence.
@@ -420,7 +420,7 @@ jobs:
             [void][Ui]::PrintWindow($handle, $dc2, 2)
             $g2.ReleaseHdc($dc2)
             $g2.Dispose()
-            $bmp2.Save((Join-Path $PWD "settings-$language-tall.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp2.Save((Join-Path $PWD "settings-$theme-$language-tall.png"), [System.Drawing.Imaging.ImageFormat]::Png)
             $bmp2.Dispose()
             Write-Host "$language : also checked a 1000x900 window"
             if (-not $p.HasExited) { $p.Kill() }
@@ -448,9 +448,18 @@ jobs:
             return $null
           }
 
-          foreach ($language in @('en', 'zh-Hans')) {
-            $failure = Check $language
-            if ($failure) { $failures += $failure }
+          # The app follows the Windows theme, so both have to be exercised: a brush that only breaks
+          # in dark mode is exactly the kind of bug this job exists to catch.
+          $personalize = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+          foreach ($theme in @(@{ Name = 'light'; Value = 1 }, @{ Name = 'dark'; Value = 0 })) {
+            Set-ItemProperty $personalize -Name AppsUseLightTheme -Value $theme.Value
+            Set-ItemProperty $personalize -Name SystemUsesLightTheme -Value $theme.Value
+            Start-Sleep -Seconds 1
+
+            foreach ($language in @('en', 'zh-Hans')) {
+              $failure = Check $language $theme.Name
+              if ($failure) { $failures += $failure }
+            }
           }
 
           if ($failures.Count -gt 0) {

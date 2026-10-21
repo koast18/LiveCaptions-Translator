@@ -406,9 +406,12 @@ namespace LiveCaptionsTranslator
                     Caption.TranslationRedundant = IsTranslationRedundant(
                         Caption.OriginalCaption, Caption.TranslatedCaption);
 
-                    Caption.RebuildRollingLines(Setting.NumContexts);
+                    // Order matters: the rolling view starts from DisplayTranslatedCaption, so the
+                    // new sentence has to be assigned before the view is rebuilt - otherwise it always
+                    // renders the previous line, and nothing at all for the first one.
                     Caption.DisplayTranslatedCaption =
                         TextUtil.ShortenDisplaySentence(Caption.TranslatedCaption, TextUtil.VERYLONG_THRESHOLD);
+                    Caption.RebuildRollingLines(Setting.NumContexts);
 
                     // Overlay window
                     if (StatusText.IsStatus(Caption.TranslatedCaption))
