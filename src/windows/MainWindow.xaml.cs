@@ -146,29 +146,53 @@ namespace LiveCaptionsTranslator
         /// settings page or a history table. Grow it when those pages are opened and put it back when
         /// the caption page returns, so nothing has to be clipped.
         /// </summary>
-        private void RootNavigation_Navigated(object sender, NavigatedEventArgs e) => FitToPage(e.Page?.GetType());
+        private void RootNavigation_Navigated(object sender, NavigatedEventArgs e) =>
+            FitToPage(e.Page as FrameworkElement, e.Page?.GetType());
 
         private Size compactSize;
         private bool grown;
 
-        private void FitToPage(Type? page)
+        private void ContentLoaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement content)
+                GrowTo(content);
+        }
+
+        /// <summary>Widens to a usable width, then takes only the height the page actually needs.</summary>
+        private void GrowTo(FrameworkElement content)
         {
             const double NeededWidth = 1000;
-            const double NeededHeight = 820;
+            const double MaximumHeight = 820;
+            const double Chrome = 90;   // title bar, paddings and the navigation header
 
+            Width = Math.Max(ActualWidth, NeededWidth);
+
+            double wanted = content.DesiredSize.Height + Chrome;
+            if (wanted >= MinHeight)
+                Height = Math.Min(MaximumHeight, wanted);
+        }
+
+        private void FitToPage(FrameworkElement? content, Type? page)
+        {
             bool needsRoom = page is not null && page != typeof(CaptionPage);
 
             if (needsRoom)
             {
-                if (grown)
-                    return;
+                // Sized after the page has laid out, so the window hugs the content instead of leaving
+                // a large empty area under it.
+                if (!grown)
+                {
+                    compactSize = new Size(ActualWidth, ActualHeight);
+                    grown = true;
+                }
 
-                compactSize = new Size(ActualWidth, ActualHeight);
-                grown = true;
+                if (content is not null)
+                {
+                    content.Loaded -= ContentLoaded;
+                    content.Loaded += ContentLoaded;
+                    GrowTo(content);
+                }
 
-                // Only grow: a user who already made the window large should keep their size.
-                Width = Math.Max(ActualWidth, NeededWidth);
-                Height = Math.Max(ActualHeight, NeededHeight);
                 return;
             }
 

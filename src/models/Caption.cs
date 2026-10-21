@@ -168,6 +168,24 @@ namespace LiveCaptionsTranslator.models
         /// </summary>
         public void RebuildRollingLines(int previousCount)
         {
+            var lines = BuildRollingLines(previousCount);
+
+            // RollingLines is bound to the caption page, and WPF refuses a collection change from any
+            // thread but the one that owns it. The display loop runs on the thread pool, so an
+            // unguarded Add here threw and took the whole loop down - which is why the page stayed
+            // empty while the history, written elsewhere, kept filling.
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher is not null && !dispatcher.CheckAccess())
+            {
+                dispatcher.BeginInvoke(new Action(() => ApplyRollingLines(lines)));
+                return;
+            }
+
+            ApplyRollingLines(lines);
+        }
+
+        private List<CaptionLine> BuildRollingLines(int previousCount)
+        {
             string current = translationRedundant ? DisplayOriginalCaption : DisplayTranslatedCaption;
 
             var lines = new List<CaptionLine>(previousCount + 1);
@@ -183,6 +201,11 @@ namespace LiveCaptionsTranslator.models
             if (!string.IsNullOrWhiteSpace(current))
                 lines.Add(new CaptionLine(current, true));
 
+            return lines;
+        }
+
+        private void ApplyRollingLines(List<CaptionLine> lines)
+        {
             if (RollingLines.Count == lines.Count && RollingLines.SequenceEqual(lines))
                 return;
 

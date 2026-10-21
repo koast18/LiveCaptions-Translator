@@ -456,6 +456,7 @@
                 Margin="2.5,6,0,0"
                 FontSize="11.5"
                 Opacity="0.7"
+                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                 TextWrapping="Wrap" />
         </StackPanel>
 
@@ -498,7 +499,8 @@
                     Margin="10,0,0,0"
                     VerticalAlignment="Center"
                     FontSize="11.5"
-                    Opacity="0.7" />
+                    Opacity="0.7"
+                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
             </WrapPanel>
             <WrapPanel
                 x:Name="ProxyTargetsPanel"
