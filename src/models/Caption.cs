@@ -26,6 +26,26 @@ namespace LiveCaptionsTranslator.models
         public ObservableCollection<CaptionLine> RollingLines { get; } = [];
 
         /// <summary>
+        /// Sentences that have finished, newest last. More are kept than any window can show so the
+        /// visible count follows the window height instead of a setting.
+        /// </summary>
+        private readonly List<CaptionLine> recent = [];
+
+        private const int MaxRecentLines = 40;
+
+        public void AddRecentLine(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+
+            recent.Add(new CaptionLine(text.Trim(), false));
+            while (recent.Count > MaxRecentLines)
+                recent.RemoveAt(0);
+        }
+
+        public void ClearRecentLines() => recent.Clear();
+
+        /// <summary>
         /// What the recogniser believes it heard right now, before the segment is final. Shown as the
         /// newest line straight away so the page reacts to speech instead of waiting for both the
         /// final result and its translation.
@@ -220,12 +240,12 @@ namespace LiveCaptionsTranslator.models
             // overwrite a translated sentence that is already on screen.
             string current = translationRedundant ? DisplayOriginalCaption : DisplayTranslatedCaption;
 
-            var lines = new List<CaptionLine>(previousCount + 1);
-            var previous = Contexts.Reverse().Take(Math.Max(0, previousCount)).Reverse().ToList();
+            // Everything that has finished goes in; the ScrollViewer decides how much of it is visible.
+            var lines = new List<CaptionLine>(recent.Count + 1);
 
-            foreach (var entry in previous)
+            foreach (var entry in recent)
             {
-                foreach (string part in SplitForDisplay(LineFor(entry.SourceText, entry.TranslatedText), DisplayLineChars))
+                foreach (string part in SplitForDisplay(entry.Text, DisplayLineChars))
                     lines.Add(new CaptionLine(part, false));
             }
 

@@ -495,8 +495,9 @@ namespace LiveCaptionsTranslator
                              translatedText, string.Empty).Trim()) &&
                          string.CompareOrdinal(Caption.TranslatedCaption, translatedText) != 0)
                 {
-                    // Main page
+                    // Main page: the sentence that was on screen becomes history.
                     Caption.InterimText = null;
+                    Caption.AddRecentLine(Caption.DisplayTranslatedCaption);
                     Caption.TranslatedCaption = translatedText;
 
                     // Nothing to show twice when the translation is the source text.
@@ -658,6 +659,7 @@ namespace LiveCaptionsTranslator
 
         public static void ClearContexts()
         {
+            Caption?.ClearRecentLines();
             Caption?.Contexts.Clear();
 
             Caption?.OnPropertyChanged("DisplayLogCards");
