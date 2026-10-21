@@ -26,6 +26,7 @@
             x:Name="RollingScroll"
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Hidden">
+            <StackPanel>
             <ItemsControl x:Name="RollingItems" ItemsSource="{Binding RollingLines}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -53,6 +54,17 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+                <!--  Live recognition, in its own slot: it changes with every chunk and must never
+                      push a translated sentence out of the way.  -->
+                <TextBlock
+                    Margin="6,2,6,2"
+                    FontSize="16"
+                    Opacity="0.55"
+                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                    Text="{Binding InterimText}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
         </ScrollViewer>
     </Grid>
 </Page>

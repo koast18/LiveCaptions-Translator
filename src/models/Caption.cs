@@ -216,10 +216,9 @@ namespace LiveCaptionsTranslator.models
 
         private List<CaptionLine> BuildRollingLines(int previousCount)
         {
-            // The interim line wins: it is the only text that exists while the recogniser is still
-            // deciding what the sentence is.
-            string current = InterimText
-                             ?? (translationRedundant ? DisplayOriginalCaption : DisplayTranslatedCaption);
+            // The finalized line only. Interim recognition lives in its own slot so it can never
+            // overwrite a translated sentence that is already on screen.
+            string current = translationRedundant ? DisplayOriginalCaption : DisplayTranslatedCaption;
 
             var lines = new List<CaptionLine>(previousCount + 1);
             var previous = Contexts.Reverse().Take(Math.Max(0, previousCount)).Reverse().ToList();

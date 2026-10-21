@@ -46,9 +46,6 @@ namespace LiveCaptionsTranslator
         public static event Action? TranslationLogged;
 
 
-        /// <summary>True while a translated sentence is on screen; raw interim text waits.</summary>
-        private static bool interimSuppressed;
-
         private static Func<string>? captionStatus;
         private static Func<string>? overlayStatus;
 
@@ -263,8 +260,6 @@ namespace LiveCaptionsTranslator
 
             public void OnFinal(string text)
             {
-                // A new segment: the interim slot is free again.
-                interimSuppressed = false;
                 Caption!.InterimText = null;
                 HandleCaptionText(text);
             }
@@ -296,9 +291,7 @@ namespace LiveCaptionsTranslator
         /// <summary>Shows what the recogniser has so far, before it commits to a final segment.</summary>
         private static void ShowInterim(string text)
         {
-            // Once a translation has been shown for this segment, the raw recogniser text must not push
-            // it back out - that is what made the line flip between a chunk and the joined sentence.
-            if (interimSuppressed || Caption is null || string.IsNullOrWhiteSpace(text))
+            if (Caption is null || string.IsNullOrWhiteSpace(text))
                 return;
 
             string interim = text.Trim();
@@ -503,7 +496,6 @@ namespace LiveCaptionsTranslator
                          string.CompareOrdinal(Caption.TranslatedCaption, translatedText) != 0)
                 {
                     // Main page
-                    interimSuppressed = true;
                     Caption.InterimText = null;
                     Caption.TranslatedCaption = translatedText;
 
