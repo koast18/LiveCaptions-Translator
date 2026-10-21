@@ -34,7 +34,7 @@ namespace LiveCaptionsTranslator.models
         /// <summary>Touched by the recognition and display threads alike.</summary>
         private readonly object recentLock = new();
 
-        private const int MaxRecentLines = 40;
+        private const int MaxRecentLines = 200;
 
         public void AddRecentLine(string? text)
         {
@@ -58,8 +58,10 @@ namespace LiveCaptionsTranslator.models
             if (recent.Count > 0 && line.Length > 20 && line.Contains(recent[^1].Text, StringComparison.Ordinal))
                 return;
 
-            // A replayed transcript repeats a whole block, not just the previous line.
-            for (int i = recent.Count - 1; i >= 0 && i >= recent.Count - 50; i--)
+            // A replayed transcript repeats a whole block, not just the previous line. The window is the
+            // whole retained history: a genuine sentence repeated hundreds of lines later is rare, a
+            // replayed block is not.
+            for (int i = recent.Count - 1; i >= 0; i--)
             {
                 if (string.Equals(recent[i].Text, line, StringComparison.Ordinal))
                     return;

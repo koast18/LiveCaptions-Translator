@@ -22,6 +22,11 @@ public sealed class LiveTranscript
     private string consumed = string.Empty;
     private string buffer = string.Empty;
 
+    /// <summary>Sentences already handed out, so a replayed transcript cannot commit them twice.</summary>
+    private readonly Queue<string> committedRecent = new();
+
+    private const int RecentCapacity = 64;
+
     /// <summary>The text still being spoken; this is the live line.</summary>
     public string Pending => buffer.Trim();
 
@@ -58,11 +63,11 @@ public sealed class LiveTranscript
         consumed = cumulative;
 
         while (TryTakeSentence(out string sentence))
-            committed.Add(sentence);
+            Add(committed, sentence);
 
         if (isFinal && HasPending)
         {
-            committed.Add(Pending);
+            Add(committed, Pending);
             buffer = string.Empty;
         }
 
@@ -82,10 +87,24 @@ public sealed class LiveTranscript
         return 0;
     }
 
+    /// <summary>Queues a sentence unless it was already committed recently.</summary>
+    private void Add(List<string> committed, string sentence)
+    {
+        if (!committedRecent.Contains(sentence))
+        {
+            committed.Add(sentence);
+
+            committedRecent.Enqueue(sentence);
+            while (committedRecent.Count > RecentCapacity)
+                committedRecent.Dequeue();
+        }
+    }
+
     public void Reset()
     {
         consumed = string.Empty;
         buffer = string.Empty;
+        committedRecent.Clear();
     }
 
     private bool TryTakeSentence(out string sentence)

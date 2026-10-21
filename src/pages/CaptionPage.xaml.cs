@@ -23,6 +23,7 @@ namespace LiveCaptionsTranslator
             Translator.Caption.RollingLines.CollectionChanged += OnRollingLinesChanged;
 
             RollingScroll.SizeChanged += (s, e) => ScrollToLatest();
+            RollingScroll.ScrollChanged += RollingScroll_ScrollChanged;
 
             Loaded += (s, e) =>
             {
@@ -41,6 +42,21 @@ namespace LiveCaptionsTranslator
 
         private void OnRollingLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)
             => ScrollToLatest();
+
+        /// <summary>
+        /// Stays pinned to the bottom unless the reader scrolled up. Scrolling after a collection change
+        /// alone was not reliable: the extent is only known once the new line has been laid out, which is
+        /// what this event reports.
+        /// </summary>
+        private void RollingScroll_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (e.ExtentHeightChange == 0)
+                return;
+
+            bool wasAtBottom = e.ExtentHeight - e.ExtentHeightChange - (e.VerticalOffset + e.ViewportHeight) < 2;
+            if (wasAtBottom)
+                RollingScroll.ScrollToEnd();
+        }
 
         private void ScrollToLatest()
         {

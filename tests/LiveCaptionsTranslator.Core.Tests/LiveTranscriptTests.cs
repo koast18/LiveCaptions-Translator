@@ -134,4 +134,23 @@ public class LiveTranscriptTests
         // The replayed block is skipped; only what is genuinely new comes through.
         Assert.Equal(["缺钱了。"], replay);
     }
+
+    [Fact]
+    public void A_whole_session_resent_at_the_end_is_dropped()
+    {
+        // What a session end can look like: one final carrying everything that was already said.
+        string[] sentences = ["第一句话。", "第二句话。", "第三句话。"];
+
+        var transcript = new LiveTranscript();
+        var committed = new List<string>();
+        foreach (string sentence in sentences)
+            committed.AddRange(transcript.Accept(sentence, isFinal: true));
+
+        Assert.Equal(sentences, committed);
+
+        // The service then repeats the lot in one final.
+        var replay = transcript.Accept(string.Concat(sentences), isFinal: true);
+
+        Assert.Empty(replay);
+    }
 }
