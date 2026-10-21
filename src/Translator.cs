@@ -255,11 +255,9 @@ namespace LiveCaptionsTranslator
             // Interim results are shown straight away - no translation round trip, no waiting for the
             // segment to be final - and still feed the sync loop, because some backends only emit a
             // final when the whole stream ends.
-            public void OnPartial(string text)
-            {
-                ShowInterim(text);
-                HandleCaptionText(text);
-            }
+            // One path only: HandleCaptionText owns the live line, so the page cannot be written by two
+            // different pieces of logic at once.
+            public void OnPartial(string text) => HandleCaptionText(text);
 
             public void OnFinal(string text)
             {
@@ -302,31 +300,7 @@ namespace LiveCaptionsTranslator
             (string.Equals(candidate, lastQueued, StringComparison.Ordinal) ||
              (candidate.Length > lastQueued.Length && candidate.Contains(lastQueued, StringComparison.Ordinal)));
 
-        /// <summary>Shows what the recogniser has so far, before it commits to a final segment.</summary>
-        private static void ShowInterim(string text)
-        {
-            if (Caption is null || string.IsNullOrWhiteSpace(text))
-                return;
 
-            string interim = text.Trim();
-
-            // Show only what is new. A cumulative transcript still contains the sentences that are
-            // already up as previous lines, which made the highlighted line grow and shrink as the
-            // recogniser re-reported them.
-            string? committed = Caption.OriginalCaption;
-            if (!string.IsNullOrEmpty(committed))
-            {
-                int at = interim.LastIndexOf(committed, StringComparison.Ordinal);
-                if (at >= 0)
-                    interim = interim[(at + committed.Length)..].TrimStart(' ', '　', '，', '。', '、', ',', '.');
-            }
-
-            if (interim.Length == 0)
-                return;
-
-            Caption.InterimText = interim;
-            Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
-        }
 
         /// <summary>
         /// Turns the raw caption text reported by the active ASR provider into the sentence
@@ -358,6 +332,11 @@ namespace LiveCaptionsTranslator
             string live = transcript.Pending;
             Caption.DisplayOriginalCaption = live;
             Caption.OriginalCaption = live;
+
+            // The live line is the sentence being spoken: it grows with the buffer and is cleared the
+            // moment that sentence is committed.
+            Caption.InterimText = live.Length > 0 ? live : null;
+            Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
         }
 
         /// <summary>Kept deliberately tiny: the loops only need somewhere to report a broken frame.</summary>
@@ -437,10 +416,9 @@ namespace LiveCaptionsTranslator
 
             if (isInterim)
             {
-                // Preview of a sentence that is still being spoken: it belongs in the interim slot and
-                // must not become history.
-                Caption.InterimText = translatedText;
-                Caption.RebuildRollingLines(Setting.NumContexts);
+                // A preview is not shown: writing it into the live line made the text flip between the
+                // source and a translation on every callback. The live line stays the recognised text
+                // and the sentence becomes history once it is translated for real.
                 return;
             }
 
@@ -452,6 +430,8 @@ namespace LiveCaptionsTranslator
 
             if (!Caption.UpdateRecentLine(shown, translatedText))
                 Caption.UpdateRecentLine(lastShownFinal, translatedText);
+
+            Caption.RebuildRollingLines(Setting.NumContexts);
 
                 if (LogOnlyFlag)
                 {
