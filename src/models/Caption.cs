@@ -38,7 +38,17 @@ namespace LiveCaptionsTranslator.models
             if (string.IsNullOrWhiteSpace(text))
                 return;
 
-            recent.Add(new CaptionLine(text.Trim(), false));
+            string line = text.Trim();
+
+            // The same sentence can arrive twice when a backend re-reports its transcript, and a
+            // growing tail would otherwise stack near-identical copies on top of each other.
+            if (recent.Count > 0 && string.Equals(recent[^1].Text, line, StringComparison.Ordinal))
+                return;
+
+            if (recent.Count > 0 && line.Length > 20 && line.Contains(recent[^1].Text, StringComparison.Ordinal))
+                return;
+
+            recent.Add(new CaptionLine(line, false));
             while (recent.Count > MaxRecentLines)
                 recent.RemoveAt(0);
         }
@@ -55,13 +65,22 @@ namespace LiveCaptionsTranslator.models
             get => interimText;
             set
             {
-                if (interimText == value)
+                // Only the tail is worth showing: the recogniser re-reports the whole session, and the
+                // full text rendered as one enormous block.
+                string? trimmed = value;
+                if (trimmed is not null && trimmed.Length > InterimChars)
+                    trimmed = "…" + trimmed[^InterimChars..];
+
+                if (interimText == trimmed)
                     return;
 
-                interimText = value;
+                interimText = trimmed;
                 OnPropertyChanged(nameof(InterimText));
             }
         }
+
+        /// <summary>How much live recognition the interim line shows.</summary>
+        private const int InterimChars = 90;
 
         private string? interimText;
         private string overlayOriginalCaption = " ";

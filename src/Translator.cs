@@ -288,6 +288,14 @@ namespace LiveCaptionsTranslator
             return true;
         }
 
+        private static string lastQueued = string.Empty;
+
+        /// <summary>True when a sentence is a copy of, or an extension of, what was just translated.</summary>
+        private static bool IsRepeatOfLastQueued(string candidate) =>
+            lastQueued.Length > 0 &&
+            (string.Equals(candidate, lastQueued, StringComparison.Ordinal) ||
+             (candidate.Length > lastQueued.Length && candidate.Contains(lastQueued, StringComparison.Ordinal)));
+
         /// <summary>Shows what the recogniser has so far, before it commits to a final segment.</summary>
         private static void ShowInterim(string text)
         {
@@ -396,7 +404,14 @@ namespace LiveCaptionsTranslator
                 if (Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) != -1)
                 {
                     syncCount = 0;
-                    pendingTextQueue.Enqueue((Caption.OriginalCaption, false));
+
+                    // A cumulative transcript re-sends sentences that were already translated; only a
+                    // genuinely new one is queued.
+                    if (!IsRepeatOfLastQueued(Caption.OriginalCaption))
+                    {
+                        lastQueued = Caption.OriginalCaption;
+                        pendingTextQueue.Enqueue((Caption.OriginalCaption, false));
+                    }
                 }
                 else if (Encoding.UTF8.GetByteCount(Caption.OriginalCaption) >= TextUtil.SHORT_THRESHOLD)
                     syncCount++;
@@ -681,6 +696,7 @@ namespace LiveCaptionsTranslator
         {
             Caption?.ClearRecentLines();
             Caption?.Contexts.Clear();
+            lastQueued = string.Empty;
 
             Caption?.OnPropertyChanged("DisplayLogCards");
             Caption?.OnPropertyChanged("OverlayPreviousTranslation");
