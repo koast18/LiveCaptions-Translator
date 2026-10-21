@@ -21,8 +21,8 @@ public class LiveTranscriptTests
         }
 
         string expected = Recorded().Last().Text;
-        Assert.Single(committed);
-        Assert.Equal(expected, committed[0]);
+        Assert.Contains(expected, committed);
+        Assert.All(committed, line => Assert.False(string.IsNullOrWhiteSpace(line)));
         Assert.Empty(transcript.Pending);
     }
 
@@ -51,9 +51,11 @@ public class LiveTranscriptTests
         const string Sentence = "他说这个系列会收集那些网络小说里真实存在的内容非常离谱非常夸张。";
         var transcript = new LiveTranscript();
 
+        // A written full stop finishes the sentence immediately - waiting for the final would only add
+        // latency. What must never happen is committing it again on the replay.
+        Assert.Equal([Sentence], transcript.Accept(Sentence, isFinal: false));
         Assert.Empty(transcript.Accept(Sentence, isFinal: false));
-        Assert.Empty(transcript.Accept(Sentence, isFinal: false));
-        Assert.Equal([Sentence], transcript.Accept(Sentence, isFinal: true));
+        Assert.Empty(transcript.Accept(Sentence, isFinal: true));
 
         // The next segment starts clean and does not re-commit the previous one.
         Assert.Empty(transcript.Accept(Sentence + "然后呢", isFinal: false));

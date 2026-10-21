@@ -1,4 +1,4 @@
-namespace LiveCaptionsTranslator.Core.Text;
+﻿namespace LiveCaptionsTranslator.Core.Text;
 
 /// <summary>
 /// Turns the cumulative text a recogniser streams into finished sentences.
@@ -86,7 +86,7 @@ public sealed class LiveTranscript
             string candidate = buffer[..(end + 1)].Trim();
             buffer = buffer[(end + 1)..];
 
-            if (candidate.Length > 0)
+            if (candidate.Any(char.IsLetterOrDigit))
             {
                 sentence = candidate;
                 return true;
