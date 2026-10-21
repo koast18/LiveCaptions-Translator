@@ -43,6 +43,8 @@ public sealed class LiveTranscript
             return committed;
 
         string delta;
+        bool replay = false;
+
         if (consumed.Length > 0 && cumulative.StartsWith(consumed, StringComparison.Ordinal))
         {
             delta = cumulative[consumed.Length..];
@@ -57,17 +59,18 @@ public sealed class LiveTranscript
             consumed = string.Empty;
             buffer = string.Empty;
             delta = cumulative[overlap..];
+            replay = true;
         }
 
         buffer += delta;
         consumed = cumulative;
 
         while (TryTakeSentence(out string sentence))
-            Add(committed, sentence);
+            Add(committed, sentence, replay);
 
         if (isFinal && HasPending)
         {
-            Add(committed, Pending);
+            Add(committed, Pending, replay);
             buffer = string.Empty;
         }
 
@@ -87,10 +90,13 @@ public sealed class LiveTranscript
         return 0;
     }
 
-    /// <summary>Queues a sentence unless it was already committed recently.</summary>
-    private void Add(List<string> committed, string sentence)
+    /// <summary>
+    /// Queues a sentence. Duplicates are only refused when this callback is a replay: the same words can
+    /// legitimately be said twice in a row, but a transcript that starts over must not be committed again.
+    /// </summary>
+    private void Add(List<string> committed, string sentence, bool replay)
     {
-        if (!committedRecent.Contains(sentence))
+        if (!replay || !committedRecent.Contains(sentence))
         {
             committed.Add(sentence);
 
