@@ -28,11 +28,8 @@
         private int monoCount;
         private double position;
 
-        /// <summary>Two cascaded biquads: a 7 kHz low-pass against aliasing, plus a DC/rumble block.</summary>
+        /// <summary>Anti-aliasing low-pass, applied before the samples are decimated.</summary>
         private readonly Biquad lowPass;
-        private readonly Biquad dcBlock;
-
-        private bool filtered;
 
         public PcmToAsrConverter(int sourceSampleRate, int sourceChannels)
         {
@@ -45,7 +42,6 @@
 
             // Anything above half the target rate must go before it can fold back into the signal.
             lowPass = Biquad.LowPass(sourceSampleRate, AudioFormat.SampleRate * 0.45, 0.7071);
-            dcBlock = Biquad.HighPass(sourceSampleRate, 70, 0.7071);
         }
 
         public int SourceSampleRate { get; }
@@ -95,9 +91,7 @@
         {
             var span = mono.AsSpan(monoCount - frames, frames);
             for (int index = 0; index < span.Length; index++)
-                span[index] = lowPass.Process(dcBlock.Process(span[index]));
-
-            filtered = true;
+                span[index] = lowPass.Process(span[index]);
         }
 
         private byte[] Resample()

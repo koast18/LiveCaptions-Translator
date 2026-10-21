@@ -147,8 +147,20 @@ public class PcmToAsrConverterTests
 
         double rms = Math.Sqrt(energy / Math.Max(1, pcm.Length));
 
-        // An unattenuated 12 kHz tone would keep roughly the input amplitude (about 9000 here).
-        Assert.True(rms < 2000, $"12 kHz survived at rms {rms:F0}");
+        // Compare with the same signal at 1 kHz: the filter must cost the out-of-band tone far more.
+        var reference = new PcmToAsrConverter(SourceRate, 1);
+        var lowTone = new float[SourceRate];
+        for (int i = 0; i < lowTone.Length; i++)
+            lowTone[i] = (float)Math.Sin(2 * Math.PI * 1000 * i / SourceRate);
+
+        short[] lowPcm = ToPcm16(reference.Convert(lowTone));
+        double lowEnergy = 0;
+        foreach (short sample in lowPcm)
+            lowEnergy += sample * (double)sample;
+
+        double lowRms = Math.Sqrt(lowEnergy / Math.Max(1, lowPcm.Length));
+
+        Assert.True(rms < lowRms / 4, $"12 kHz rms {rms:F0} vs 1 kHz rms {lowRms:F0}");
     }
 
     [Fact]
