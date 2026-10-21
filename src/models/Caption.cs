@@ -63,6 +63,27 @@ namespace LiveCaptionsTranslator.models
         public void ClearRecentLines() => recent.Clear();
 
         /// <summary>
+        /// Replaces a line that is already on screen. A recogniser can revise what it said, and the
+        /// corrected sentence belongs where the old one is - not appended below it.
+        /// </summary>
+        public bool UpdateRecentLine(string? was, string? now)
+        {
+            if (string.IsNullOrWhiteSpace(was) || string.IsNullOrWhiteSpace(now) || was == now)
+                return false;
+
+            for (int i = recent.Count - 1; i >= 0; i--)
+            {
+                if (!string.Equals(recent[i].Text, was, StringComparison.Ordinal))
+                    continue;
+
+                recent[i] = new CaptionLine(now.Trim(), false);
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// What the recogniser believes it heard right now, before the segment is final. Shown as the
         /// newest line straight away so the page reacts to speech instead of waiting for both the
         /// final result and its translation.
@@ -72,22 +93,15 @@ namespace LiveCaptionsTranslator.models
             get => interimText;
             set
             {
-                // Only the tail is worth showing: the recogniser re-reports the whole session, and the
-                // full text rendered as one enormous block.
-                string? trimmed = value;
-                if (trimmed is not null && trimmed.Length > InterimChars)
-                    trimmed = "…" + trimmed[^InterimChars..];
-
-                if (interimText == trimmed)
+                // Grows with the buffer instead of being re-cut on every callback: the line is the
+                // sentence being spoken, and it only resets when that sentence is committed.
+                if (interimText == value)
                     return;
 
-                interimText = trimmed;
+                interimText = value;
                 OnPropertyChanged(nameof(InterimText));
             }
         }
-
-        /// <summary>How much live recognition the interim line shows.</summary>
-        private const int InterimChars = 90;
 
         private string? interimText;
         private string overlayOriginalCaption = " ";

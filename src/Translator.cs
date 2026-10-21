@@ -293,6 +293,9 @@ namespace LiveCaptionsTranslator
 
         private static string lastQueued = string.Empty;
 
+        /// <summary>What the previous final translation replaced, for in-place correction.</summary>
+        private static string lastShownFinal = string.Empty;
+
         /// <summary>True when a sentence is a copy of, or an extension of, what was just translated.</summary>
         private static bool IsRepeatOfLastQueued(string candidate) =>
             lastQueued.Length > 0 &&
@@ -441,6 +444,15 @@ namespace LiveCaptionsTranslator
                 return;
             }
 
+            // The final version replaces whatever is on screen for this sentence - the live line if it
+            // has not been committed yet, or the history entry it already became.
+            string shown = Caption.InterimText ?? string.Empty;
+            if (shown.Length > 0)
+                Caption.InterimText = null;
+
+            if (!Caption.UpdateRecentLine(shown, translatedText))
+                Caption.UpdateRecentLine(lastShownFinal, translatedText);
+
                 if (LogOnlyFlag)
                 {
                     Caption.TranslatedCaption = string.Empty;
@@ -455,6 +467,7 @@ namespace LiveCaptionsTranslator
                 {
                     // Main page: the sentence that was on screen becomes history.
                     Caption.InterimText = null;
+                    lastShownFinal = Caption.DisplayTranslatedCaption;
                     Caption.AddRecentLine(Caption.DisplayTranslatedCaption);
                     Caption.TranslatedCaption = translatedText;
 
