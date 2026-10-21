@@ -44,10 +44,14 @@ public sealed class LiveTranscript
         }
         else
         {
-            // The backend restarted its transcript (new session, or a corrected segment).
+            // The backend restarted its transcript - a recycled session, or a corrected segment. It may
+            // still begin with what we have already read, so the overlap is skipped instead of being
+            // committed a second time. Without this a whole block of sentences is repeated.
+            int overlap = Overlap(consumed, cumulative);
+
             consumed = string.Empty;
             buffer = string.Empty;
-            delta = cumulative;
+            delta = cumulative[overlap..];
         }
 
         buffer += delta;
@@ -63,6 +67,19 @@ public sealed class LiveTranscript
         }
 
         return committed;
+    }
+
+    /// <summary>Longest suffix of <paramref name="seen"/> that is also a prefix of <paramref name="next"/>.</summary>
+    private static int Overlap(string seen, string next)
+    {
+        int max = Math.Min(seen.Length, next.Length);
+        for (int length = max; length > 0; length--)
+        {
+            if (seen.AsSpan(seen.Length - length).SequenceEqual(next.AsSpan(0, length)))
+                return length;
+        }
+
+        return 0;
     }
 
     public void Reset()

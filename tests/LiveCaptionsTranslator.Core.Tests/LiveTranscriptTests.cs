@@ -118,4 +118,20 @@ public class LiveTranscriptTests
         ("partial", "今天天气不错，我们一起去公园散步吧。"),
         ("final", "今天天气不错，我们一起去公园散步吧。"),
     ];
+
+    [Fact]
+    public void A_replayed_transcript_does_not_commit_the_same_sentences_again()
+    {
+        // What a recycled session looks like: the service starts over and re-sends what it already said.
+        const string Block = "至少蹲三年。而且作为外国公民。他出狱后极大概率。会被遣返回国。";
+
+        var transcript = new LiveTranscript();
+        var first = transcript.Accept(Block, isFinal: true);
+        Assert.Equal(4, first.Count);
+
+        var replay = transcript.Accept(Block + "缺钱了。", isFinal: false);
+
+        Assert.Empty(replay);
+        Assert.Equal("缺钱了。", transcript.Pending);
+    }
 }

@@ -48,6 +48,13 @@ namespace LiveCaptionsTranslator.models
             if (recent.Count > 0 && line.Length > 20 && line.Contains(recent[^1].Text, StringComparison.Ordinal))
                 return;
 
+            // A replayed transcript repeats a whole block, not just the previous line.
+            for (int i = recent.Count - 1; i >= 0 && i >= recent.Count - 50; i--)
+            {
+                if (string.Equals(recent[i].Text, line, StringComparison.Ordinal))
+                    return;
+            }
+
             recent.Add(new CaptionLine(line, false));
             while (recent.Count > MaxRecentLines)
                 recent.RemoveAt(0);
