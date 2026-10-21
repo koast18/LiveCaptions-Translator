@@ -1,4 +1,4 @@
-using LiveCaptionsTranslator.Core.Audio;
+﻿using LiveCaptionsTranslator.Core.Audio;
 
 namespace LiveCaptionsTranslator.Core.Tests;
 
@@ -126,5 +126,55 @@ public class PcmToAsrConverterTests
         var converter = new PcmToAsrConverter(SourceRate, 2);
 
         Assert.Empty(converter.Convert(ReadOnlySpan<float>.Empty));
+    }
+
+    [Fact]
+    public void Content_above_the_target_nyquist_is_attenuated_instead_of_aliasing()
+    {
+        // 12 kHz is above 8 kHz, so without a low-pass it would fold down to 4 kHz - audible as hiss
+        // to a recogniser. Compare the same tone before and after conversion.
+        const int SourceRate = 48000;
+        var converter = new PcmToAsrConverter(SourceRate, 1);
+
+        var tone = new float[SourceRate];
+        for (int i = 0; i < tone.Length; i++)
+            tone[i] = (float)Math.Sin(2 * Math.PI * 12000 * i / SourceRate);
+
+        short[] pcm = ToPcm16(converter.Convert(tone));
+        double energy = 0;
+        foreach (short sample in pcm)
+            energy += sample * (double)sample;
+
+        double rms = Math.Sqrt(energy / Math.Max(1, pcm.Length));
+
+        // An unattenuated 12 kHz tone would keep roughly the input amplitude (about 9000 here).
+        Assert.True(rms < 2000, $"12 kHz survived at rms {rms:F0}");
+    }
+
+    [Fact]
+    public void Speech_band_content_survives_the_filter()
+    {
+        const int SourceRate = 48000;
+        var converter = new PcmToAsrConverter(SourceRate, 1);
+
+        var tone = new float[SourceRate];
+        for (int i = 0; i < tone.Length; i++)
+            tone[i] = (float)Math.Sin(2 * Math.PI * 1000 * i / SourceRate);
+
+        short[] pcm = ToPcm16(converter.Convert(tone));
+        double energy = 0;
+        foreach (short sample in pcm)
+            energy += sample * (double)sample;
+
+        double rms = Math.Sqrt(energy / Math.Max(1, pcm.Length));
+
+        Assert.True(rms > 4000, $"1 kHz was over-attenuated, rms {rms:F0}");
+    }
+
+    private static short[] ToPcm16(byte[] pcm)
+    {
+        var samples = new short[pcm.Length / sizeof(short)];
+        Buffer.BlockCopy(pcm, 0, samples, 0, pcm.Length);
+        return samples;
     }
 }

@@ -1,8 +1,13 @@
-namespace LiveCaptionsTranslator.Core.Audio
+﻿namespace LiveCaptionsTranslator.Core.Audio
 {
     /// <summary>
     /// Converts interleaved 32-bit float PCM at any sample rate / channel count into the
     /// 16 kHz / mono / 16-bit little-endian stream that ASR providers expect.
+    /// <para>
+    /// Downsampling is preceded by a low-pass, because dropping 48 kHz to 16 kHz by plain
+    /// interpolation folds everything above 8 kHz back into the speech band as hiss and makes the
+    /// recogniser noticeably worse - the reason the same audio transcribed better in a phone keyboard.
+    /// </para>
     /// <para>
     /// The converter is stateful, so a continuous capture can be fed in arbitrary chunks:
     /// the resampling position and the samples still needed for interpolation are carried
@@ -23,6 +28,12 @@ namespace LiveCaptionsTranslator.Core.Audio
         private int monoCount;
         private double position;
 
+        /// <summary>Two cascaded biquads: a 7 kHz low-pass against aliasing, plus a DC/rumble block.</summary>
+        private readonly Biquad lowPass;
+        private readonly Biquad dcBlock;
+
+        private bool filtered;
+
         public PcmToAsrConverter(int sourceSampleRate, int sourceChannels)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(sourceSampleRate);
@@ -31,6 +42,10 @@ namespace LiveCaptionsTranslator.Core.Audio
             SourceSampleRate = sourceSampleRate;
             this.sourceChannels = sourceChannels;
             step = (double)sourceSampleRate / AudioFormat.SampleRate;
+
+            // Anything above half the target rate must go before it can fold back into the signal.
+            lowPass = Biquad.LowPass(sourceSampleRate, AudioFormat.SampleRate * 0.45, 0.7071);
+            dcBlock = Biquad.HighPass(sourceSampleRate, 70, 0.7071);
         }
 
         public int SourceSampleRate { get; }
@@ -71,6 +86,18 @@ namespace LiveCaptionsTranslator.Core.Audio
             }
 
             monoCount += frames;
+
+            if (step > 1.05)
+                Filter(frames);
+        }
+
+        private void Filter(int frames)
+        {
+            var span = mono.AsSpan(monoCount - frames, frames);
+            for (int index = 0; index < span.Length; index++)
+                span[index] = lowPass.Process(dcBlock.Process(span[index]));
+
+            filtered = true;
         }
 
         private byte[] Resample()

@@ -34,10 +34,12 @@ namespace LiveCaptionsTranslator.Core.Doubao
         {
             OpusCodecFactory.AttemptToUseNativeLibrary = false;
 
+            // VOIP instead of AUDIO: the encoder spends its bits on intelligible speech rather than
+            // on reproducing music, which is what the recogniser is listening for.
             encoder = OpusCodecFactory.CreateEncoder(
-                SampleRate, Channels, OpusApplication.OPUS_APPLICATION_AUDIO);
+                SampleRate, Channels, OpusApplication.OPUS_APPLICATION_VOIP);
             encoder.Bitrate = bitrate;
-            encoder.Complexity = 5;
+            encoder.Complexity = 10;
         }
 
         public int Bitrate => encoder.Bitrate;
