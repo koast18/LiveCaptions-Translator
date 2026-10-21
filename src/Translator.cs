@@ -357,9 +357,6 @@ namespace LiveCaptionsTranslator
             Caption.OriginalCaption = live;
         }
 
-        }
-
-
         /// <summary>Kept deliberately tiny: the loops only need somewhere to report a broken frame.</summary>
         private static void Log(string message)
         {
