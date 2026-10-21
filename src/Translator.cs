@@ -17,6 +17,9 @@ namespace LiveCaptionsTranslator
         private static Setting? setting = null;
 
         private static readonly Queue<(string Text, bool Interim)> pendingTextQueue = new();
+
+        /// <summary>Decides when a sentence is finished; it remembers what it has already consumed.</summary>
+        private static readonly Core.Text.LiveTranscript transcript = new();
         private static readonly TranslationTaskQueue translationTaskQueue = new();
 
         private static int idleCount = 0;
@@ -336,101 +339,24 @@ namespace LiveCaptionsTranslator
             if (string.IsNullOrEmpty(fullText))
                 return;
 
-            // Preprocess
+            // Preprocess for display and translation quality (unchanged upstream rules).
             fullText = RegexPatterns.Acronym().Replace(fullText, "$1$2");
             fullText = RegexPatterns.AcronymWithWords().Replace(fullText, "$1 $2");
             fullText = RegexPatterns.PunctuationSpace().Replace(fullText, "$1 ");
             fullText = RegexPatterns.CJPunctuationSpace().Replace(fullText, "$1");
-            // Note: For certain languages (such as Japanese), LiveCaptions excessively uses `\n`.
-            // Replace redundant `\n` within sentences with comma or period.
             fullText = TextUtil.ReplaceNewlines(fullText, TextUtil.MEDIUM_THRESHOLD);
 
-            if (isFinal && fullText.Length > 0 && Array.IndexOf(TextUtil.PUNC_EOS, fullText[^1]) == -1)
-                fullText += EndsInCjk(fullText) ? "。" : ".";
+            // The recogniser reports the whole segment on every callback, so the splitter works on the
+            // difference. It decides when a sentence is finished; nothing here re-slices the full text,
+            // which is what used to commit the same sentence again and again.
+            foreach (string sentence in transcript.Accept(fullText, isFinal))
+                pendingTextQueue.Enqueue((sentence, false));
 
-            // Prevent adding the last sentence from previous running to log cards
-            // before the first sentence is completed.
-            if (fullText.IndexOfAny(TextUtil.PUNC_EOS) == -1 && Caption!.Contexts.Count > 0)
-                ClearContexts();
+            string live = transcript.Pending;
+            Caption.DisplayOriginalCaption = live;
+            Caption.OriginalCaption = live;
+        }
 
-            // Get the last sentence.
-            int lastEOSIndex;
-            if (Array.IndexOf(TextUtil.PUNC_EOS, fullText[^1]) != -1)
-                lastEOSIndex = fullText[0..^1].LastIndexOfAny(TextUtil.PUNC_EOS);
-            else
-                lastEOSIndex = fullText.LastIndexOfAny(TextUtil.PUNC_EOS);
-            string latestCaption = fullText.Substring(lastEOSIndex + 1);
-
-            if (latestCaption.Length == 0)
-                return;
-
-            // If the last sentence is too short, extend it by adding the previous sentence.
-            // Note: LiveCaptions may generate multiple characters including EOS at once.
-            if (lastEOSIndex > 0 && Encoding.UTF8.GetByteCount(latestCaption) < TextUtil.SHORT_THRESHOLD)
-            {
-                lastEOSIndex = fullText[0..lastEOSIndex].LastIndexOfAny(TextUtil.PUNC_EOS);
-                latestCaption = fullText.Substring(lastEOSIndex + 1);
-            }
-
-            // `OverlayOriginalCaption`: The sentence to be displayed on Overlay Window.
-            Caption.OverlayOriginalCaption = latestCaption;
-            for (int historyCount = Math.Min(Setting!.DisplaySentences, Caption.Contexts.Count);
-                 historyCount > 0 && lastEOSIndex > 0;
-                 historyCount--)
-            {
-                lastEOSIndex = fullText[0..lastEOSIndex].LastIndexOfAny(TextUtil.PUNC_EOS);
-                Caption.OverlayOriginalCaption = fullText.Substring(lastEOSIndex + 1);
-            }
-
-            // `DisplayOriginalCaption`: The sentence to be displayed on Main Window.
-            if (string.CompareOrdinal(Caption.DisplayOriginalCaption, latestCaption) != 0)
-            {
-                Caption.DisplayOriginalCaption = latestCaption;
-                // If the last sentence is too long, truncate it when displayed.
-                Caption.DisplayOriginalCaption =
-                    TextUtil.ShortenDisplaySentence(Caption.DisplayOriginalCaption, TextUtil.VERYLONG_THRESHOLD);
-            }
-
-            // Prepare for `OriginalCaption`. If Expanded, only retain the complete sentence.
-            int lastEOS = latestCaption.LastIndexOfAny(TextUtil.PUNC_EOS);
-            if (lastEOS != -1)
-                latestCaption = latestCaption.Substring(0, lastEOS + 1);
-            // `OriginalCaption`: The sentence to be really translated.
-            if (string.CompareOrdinal(Caption.OriginalCaption, latestCaption) != 0)
-            {
-                Caption.OriginalCaption = latestCaption;
-
-                idleCount = 0;
-                if (Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) != -1)
-                {
-                    syncCount = 0;
-
-                    // A cumulative transcript re-sends sentences that were already translated; only a
-                    // genuinely new one is queued.
-                    if (!IsRepeatOfLastQueued(Caption.OriginalCaption))
-                    {
-                        lastQueued = Caption.OriginalCaption;
-                        pendingTextQueue.Enqueue((Caption.OriginalCaption, false));
-                    }
-                }
-                else if (Encoding.UTF8.GetByteCount(Caption.OriginalCaption) >= TextUtil.SHORT_THRESHOLD)
-                    syncCount++;
-            }
-            else
-                idleCount++;
-
-            // `TranslateFlag` determines whether this sentence should be translated.
-            // When `OriginalCaption` remains unchanged, `idleCount` +1; when `OriginalCaption` changes, `MaxSyncInterval` +1.
-            if (syncCount > Setting.MaxSyncInterval ||
-                idleCount == Setting.MaxIdleInterval)
-            {
-                syncCount = 0;
-                // A sentence that is still being spoken: translating it now is a preview, replaced by
-                // the final translation once the sentence ends.
-                bool complete = Caption.OriginalCaption.Length > 0 &&
-                                Array.IndexOf(TextUtil.PUNC_EOS, Caption.OriginalCaption[^1]) != -1;
-                pendingTextQueue.Enqueue((Caption.OriginalCaption, !complete));
-            }
         }
 
 
