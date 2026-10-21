@@ -131,7 +131,7 @@ public class LiveTranscriptTests
 
         var replay = transcript.Accept(Block + "缺钱了。", isFinal: false);
 
-        Assert.Empty(replay);
-        Assert.Equal("缺钱了。", transcript.Pending);
+        // The replayed block is skipped; only what is genuinely new comes through.
+        Assert.Equal(["缺钱了。"], replay);
     }
 }
