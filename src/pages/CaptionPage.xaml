@@ -37,8 +37,8 @@
                             ToolTip="{DynamicResource Caption_CopyTooltip}">
                             <TextBlock.Style>
                                 <Style BasedOn="{StaticResource CaptionBlockStyle}" TargetType="TextBlock">
-                                    <Setter Property="FontSize" Value="13" />
-                                    <Setter Property="Opacity" Value="0.45" />
+                                    <Setter Property="FontSize" Value="16" />
+                                    <Setter Property="Opacity" Value="0.5" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsLatest}" Value="True">
                                             <Setter Property="FontSize" Value="19" />
