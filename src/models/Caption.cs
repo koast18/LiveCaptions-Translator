@@ -31,6 +31,9 @@ namespace LiveCaptionsTranslator.models
         /// </summary>
         private readonly List<CaptionLine> recent = [];
 
+        /// <summary>Touched by the recognition and display threads alike.</summary>
+        private readonly object recentLock = new();
+
         private const int MaxRecentLines = 40;
 
         public void AddRecentLine(string? text)
@@ -39,6 +42,13 @@ namespace LiveCaptionsTranslator.models
                 return;
 
             string line = text.Trim();
+
+            lock (recentLock)
+                AddRecentLineCore(line);
+        }
+
+        private void AddRecentLineCore(string line)
+        {
 
             // The same sentence can arrive twice when a backend re-reports its transcript, and a
             // growing tail would otherwise stack near-identical copies on top of each other.
@@ -60,7 +70,11 @@ namespace LiveCaptionsTranslator.models
                 recent.RemoveAt(0);
         }
 
-        public void ClearRecentLines() => recent.Clear();
+        public void ClearRecentLines()
+        {
+            lock (recentLock)
+                recent.Clear();
+        }
 
         /// <summary>
         /// Replaces a line that is already on screen. A recogniser can revise what it said, and the
@@ -71,13 +85,16 @@ namespace LiveCaptionsTranslator.models
             if (string.IsNullOrWhiteSpace(was) || string.IsNullOrWhiteSpace(now) || was == now)
                 return false;
 
-            for (int i = recent.Count - 1; i >= 0; i--)
+            lock (recentLock)
             {
-                if (!string.Equals(recent[i].Text, was, StringComparison.Ordinal))
-                    continue;
+                for (int i = recent.Count - 1; i >= 0; i--)
+                {
+                    if (!string.Equals(recent[i].Text, was, StringComparison.Ordinal))
+                        continue;
 
-                recent[i] = new CaptionLine(now.Trim(), false);
-                return true;
+                    recent[i] = new CaptionLine(now.Trim(), false);
+                    return true;
+                }
             }
 
             return false;
@@ -281,9 +298,13 @@ namespace LiveCaptionsTranslator.models
             string current = translationRedundant ? DisplayOriginalCaption : DisplayTranslatedCaption;
 
             // Everything that has finished goes in; the ScrollViewer decides how much of it is visible.
-            var lines = new List<CaptionLine>(recent.Count + 1);
+            List<CaptionLine> snapshot;
+            lock (recentLock)
+                snapshot = [.. recent];
 
-            foreach (var entry in recent)
+            var lines = new List<CaptionLine>(snapshot.Count + 1);
+
+            foreach (var entry in snapshot)
             {
                 foreach (string part in SplitForDisplay(entry.Text, DisplayLineChars))
                     lines.Add(new CaptionLine(part, false));

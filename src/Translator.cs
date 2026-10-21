@@ -16,7 +16,9 @@ namespace LiveCaptionsTranslator
         private static Caption? caption = null;
         private static Setting? setting = null;
 
+        /// <summary>Written by the recogniser thread, read by the translate loop: guarded.</summary>
         private static readonly Queue<(string Text, bool Interim)> pendingTextQueue = new();
+        private static readonly object pendingLock = new();
 
         /// <summary>Decides when a sentence is finished; it remembers what it has already consumed.</summary>
         private static readonly Core.Text.LiveTranscript transcript = new();
@@ -289,16 +291,8 @@ namespace LiveCaptionsTranslator
             return true;
         }
 
-        private static string lastQueued = string.Empty;
-
         /// <summary>What the previous final translation replaced, for in-place correction.</summary>
         private static string lastShownFinal = string.Empty;
-
-        /// <summary>True when a sentence is a copy of, or an extension of, what was just translated.</summary>
-        private static bool IsRepeatOfLastQueued(string candidate) =>
-            lastQueued.Length > 0 &&
-            (string.Equals(candidate, lastQueued, StringComparison.Ordinal) ||
-             (candidate.Length > lastQueued.Length && candidate.Contains(lastQueued, StringComparison.Ordinal)));
 
 
 
@@ -327,7 +321,8 @@ namespace LiveCaptionsTranslator
             // difference. It decides when a sentence is finished; nothing here re-slices the full text,
             // which is what used to commit the same sentence again and again.
             foreach (string sentence in transcript.Accept(fullText, isFinal))
-                pendingTextQueue.Enqueue((sentence, false));
+                lock (pendingLock)
+                    pendingTextQueue.Enqueue((sentence, false));
 
             string live = transcript.Pending;
             Caption.DisplayOriginalCaption = live;
@@ -365,9 +360,18 @@ namespace LiveCaptionsTranslator
         private static async Task TranslateOnce()
         {
             // Translate
-            if (pendingTextQueue.Count > 0)
+            (string Text, bool Interim) next;
+            lock (pendingLock)
             {
-                var (originalSnapshot, interim) = pendingTextQueue.Dequeue();
+                if (pendingTextQueue.Count == 0)
+                    next = (string.Empty, false);
+                else
+                    next = pendingTextQueue.Dequeue();
+            }
+
+            if (next.Text.Length > 0)
+            {
+                var (originalSnapshot, interim) = next;
 
                 if (LogOnlyFlag)
                 {
@@ -612,7 +616,6 @@ namespace LiveCaptionsTranslator
         {
             Caption?.ClearRecentLines();
             Caption?.Contexts.Clear();
-            lastQueued = string.Empty;
 
             Caption?.OnPropertyChanged("DisplayLogCards");
             Caption?.OnPropertyChanged("OverlayPreviousTranslation");
