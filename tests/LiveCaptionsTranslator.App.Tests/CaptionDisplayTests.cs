@@ -1,4 +1,4 @@
-using LiveCaptionsTranslator.models;
+﻿using LiveCaptionsTranslator.models;
 
 namespace LiveCaptionsTranslator.App.Tests;
 
@@ -40,14 +40,16 @@ public class CaptionDisplayTests
     {
         var caption = Fresh();
 
+        // The real flow: the finished sentence moves into the list, the new one becomes the live line.
         caption.AddRecentLine("已经说完的。");
-        caption.InterimText = "正在说的";
-        caption.DisplayTranslatedCaption = "已经说完的。";
+        caption.DisplayTranslatedCaption = "正在说的。";
+        caption.InterimText = "正在说";
         caption.RebuildRollingLines(0);
 
-        // The live line has its own slot in the page; the list holds finished sentences only.
-        Assert.Equal(["已经说完的。"], caption.RollingLines.Select(line => line.Text));
-        Assert.DoesNotContain(caption.RollingLines, line => line.Text == "正在说的");
+        // The live line has its own slot in the page; the list holds finished sentences plus the newest
+        // finished one - never the half-heard text.
+        Assert.Equal(["已经说完的。", "正在说的。"], caption.RollingLines.Select(line => line.Text));
+        Assert.DoesNotContain(caption.RollingLines, line => line.Text == "正在说");
     }
 
     [Fact]
