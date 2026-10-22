@@ -89,7 +89,10 @@ public class CaptionDisplayTests
         caption.RebuildRollingLines(0);
 
         Assert.True(caption.RollingLines.Count > 1);
-        Assert.All(caption.RollingLines, line => Assert.False(line.IsLatest));
+
+        // Everything but the tail of the sentence is history; the tail is the line being spoken.
+        Assert.All(caption.RollingLines.Take(caption.RollingLines.Count - 1), line => Assert.False(line.IsLatest));
+        Assert.True(caption.RollingLines[^1].IsLatest);
         Assert.Equal(long1, string.Concat(caption.RollingLines.Select(line => line.Text)));
     }
 
