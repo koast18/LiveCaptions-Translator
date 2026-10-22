@@ -162,15 +162,18 @@ public class LiveTranscriptTests
         string text = string.Concat(Enumerable.Repeat("他说这个系列会收集那些网络小说里真实存在的内容非常离谱非常夸张，", 3));
 
         var transcript = new LiveTranscript();
-        Assert.Empty(transcript.Accept(text, isFinal: false));
 
-        string? first = transcript.TakePendingLine();
-        Assert.NotNull(first);
-        Assert.True(first!.Length <= LiveTranscript.MaxLineChars + 2, $"{first.Length} chars");
-        Assert.True(transcript.Pending.Length < text.Length);
+        var committed = new List<string>(transcript.Accept(text, isFinal: false));
+        Assert.NotEmpty(committed);
 
-        // Nothing is lost: the taken part plus what is pending is the original text.
-        Assert.Equal(text, first + transcript.Pending);
+        // Whatever Accept could not finish stays pending and is either handed over a line at a time or
+        // kept while it still fits.
+        while (transcript.TakePendingLine() is { } line)
+            committed.Add(line);
+
+        // Nothing is lost and no line is longer than a comfortable one.
+        Assert.Equal(text, string.Concat(committed) + transcript.Pending);
+        Assert.All(committed, line => Assert.True(line.Length <= LiveTranscript.MaxLineChars + 2, $"{line.Length} chars"));
     }
 
     [Fact]
