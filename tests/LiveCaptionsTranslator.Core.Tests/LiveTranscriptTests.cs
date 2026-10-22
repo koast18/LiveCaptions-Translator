@@ -163,4 +163,24 @@ public class LiveTranscriptTests
         Assert.Null(transcript.TakePendingLine());
         Assert.Equal("还在说", transcript.Pending);
     }
+
+    [Fact]
+    public void A_comma_is_not_a_sentence_boundary()
+    {
+        // The reported duplicate: a line that was a prefix of the next one. It came from treating a pause
+        // inside the sentence as the end of it.
+        const string Part = "韩媒指挥体系将变为韩国军官担任总司令，负责指挥美国军官担任副司令，";
+        const string Full = Part + "提供支援的结构。";
+
+        var transcript = new LiveTranscript();
+        var committed = new List<string>();
+
+        committed.AddRange(transcript.Accept(Part, isFinal: false));
+        Assert.Empty(committed);
+
+        committed.AddRange(transcript.Accept(Full, isFinal: true));
+
+        Assert.Equal([Full], committed);
+        Assert.Single(committed);
+    }
 }

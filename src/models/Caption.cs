@@ -115,12 +115,17 @@ namespace LiveCaptionsTranslator.models
             get => interimText;
             set
             {
-                // Grows with the buffer instead of being re-cut on every callback: the line is the
-                // sentence being spoken, and it only resets when that sentence is committed.
-                if (interimText == value)
+                // The live slot shows at most two lines: beyond that only the tail is shown, so it can
+                // never push the finished sentences out of view. It is a display concern only - nothing
+                // is committed here.
+                string? shown = value;
+                if (shown is not null && shown.Length > DisplayLineChars * 2)
+                    shown = "…" + shown[^(DisplayLineChars * 2)..];
+
+                if (interimText == shown)
                     return;
 
-                interimText = value;
+                interimText = shown;
                 OnPropertyChanged(nameof(InterimText));
             }
         }
