@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 
 using LiveCaptionsTranslator.Core.Asr;
 using LiveCaptionsTranslator.Core.Audio;
@@ -24,9 +24,9 @@ public class TranscriptCaptureTests
     {
         public List<(string Kind, string Text)> Events { get; } = [];
 
-        public void OnPartial(string text) => Events.Add(("partial", text));
+        public void OnPartial(string text, string? stableText = null) => Events.Add(("partial", text));
 
-        public void OnFinal(string text) => Events.Add(("final", text));
+        public void OnFinal(string text, string? stableText = null) => Events.Add(("final", text));
 
         public void OnNotice(string message) { }
 

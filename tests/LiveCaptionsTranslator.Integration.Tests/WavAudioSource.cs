@@ -1,4 +1,4 @@
-using LiveCaptionsTranslator.Core.Audio;
+﻿using LiveCaptionsTranslator.Core.Audio;
 
 namespace LiveCaptionsTranslator.Integration.Tests;
 
@@ -116,13 +116,13 @@ internal sealed class CollectingSink : LiveCaptionsTranslator.Core.Asr.IAsrSink
         }
     }
 
-    public void OnPartial(string text)
+    public void OnPartial(string text, string? stableText = null)
     {
         lock (gate)
             partials.Add(text);
     }
 
-    public void OnFinal(string text)
+    public void OnFinal(string text, string? stableText = null)
     {
         lock (gate)
             finals.Add(text);

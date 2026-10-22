@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 
 using LiveCaptionsTranslator.Core.Asr;
 using LiveCaptionsTranslator.Core.Audio;
@@ -29,13 +29,13 @@ public class DoubaoTranscriptCaptureTests
 
         public List<(string Kind, long AtMs, string Text)> Events { get; } = [];
 
-        public void OnPartial(string text)
+        public void OnPartial(string text, string? stableText = null)
         {
             lock (gate)
                 Events.Add(("partial", clock.ElapsedMilliseconds, text));
         }
 
-        public void OnFinal(string text)
+        public void OnFinal(string text, string? stableText = null)
         {
             lock (gate)
                 Events.Add(("final", clock.ElapsedMilliseconds, text));
@@ -54,31 +54,42 @@ public class DoubaoTranscriptCaptureTests
     public async Task The_multisentence_sample_produces_a_recorded_stream()
     {
         var audio = WavFile.Read(FixturePath("doubao-zh-cn-multisentence-16k.wav"));
-        var source = new WavAudioSource(audio.Pcm, pacePerChunk: TimeSpan.FromMilliseconds(40));
-        var sink = new RecordingSink();
-
         var credentials = await new DoubaoDeviceRegistrar().RegisterAsync();
+        RecordingSink sink = new();
 
-        await using var provider = new DoubaoAsrProvider(
-            credentials,
-            streamOptions: new DoubaoStreamOptions
+        // The endpoint intermittently rejects a freshly opened session (SessionFailed 50700000) and
+        // sometimes answers nothing at all, which is a service-side transient. Try a few times; the
+        // recording is evidence, so it is written whatever happened.
+        const int attempts = 5;
+
+        for (int attempt = 1; attempt <= attempts && sink.Events.Count == 0; attempt++)
+        {
+            var source = new WavAudioSource(audio.Pcm, pacePerChunk: TimeSpan.FromMilliseconds(40));
+            sink = new RecordingSink();
+
+            await using var provider = new DoubaoAsrProvider(
+                credentials,
+                streamOptions: new DoubaoStreamOptions
+                {
+                    MaxConsecutiveFailures = 1,
+                    ReconnectDelay = TimeSpan.FromSeconds(1),
+                });
+
+            await provider.StartAsync(new AsrContext
             {
-                MaxConsecutiveFailures = 1,
-                ReconnectDelay = TimeSpan.FromSeconds(1),
+                Sink = sink,
+                Options = new AsrOptions(),
+                AudioSource = source,
             });
 
-        await provider.StartAsync(new AsrContext
-        {
-            Sink = sink,
-            Options = new AsrOptions(),
-            AudioSource = source,
-        });
+            await source.EmitAllAsync();
+            await provider.StopAsync();
 
-        await source.EmitAllAsync();
-        await provider.StopAsync();
+            if (sink.Events.Count == 0 && attempt < attempts)
+                await Task.Delay(TimeSpan.FromSeconds(5));
+        }
 
-        // The endpoint is flaky for freshly registered devices; an empty capture is a service
-        // problem, but a partially written one is still evidence, so write it either way.
+        // The recording is direct evidence: write it even when the endpoint gave us nothing.
         var text = new StringBuilder();
         foreach (var (kind, at, value) in sink.Events)
             text.Append(kind).Append('\t').Append(at).Append('\t')

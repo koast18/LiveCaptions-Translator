@@ -188,6 +188,10 @@ namespace LiveCaptionsTranslator
             if (provider == null)
                 return;
 
+            // A new backend starts a new transcript: text from the previous one must not be treated
+            // as a replay of it, and a half-heard line from it must not stay on screen.
+            ResetTranscription();
+
             IAudioSource? audioSource = null;
             if (provider.RequiresAudioSource)
             {
@@ -259,12 +263,13 @@ namespace LiveCaptionsTranslator
             // final when the whole stream ends.
             // One path only: HandleCaptionText owns the live line, so the page cannot be written by two
             // different pieces of logic at once.
-            public void OnPartial(string text) => HandleCaptionText(text);
+            public void OnPartial(string text, string? stableText = null) =>
+                HandleCaptionText(text, isFinal: false, stableText: stableText);
 
-            public void OnFinal(string text)
+            public void OnFinal(string text, string? stableText = null)
             {
                 Caption!.InterimText = null;
-                HandleCaptionText(text);
+                HandleCaptionText(text, isFinal: true, stableText: stableText);
             }
 
             public void OnNotice(string message) => SetNotice(message);
@@ -304,38 +309,25 @@ namespace LiveCaptionsTranslator
         /// when the service did not punctuate it, and without a closing mark the splitter would glue
         /// it to the next one - the "several sentences run together" complaint.
         /// </param>
-        public static void HandleCaptionText(string fullText, bool isFinal = false)
+        public static void HandleCaptionText(string fullText, bool isFinal = false, string? stableText = null)
         {
             if (string.IsNullOrEmpty(fullText))
                 return;
 
-            // Preprocess for display and translation quality (unchanged upstream rules).
-            fullText = RegexPatterns.Acronym().Replace(fullText, "$1$2");
-            fullText = RegexPatterns.AcronymWithWords().Replace(fullText, "$1 $2");
-            fullText = RegexPatterns.PunctuationSpace().Replace(fullText, "$1 ");
-            fullText = RegexPatterns.CJPunctuationSpace().Replace(fullText, "$1");
-            fullText = TextUtil.ReplaceNewlines(fullText, TextUtil.MEDIUM_THRESHOLD);
+            fullText = PreprocessCaptionText(fullText);
+            string? stable = stableText is null ? null : PreprocessCaptionText(stableText);
 
-            // The recogniser reports the whole segment on every callback, so the splitter works on the
-            // difference. It decides when a sentence is finished; nothing here re-slices the full text,
-            // which is what used to commit the same sentence again and again.
-            var updates = transcript.Accept(fullText, isFinal);
+            // The recogniser reports the whole transcript on every callback, so the splitter works on
+            // what is new. It decides when a sentence is finished; nothing here re-slices the full
+            // text, which is what used to commit the same sentence again and again.
+            var updates = transcript.Accept(fullText, stable, isFinal);
 
-            foreach (var update in updates)
+            foreach (string sentence in updates)
             {
-                if (update.Retract)
-                {
-                    RetractLine(update.Text);
-                    continue;
-                }
-
-                if (update.Replaces is not null)
-                    ReviseLine(update.Replaces, update.Text);
-                else
-                    CommitLine(update.Text);
+                CommitLine(sentence);
 
                 lock (pendingLock)
-                    pendingTextQueue.Enqueue(update.Text);
+                    pendingTextQueue.Enqueue(sentence);
             }
 
             // Deliberately not committing a pause-split of the unconfirmed text: doing that produced a
@@ -347,6 +339,19 @@ namespace LiveCaptionsTranslator
             Caption.InterimText = live.Length > 0 ? live : null;
 
             Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
+        }
+
+        /// <summary>
+        /// The upstream clean-up rules, applied to both the transcript and its stable prefix so the
+        /// stable offsets stay valid.
+        /// </summary>
+        private static string PreprocessCaptionText(string text)
+        {
+            text = RegexPatterns.Acronym().Replace(text, "$1$2");
+            text = RegexPatterns.AcronymWithWords().Replace(text, "$1 $2");
+            text = RegexPatterns.PunctuationSpace().Replace(text, "$1 ");
+            text = RegexPatterns.CJPunctuationSpace().Replace(text, "$1");
+            return TextUtil.ReplaceNewlines(text, TextUtil.MEDIUM_THRESHOLD);
         }
 
         /// <summary>
@@ -382,44 +387,18 @@ namespace LiveCaptionsTranslator
         }
 
         /// <summary>
-        /// The recogniser corrected a sentence it had already handed out (its final pass fixes
-        /// mis-heard characters). The corrected wording takes the place of the old one; it is never
-        /// appended, which is what used to leave the wrong sentence and its correction on screen.
+        /// Forgets what has been transcribed so far. Called when the backend or its language changes,
+        /// and when the user clears the captions.
         /// </summary>
-        private static void ReviseLine(string was, string now)
+        public static void ResetTranscription()
         {
-            if (string.IsNullOrWhiteSpace(now))
-                return;
+            transcript.Reset();
 
-            if (string.Equals(Caption.OriginalCaption, was, StringComparison.Ordinal))
-            {
-                Caption.OriginalCaption = now;
-                Caption.TranslatedCaption = now;
-                Caption.DisplayTranslatedCaption = now;
-                Caption.TranslationRedundant = true;
-                Caption.OverlayOriginalCaption = now;
-                Caption.OverlayCurrentTranslation = now;
-                return;
-            }
+            lock (pendingLock)
+                pendingTextQueue.Clear();
 
-            Caption.ReviseRecentLine(was, now);
-        }
-
-        /// <summary>A revision removed a sentence from the transcript, so it must leave the screen.</summary>
-        private static void RetractLine(string source)
-        {
-            if (string.Equals(Caption.OriginalCaption, source, StringComparison.Ordinal))
-            {
-                Caption.OriginalCaption = string.Empty;
-                Caption.TranslatedCaption = string.Empty;
-                Caption.DisplayTranslatedCaption = string.Empty;
-                Caption.TranslationRedundant = false;
-                Caption.OverlayOriginalCaption = string.Empty;
-                Caption.OverlayCurrentTranslation = string.Empty;
-                return;
-            }
-
-            Caption.RemoveRecentLineBySource(source);
+            if (Caption is not null)
+                Caption.InterimText = null;
         }
 
         /// <summary>Kept deliberately tiny: the loops only need somewhere to report a broken frame.</summary>
@@ -696,8 +675,16 @@ namespace LiveCaptionsTranslator
 
         public static void ClearContexts()
         {
+            ResetTranscription();
             Caption?.ClearRecentLines();
             Caption?.Contexts.Clear();
+            if (Caption is not null)
+            {
+                Caption.DisplayTranslatedCaption = string.Empty;
+                Caption.OriginalCaption = string.Empty;
+                Caption.TranslatedCaption = string.Empty;
+                Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
+            }
 
             Caption?.OnPropertyChanged("DisplayLogCards");
             Caption?.OnPropertyChanged("OverlayPreviousTranslation");

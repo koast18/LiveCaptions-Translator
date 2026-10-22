@@ -1,4 +1,4 @@
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 
 using LiveCaptionsTranslator.Core.Asr;
 using LiveCaptionsTranslator.Core.Audio;
@@ -82,13 +82,13 @@ internal sealed class RecordingSink : IAsrSink
         }
     }
 
-    public void OnPartial(string text)
+    public void OnPartial(string text, string? stableText = null)
     {
         lock (gate)
             partials.Add(text);
     }
 
-    public void OnFinal(string text)
+    public void OnFinal(string text, string? stableText = null)
     {
         lock (gate)
             finals.Add(text);

@@ -420,10 +420,15 @@ namespace LiveCaptionsTranslator.Core.Doubao
                     Volatile.Write(ref lastServerActivity, Environment.TickCount64);
                     var (text, isFinal) = transcript.Append(segment);
 
+                    // The provider knows exactly which part of the transcript it will not revise:
+                    // the builder commits a segment as soon as it is finished, and the caption
+                    // pipeline only shows text that has settled (so a correction never duplicates).
+                    string stableText = transcript.Committed;
+
                     if (isFinal)
-                        sink.OnFinal(text);
+                        sink.OnFinal(text, stableText);
                     else
-                        sink.OnPartial(text);
+                        sink.OnPartial(text, stableText);
 
                     return Task.CompletedTask;
                 },

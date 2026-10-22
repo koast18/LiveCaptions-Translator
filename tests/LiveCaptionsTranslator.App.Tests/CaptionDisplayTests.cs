@@ -1,4 +1,4 @@
-using LiveCaptionsTranslator.models;
+﻿using LiveCaptionsTranslator.models;
 
 namespace LiveCaptionsTranslator.App.Tests;
 
@@ -114,19 +114,6 @@ public class CaptionDisplayTests
     }
 
     [Fact]
-    public void A_corrected_sentence_replaces_its_line_instead_of_adding_another()
-    {
-        var caption = Fresh();
-
-        caption.AddRecentLine("原来的句子。", source: "原来的句子。");
-        Assert.True(caption.ReviseRecentLine("原来的句子。", "修正后的句子。"));
-
-        caption.RebuildRollingLines(0);
-
-        Assert.Equal(["修正后的句子。"], caption.RollingLines.Select(line => line.Text));
-    }
-
-    [Fact]
     public void A_translation_lands_on_the_line_its_sentence_is_on()
     {
         var caption = Fresh();
@@ -139,20 +126,6 @@ public class CaptionDisplayTests
         caption.RebuildRollingLines(0);
 
         Assert.Equal(["The weather is nice.", "第二句。"], caption.RollingLines.Select(line => line.Text));
-    }
-
-    [Fact]
-    public void A_retracted_sentence_leaves_the_screen()
-    {
-        var caption = Fresh();
-
-        caption.AddRecentLine("第一句。", source: "第一句。");
-        caption.AddRecentLine("第二句。", source: "第二句。");
-
-        Assert.True(caption.RemoveRecentLineBySource("第二句。"));
-        caption.RebuildRollingLines(0);
-
-        Assert.Equal(["第一句。"], caption.RollingLines.Select(line => line.Text));
     }
 
     [Fact]

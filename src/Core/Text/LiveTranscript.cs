@@ -1,29 +1,25 @@
 namespace LiveCaptionsTranslator.Core.Text;
 
 /// <summary>
-/// One sentence the recogniser finished, and what it does to the line already on screen.
-/// <para>
-/// <paramref name="Replaces"/> is set when the backend revised a sentence it had already handed
-/// out: the service's final pass is what fixes mis-heard characters, and the corrected sentence
-/// belongs where the old one was, not below it. <paramref name="Retract"/> is set when the
-/// revision removed a sentence altogether.
-/// </para>
-/// </summary>
-public sealed record TranscriptUpdate(string Text, string? Replaces = null, bool Retract = false);
-
-/// <summary>
 /// Turns the cumulative text a recogniser streams into finished sentences.
 /// <para>
-/// Every callback carries the whole segment so far - recorded from the real endpoint, see
-/// tests/fixtures/doubao-partials.txt - so the only sound model is to remember what has already
-/// been consumed and process the difference. Splitting the full text again on every callback is what
-/// produced duplicated sentences and one ever-growing line.
+/// Two kinds of backend feed this class:
 /// </para>
+/// <list type="bullet">
+/// <item>
+/// A backend that knows which part of its transcript is final (Doubao: everything before the
+/// segment it is still revising) passes that <c>stableText</c>. Only sentences inside it are
+/// committed, so a sentence is shown once, in the wording the recogniser finally settled on -
+/// its second/third pass corrects mis-heard characters before the sentence reaches the screen.
+/// </item>
+/// <item>
+/// A backend that only has a growing cumulative transcript (iFlytek, Windows Live Captions) passes
+/// no stable text. A sentence is then committed at its full stop, and a replayed transcript is
+/// recognised by the overlap with what has already been read.
+/// </item>
+/// </list>
 /// <para>
-/// The backend's second/third pass revises text it already sent. When that happens the new
-/// transcript no longer starts with what was consumed, but it still shares the beginning of it;
-/// the revised tail is handed back as updates that replace the lines already shown, so a correction
-/// never becomes a second line.
+/// Everything after the committed text is <see cref="Pending"/>: the line being spoken now.
 /// </para>
 /// </summary>
 public sealed class LiveTranscript
@@ -36,22 +32,22 @@ public sealed class LiveTranscript
     private static readonly char[] Pauses =
         [' ', '　', '，', '、', '：', ',', ':', '。', '！', '？', '；', '.', '!', '?', ';'];
 
-    private static readonly char[] TrailingPunctuation =
-        [' ', '　', '。', '！', '？', '；', '…', '，', '、', '：', '.', '!', '?', ';', ',', ':', '~', '～'];
-
+    /// <summary>Streaming mode: how much of the cumulative transcript has been consumed already.</summary>
     private string consumed = string.Empty;
+
+    /// <summary>Stable mode: the transcript as it was last reported, so a rewrite can be spotted.</summary>
+    private string stableConsumed = string.Empty;
+
+    /// <summary>Stable mode: offset in the transcript just after the last committed sentence.</summary>
+    private int committedEnd;
+
+    /// <summary>The text after the last committed sentence; this is the live line.</summary>
     private string buffer = string.Empty;
 
-    /// <summary>Sentences already handed out, newest last, so a replay or a revision can be recognised.</summary>
+    /// <summary>Sentences already handed out, newest last, so a replayed transcript can be recognised.</summary>
     private readonly List<string> sentences = [];
 
     private const int RecentCapacity = 64;
-
-    /// <summary>How far back a revision is compared; a long session must not make this quadratic.</summary>
-    private const int SimilarityTailChars = 400;
-
-    /// <summary>A revision shares its wording with what it replaces; a new session does not.</summary>
-    private const double RevisionSimilarity = 0.5;
 
     /// <summary>The text still being spoken; this is the live line.</summary>
     public string Pending => buffer.Trim();
@@ -62,19 +58,77 @@ public sealed class LiveTranscript
     public IReadOnlyList<string> Committed => sentences;
 
     /// <summary>
-    /// Feeds one callback and returns what it finished. Everything absorbed so far is remembered,
-    /// so a repeated callback can never commit the same sentence twice, and a revised sentence
-    /// comes back marked with the text it replaces.
+    /// Feeds one callback and returns the sentences that finished because of it.
     /// </summary>
-    public IReadOnlyList<TranscriptUpdate> Accept(string? cumulative, bool isFinal)
+    /// <param name="cumulative">The whole transcript the backend reports on this callback.</param>
+    /// <param name="stableText">
+    /// The part of <paramref name="cumulative"/> the backend will not revise any more, or
+    /// <c>null</c> when the backend cannot tell. Doubao passes everything before the segment it is
+    /// still revising.
+    /// </param>
+    /// <param name="isFinal">True when the backend will not revise anything it has reported.</param>
+    public IReadOnlyList<string> Accept(string? cumulative, string? stableText = null, bool isFinal = false)
     {
-        var updates = new List<TranscriptUpdate>();
         if (string.IsNullOrEmpty(cumulative))
-            return updates;
+            return Array.Empty<string>();
 
+        return stableText is null
+            ? AcceptStreaming(cumulative, isFinal)
+            : AcceptStable(cumulative, isFinal ? cumulative : stableText);
+    }
+
+    /// <summary>
+    /// A backend that reports which part of the transcript is settled. Nothing is committed while it
+    /// can still be revised, so a correction can never become a second line.
+    /// </summary>
+    private IReadOnlyList<string> AcceptStable(string cumulative, string stableText)
+    {
+        var committed = new List<string>();
+
+        int stableLimit = CommonPrefixLength(cumulative, stableText);
+        if (stableLimit > cumulative.Length)
+            stableLimit = cumulative.Length;
+
+        if (stableConsumed.Length > 0 && !cumulative.StartsWith(stableConsumed, StringComparison.Ordinal))
+        {
+            // The transcript was rewritten - a recycled session, or a correction that reached back
+            // past the segment boundary. Reposition to whatever has already been committed.
+            committedEnd = CommittedPrefixEnd(cumulative);
+        }
+
+        stableConsumed = cumulative;
+
+        if (committedEnd > stableLimit)
+            committedEnd = stableLimit;
+
+        if (stableLimit > committedEnd)
+        {
+            foreach (var (text, _) in SplitSentences(cumulative[committedEnd..stableLimit]))
+            {
+                if (string.IsNullOrWhiteSpace(text))
+                    continue;
+
+                committed.Add(text);
+                sentences.Add(text);
+                Remember();
+            }
+
+            committedEnd = stableLimit;
+        }
+
+        buffer = cumulative[stableLimit..];
+        return committed;
+    }
+
+    /// <summary>
+    /// A backend that only has a growing transcript. A full stop ends a sentence, and a callback that
+    /// does not continue what was read before is treated as a replay or a restarted transcript.
+    /// </summary>
+    private IReadOnlyList<string> AcceptStreaming(string cumulative, bool isFinal)
+    {
+        var committed = new List<string>();
         string delta;
         bool replay = false;
-        List<string>? revised = null;
 
         if (consumed.Length > 0 && cumulative.StartsWith(consumed, StringComparison.Ordinal))
         {
@@ -82,72 +136,91 @@ public sealed class LiveTranscript
         }
         else
         {
-            // The backend restarted or revised its transcript. It may still begin with what has
-            // already been read, so the overlap is skipped instead of being committed twice.
+            // The backend restarted its transcript - a recycled session, or a corrected segment. It may
+            // still begin with what has already been read, so the overlap is skipped instead of being
+            // committed a second time. Without this a whole block of sentences is repeated.
             int overlap = Overlap(consumed, cumulative);
-            string tail = cumulative[overlap..];
-
-            // Sentences fully inside the part that still matches are stable. The rest of the old
-            // tail may have been revised: it is handed back for replacement, never appended again.
-            revised = RevisionCandidates(consumed, cumulative, tail, overlap);
 
             consumed = string.Empty;
             buffer = string.Empty;
-            delta = tail;
+            delta = cumulative[overlap..];
             replay = true;
         }
 
         buffer += delta;
         consumed = cumulative;
 
-        int cursor = 0;
-        List<string> dropped = [];
-
         while (TryTakeSentence(out string sentence))
-            Add(updates, sentence, replay, revised, ref cursor, dropped);
+            Add(committed, sentence, replay);
 
         if (isFinal && HasPending)
         {
-            string pending = Pending;
+            Add(committed, Pending, replay);
             buffer = string.Empty;
-            Add(updates, pending, replay, revised, ref cursor, dropped);
         }
 
-        // A revision that removed a sentence: the display has to drop it, or a sentence that is no
-        // longer part of the transcript would stay on screen forever.
-        if (revised is not null)
-        {
-            for (int i = cursor; i < revised.Count; i++)
-                dropped.Add(revised[i]);
-
-            foreach (string removed in dropped)
-                updates.Add(new TranscriptUpdate(removed, Retract: true));
-        }
-
-        return updates;
+        return committed;
     }
 
     /// <summary>
-    /// Decides which already-committed sentences the backend just revised. Returns those that were
-    /// taken out of the committed history, so unpaired ones can be retracted and paired ones
-    /// replaced. A transcript that simply starts over keeps everything it already showed.
+    /// Queues a sentence. In a replay, a sentence that has already been shown is refused: the same
+    /// words can legitimately be said twice, but a transcript that starts over must not be recorded
+    /// again.
     /// </summary>
-    private List<string>? RevisionCandidates(string seen, string next, string tail, int overlap)
+    private void Add(List<string> committed, string sentence, bool replay)
     {
-        int stable = StableSentenceCount(next, overlap);
-        if (stable >= sentences.Count)
-            return null;
+        if (replay && sentences.Contains(sentence))
+            return;
 
-        var candidates = sentences.GetRange(stable, sentences.Count - stable);
+        committed.Add(sentence);
+        sentences.Add(sentence);
+        Remember();
+    }
 
-        // A fresh session starts with different words; a revision keeps the wording of what it
-        // revises, either by being similar or by extending the sentence that was cut off.
-        bool revision = LooksLikeRevision(seen, next) || PrefixExtends(candidates[^1], tail);
-        if (!revision)
-            return null;
+    private void Remember()
+    {
+        while (sentences.Count > RecentCapacity)
+            sentences.RemoveAt(0);
+    }
 
-        sentences.RemoveRange(stable, candidates.Count);
-        return candidates;
+    /// <summary>
+    /// How far into <paramref name="text"/> the sentences committed so far reach. Sentences that are
+    /// no longer part of the transcript from this point on are forgotten, so the rewritten tail can be
+    /// committed again.
+    /// </summary>
+    private int CommittedPrefixEnd(string text)
+    {
+        int cursor = 0;
+        int count = 0;
+
+        foreach (string sentence in sentences)
+        {
+            int at = text.IndexOf(sentence, cursor, StringComparison.Ordinal);
+
+            // The transcript has to *start* with what was committed; a gap is a different session.
+            if (at < 0 || at > cursor + 2)
+                break;
+
+            cursor = at + sentence.Length;
+            count++;
+        }
+
+        if (count < sentences.Count)
+            sentences.RemoveRange(count, sentences.Count - count);
+
+        return cursor;
+    }
+
+    /// <summary>Longest prefix the two texts share.</summary>
+    private static int CommonPrefixLength(string text, string prefix)
+    {
+        int length = Math.Min(text.Length, prefix.Length);
+        int i = 0;
+
+        while (i < length && text[i] == prefix[i])
+            i++;
+
+        return i;
     }
 
     /// <summary>Longest suffix of <paramref name="seen"/> that is also a prefix of <paramref name="next"/>.</summary>
@@ -164,112 +237,24 @@ public sealed class LiveTranscript
     }
 
     /// <summary>
-    /// True when <paramref name="next"/> revises <paramref name="seen"/> rather than being a new
-    /// transcript from a fresh session. A revision keeps the wording of the transcript it revises;
-    /// a session that restarts after a reconnect starts with different words.
+    /// Splits settled text into sentences. The text is settled, so a trailing run without a full stop
+    /// is a finished sentence too - the recogniser simply did not punctuate it.
     /// </summary>
-    private static bool LooksLikeRevision(string seen, string next)
+    private static IEnumerable<(string Text, int End)> SplitSentences(string text)
     {
-        if (seen.Length == 0)
-            return false;
+        int start = 0;
 
-        string a = seen.Length > SimilarityTailChars ? seen[^SimilarityTailChars..] : seen;
-        string b = next.Length > SimilarityTailChars ? next[^SimilarityTailChars..] : next;
-
-        return TextUtil.Similarity(a, b) >= RevisionSimilarity;
-    }
-
-    /// <summary>
-    /// True when the new text still begins with the words of the sentence that was cut off. This is
-    /// the shape of a live revision: "嗯。" grows into "嗯，我们开始吧。".
-    /// </summary>
-    private static bool PrefixExtends(string sentence, string tail)
-    {
-        string trimmed = sentence.TrimEnd(TrailingPunctuation);
-        return trimmed.Length > 0 && tail.TrimStart().StartsWith(trimmed, StringComparison.Ordinal);
-    }
-
-    /// <summary>How many already-committed sentences sit entirely inside the still-matching prefix.</summary>
-    private int StableSentenceCount(string next, int overlap)
-    {
-        int stable = 0;
-        int cursor = 0;
-
-        foreach (string sentence in sentences)
+        while (start < text.Length)
         {
-            int at = next.IndexOf(sentence, cursor, StringComparison.Ordinal);
-            if (at < 0 || at + sentence.Length > overlap)
-                break;
+            int index = text.IndexOfAny(SentenceEnds, start);
+            int stop = index < 0 ? text.Length : index + 1;
+            string candidate = text[start..stop].Trim();
 
-            cursor = at + sentence.Length;
-            stable++;
+            if (candidate.Length > 0 && candidate.Any(char.IsLetterOrDigit))
+                yield return (candidate, stop);
+
+            start = stop;
         }
-
-        return stable;
-    }
-
-    /// <summary>
-    /// Queues a sentence. When a revision is being replayed, the new sentence replaces the revised
-    /// one; a revision that dropped sentences leaves them for the retraction pass at the end.
-    /// </summary>
-    private void Add(
-        List<TranscriptUpdate> updates,
-        string sentence,
-        bool replay,
-        List<string>? revised,
-        ref int cursor,
-        List<string> dropped)
-    {
-        string? replaces = null;
-
-        if (revised is not null)
-        {
-            // A revision can delete sentences, so keep looking past the ones it removed.
-            while (cursor < revised.Count && !Revises(revised[cursor], sentence))
-                dropped.Add(revised[cursor++]);
-
-            if (cursor < revised.Count)
-                replaces = revised[cursor++];
-        }
-
-        if (replaces is null && replay && sentences.Contains(sentence))
-            return;
-
-        // The same wording came back: nothing on screen changes, but the sentence is still committed.
-        if (replaces is not null && string.Equals(replaces, sentence, StringComparison.Ordinal))
-        {
-            sentences.Add(sentence);
-            Remember();
-            return;
-        }
-
-        updates.Add(new TranscriptUpdate(sentence, replaces));
-        sentences.Add(sentence);
-        Remember();
-    }
-
-    /// <summary>True when <paramref name="now"/> is the recogniser's corrected form of <paramref name="was"/>.</summary>
-    private static bool Revises(string was, string now)
-    {
-        if (string.Equals(was, now, StringComparison.Ordinal))
-            return true;
-
-        string a = was.TrimEnd(TrailingPunctuation);
-        string b = now.TrimEnd(TrailingPunctuation);
-
-        if (a.Length == 0 || b.Length == 0)
-            return false;
-
-        if (b.StartsWith(a, StringComparison.Ordinal) || a.StartsWith(b, StringComparison.Ordinal))
-            return true;
-
-        return TextUtil.Similarity(a, b) >= RevisionSimilarity;
-    }
-
-    private void Remember()
-    {
-        while (sentences.Count > RecentCapacity)
-            sentences.RemoveAt(0);
     }
 
     /// <summary>
@@ -298,10 +283,13 @@ public sealed class LiveTranscript
     public void Reset()
     {
         consumed = string.Empty;
+        stableConsumed = string.Empty;
+        committedEnd = 0;
         buffer = string.Empty;
         sentences.Clear();
     }
 
+    /// <summary>Commits the leading finished sentence of the streaming buffer, if there is one.</summary>
     private bool TryTakeSentence(out string sentence)
     {
         sentence = string.Empty;

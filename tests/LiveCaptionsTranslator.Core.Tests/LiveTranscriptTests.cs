@@ -3,30 +3,39 @@ using LiveCaptionsTranslator.Core.Text;
 namespace LiveCaptionsTranslator.Core.Tests;
 
 /// <summary>
-/// Cases come from the recording of the real endpoints (tests/fixtures/transcript-partials.txt and
+/// Cases come from recordings of the real endpoints (tests/fixtures/transcript-partials.txt and
 /// doubao-partials.txt) and from the failures a user reported: a backend that never punctuates, a
-/// transcript that is re-reported so sentences stacked up, and a final pass that corrects a
-/// sentence after it was already shown.
+/// transcript that is re-reported so sentences stacked up, and a second/third pass that corrects a
+/// sentence after it was first heard.
 /// </summary>
 public class LiveTranscriptTests
 {
-    private static string[] Texts(IEnumerable<TranscriptUpdate> updates) =>
-        updates.Where(update => !update.Retract).Select(update => update.Text).ToArray();
+    /// <summary>Verbatim from the capture of the committed iFlytek sample.</summary>
+    private static List<(string Kind, string Text)> Recorded() =>
+    [
+        ("partial", "今天天气不"),
+        ("partial", "今天天气不错"),
+        ("partial", "今天天气不错我们一起去"),
+        ("partial", "今天天气不错我们一起去公"),
+        ("partial", "今天天气不错，我们一起去公园散步吧"),
+        ("partial", "今天天气不错，我们一起去公园散步吧。"),
+        ("final", "今天天气不错，我们一起去公园散步吧。"),
+    ];
+
+    // ---------------------------------------------------------------- streaming backends
 
     [Fact]
     public void The_recorded_stream_yields_exactly_one_sentence()
     {
         var transcript = new LiveTranscript();
-        var committed = new List<TranscriptUpdate>();
+        var committed = new List<string>();
 
         foreach (var (kind, text) in Recorded())
-        {
             committed.AddRange(transcript.Accept(text, isFinal: kind == "final"));
-        }
 
         string expected = Recorded().Last().Text;
-        Assert.Contains(expected, Texts(committed));
-        Assert.All(Texts(committed), line => Assert.False(string.IsNullOrWhiteSpace(line)));
+        Assert.Contains(expected, committed);
+        Assert.All(committed, line => Assert.False(string.IsNullOrWhiteSpace(line)));
         Assert.Empty(transcript.Pending);
     }
 
@@ -36,18 +45,17 @@ public class LiveTranscriptTests
         string text = string.Concat(Enumerable.Repeat("他说这个系列会收集那些网络小说里真实存在的内容非常离谱非常夸张，", 4));
 
         var transcript = new LiveTranscript();
-        var committed = new List<TranscriptUpdate>();
+        var committed = new List<string>();
 
         for (int length = 2; length <= text.Length; length += 2)
-            committed.AddRange(transcript.Accept(text[..length], isFinal: false));
+            committed.AddRange(transcript.Accept(text[..length]));
 
         committed.AddRange(transcript.Accept(text, isFinal: true));
 
-        string[] lines = Texts(committed);
-        Assert.True(lines.Length > 1, "expected the text to be split");
-        Assert.All(lines, line => Assert.False(string.IsNullOrWhiteSpace(line)));
-        Assert.All(lines, line => Assert.True(line.Length <= LiveTranscript.MaxLineChars + 2, $"{line.Length} chars"));
-        Assert.Equal(text, string.Concat(lines));
+        Assert.True(committed.Count > 1, "expected the text to be split");
+        Assert.All(committed, line => Assert.False(string.IsNullOrWhiteSpace(line)));
+        Assert.All(committed, line => Assert.True(line.Length <= LiveTranscript.MaxLineChars + 2, $"{line.Length} chars"));
+        Assert.Equal(text, string.Concat(committed));
     }
 
     [Fact]
@@ -58,12 +66,12 @@ public class LiveTranscriptTests
 
         // A written full stop finishes the sentence immediately - waiting for the final would only add
         // latency. What must never happen is committing it again on the replay.
-        Assert.Equal([Sentence], Texts(transcript.Accept(Sentence, isFinal: false)));
-        Assert.Empty(transcript.Accept(Sentence, isFinal: false));
+        Assert.Equal([Sentence], transcript.Accept(Sentence));
+        Assert.Empty(transcript.Accept(Sentence));
         Assert.Empty(transcript.Accept(Sentence, isFinal: true));
 
         // The next segment starts clean and does not re-commit the previous one.
-        Assert.Empty(transcript.Accept(Sentence + "然后呢", isFinal: false));
+        Assert.Empty(transcript.Accept(Sentence + "然后呢"));
     }
 
     [Fact]
@@ -72,9 +80,8 @@ public class LiveTranscriptTests
         var transcript = new LiveTranscript();
 
         transcript.Accept("第一段话已经说完了。", isFinal: true);
-        var committed = transcript.Accept("重新开始的一段", isFinal: false);
+        var committed = transcript.Accept("重新开始的一段");
 
-        // Different words: a new session, not a correction of what is on screen.
         Assert.Empty(committed);
         Assert.Equal("重新开始的一段", transcript.Pending);
     }
@@ -84,10 +91,10 @@ public class LiveTranscriptTests
     {
         var transcript = new LiveTranscript();
 
-        transcript.Accept("这句话没有句号", isFinal: false);
+        transcript.Accept("这句话没有句号");
         var committed = transcript.Accept("这句话没有句号", isFinal: true);
 
-        Assert.Equal(["这句话没有句号"], Texts(committed));
+        Assert.Equal(["这句话没有句号"], committed);
         Assert.Empty(transcript.Pending);
     }
 
@@ -100,8 +107,8 @@ public class LiveTranscriptTests
     {
         var transcript = new LiveTranscript();
 
-        Assert.Empty(transcript.Accept(input, isFinal: false));
-        Assert.All(Texts(transcript.Accept(input, isFinal: true)), line => Assert.False(string.IsNullOrWhiteSpace(line)));
+        Assert.Empty(transcript.Accept(input));
+        Assert.All(transcript.Accept(input, isFinal: true), line => Assert.False(string.IsNullOrWhiteSpace(line)));
     }
 
     [Fact]
@@ -109,21 +116,9 @@ public class LiveTranscriptTests
     {
         var transcript = new LiveTranscript();
 
-        Assert.Empty(transcript.Accept("我", isFinal: false));
-        Assert.Equal(["我"], Texts(transcript.Accept("我", isFinal: true)));
+        Assert.Empty(transcript.Accept("我"));
+        Assert.Equal(["我"], transcript.Accept("我", isFinal: true));
     }
-
-    /// <summary>Verbatim from the capture of the committed sample (transcript-capture artifact).</summary>
-    private static List<(string Kind, string Text)> Recorded() =>
-    [
-        ("partial", "今天天气不"),
-        ("partial", "今天天气不错"),
-        ("partial", "今天天气不错我们一起去"),
-        ("partial", "今天天气不错我们一起去公"),
-        ("partial", "今天天气不错，我们一起去公园散步吧"),
-        ("partial", "今天天气不错，我们一起去公园散步吧。"),
-        ("final", "今天天气不错，我们一起去公园散步吧。"),
-    ];
 
     [Fact]
     public void A_replayed_transcript_does_not_commit_the_same_sentences_again()
@@ -135,11 +130,10 @@ public class LiveTranscriptTests
         var first = transcript.Accept(Block, isFinal: true);
         Assert.Equal(4, first.Count);
 
-        var replay = transcript.Accept(Block + "缺钱了。", isFinal: false);
+        var replay = transcript.Accept(Block + "缺钱了。");
 
         // The replayed block is skipped; only what is genuinely new comes through.
-        Assert.Equal(["缺钱了。"], Texts(replay));
-        Assert.Empty(replay.Where(update => update.Replaces is not null));
+        Assert.Equal(["缺钱了。"], replay);
     }
 
     [Fact]
@@ -149,23 +143,21 @@ public class LiveTranscriptTests
         string[] sentences = ["第一句话。", "第二句话。", "第三句话。"];
 
         var transcript = new LiveTranscript();
-        var committed = new List<TranscriptUpdate>();
+        var committed = new List<string>();
         foreach (string sentence in sentences)
             committed.AddRange(transcript.Accept(sentence, isFinal: true));
 
-        Assert.Equal(sentences, Texts(committed));
+        Assert.Equal(sentences, committed);
 
         // The service then repeats the lot in one final.
-        var replay = transcript.Accept(string.Concat(sentences), isFinal: true);
-
-        Assert.Empty(replay);
+        Assert.Empty(transcript.Accept(string.Concat(sentences), isFinal: true));
     }
 
     [Fact]
     public void A_short_unconfirmed_line_is_left_alone()
     {
         var transcript = new LiveTranscript();
-        transcript.Accept("还在说", isFinal: false);
+        transcript.Accept("还在说");
 
         Assert.Null(transcript.TakePendingLine());
         Assert.Equal("还在说", transcript.Pending);
@@ -180,66 +172,9 @@ public class LiveTranscriptTests
         const string Full = Part + "提供支援的结构。";
 
         var transcript = new LiveTranscript();
-        var committed = new List<TranscriptUpdate>();
 
-        committed.AddRange(transcript.Accept(Part, isFinal: false));
-        Assert.Empty(committed);
-
-        committed.AddRange(transcript.Accept(Full, isFinal: true));
-
-        Assert.Equal([Full], Texts(committed));
-        Assert.Single(committed);
-    }
-
-    [Fact]
-    public void A_corrected_sentence_replaces_the_one_already_shown()
-    {
-        // The third pass fixes a mis-heard character after the sentence was committed on its full
-        // stop. Both the old line and the correction on screen would be the reported duplicate.
-        const string Heard = "今天天汽不错，我们一起去公园散步吧。";
-        const string Corrected = "今天天气不错，我们一起去公园散步吧。";
-
-        var transcript = new LiveTranscript();
-        var first = transcript.Accept(Heard, isFinal: false);
-
-        Assert.Equal([Heard], Texts(first));
-
-        var revision = transcript.Accept(Corrected, isFinal: true);
-
-        Assert.Equal([Corrected], Texts(revision));
-        Assert.Equal(Heard, revision[0].Replaces);
-        Assert.Equal([Corrected], transcript.Committed);
-    }
-
-    [Fact]
-    public void A_sentence_that_grows_after_being_committed_replaces_itself()
-    {
-        // A live revision of the shape "嗯。" -> "嗯，我们开始吧。": the sentence was committed at the
-        // first full stop and the recogniser then extended it.
-        var transcript = new LiveTranscript();
-
-        Assert.Equal(["嗯。"], Texts(transcript.Accept("嗯。", isFinal: false)));
-
-        var revision = transcript.Accept("嗯，我们开始吧。", isFinal: false);
-
-        Assert.Equal(["嗯，我们开始吧。"], Texts(revision));
-        Assert.Equal("嗯。", revision[0].Replaces);
-    }
-
-    [Fact]
-    public void A_revision_that_deletes_a_sentence_retracts_it()
-    {
-        const string First = "第一句话。第二句话。";
-
-        var transcript = new LiveTranscript();
-        Assert.Equal(["第一句话。", "第二句话。"], Texts(transcript.Accept(First, isFinal: false)));
-
-        // The service re-sends the segment without the second sentence.
-        var revision = transcript.Accept("第一句话。", isFinal: true);
-
-        var retracted = revision.Where(update => update.Retract).Select(update => update.Text);
-        Assert.Contains("第二句话。", retracted);
-        Assert.DoesNotContain("第二句话。", transcript.Committed);
+        Assert.Empty(transcript.Accept(Part));
+        Assert.Equal([Full], transcript.Accept(Full, isFinal: true));
     }
 
     [Fact]
@@ -248,7 +183,101 @@ public class LiveTranscriptTests
         // "谢谢大家。" twice in a row is speech, not a replay: the second one must not be swallowed.
         var transcript = new LiveTranscript();
 
-        Assert.Equal(["谢谢大家。"], Texts(transcript.Accept("谢谢大家。", isFinal: true)));
-        Assert.Equal(["谢谢大家。"], Texts(transcript.Accept("谢谢大家。谢谢大家。", isFinal: true)));
+        Assert.Equal(["谢谢大家。"], transcript.Accept("谢谢大家。", isFinal: true));
+        Assert.Equal(["谢谢大家。"], transcript.Accept("谢谢大家。谢谢大家。", isFinal: true));
+    }
+
+    // ---------------------------------------------------------------- backends that report stable text
+
+    [Fact]
+    public void Nothing_is_committed_while_the_segment_can_still_be_revised()
+    {
+        // Doubao sends the segment it is still working on; the builder reports no stable text until
+        // the segment ends.
+        var transcript = new LiveTranscript();
+
+        Assert.Empty(transcript.Accept("今天天气不错。", stableText: ""));
+        Assert.Equal("今天天气不错。", transcript.Pending);
+        Assert.Empty(transcript.Committed);
+    }
+
+    [Fact]
+    public void A_corrected_sentence_is_committed_once_in_its_corrected_wording()
+    {
+        // The recogniser hears the first character wrong and its final pass fixes it. Because nothing
+        // was committed while the sentence was unstable, only the corrected sentence reaches the page.
+        var transcript = new LiveTranscript();
+
+        Assert.Empty(transcript.Accept("今天天汽不错，我们一起去公园散步吧。", stableText: ""));
+        Assert.Empty(transcript.Accept("今天天气不错，我们一起去公园散步吧。", stableText: ""));
+
+        string final = "今天天气不错，我们一起去公园散步吧。";
+        var committed = transcript.Accept(final, stableText: final, isFinal: true);
+
+        Assert.Equal([final], committed);
+        Assert.Empty(transcript.Pending);
+        Assert.Equal([final], transcript.Committed);
+    }
+
+    [Fact]
+    public void A_segment_is_committed_when_the_next_one_starts()
+    {
+        // The stable text grows as soon as the service moves on to the next segment; that is the
+        // moment the previous sentence is shown and translated.
+        const string First = "今天天气不错，我们一起去公园散步吧。";
+        const string Second = "这个项目的字幕不能重复。";
+
+        var transcript = new LiveTranscript();
+
+        Assert.Empty(transcript.Accept(First, stableText: ""));
+
+        // The second segment has started: everything before it is stable.
+        var committed = transcript.Accept(First + "这个项目", stableText: First);
+
+        Assert.Equal([First], committed);
+        Assert.Equal("这个项目", transcript.Pending);
+
+        committed = transcript.Accept(First + Second, stableText: First + Second, isFinal: true);
+
+        Assert.Equal([Second], committed);
+        Assert.Equal([First, Second], transcript.Committed);
+    }
+
+    [Fact]
+    public void A_stable_final_without_punctuation_is_still_a_sentence()
+    {
+        var transcript = new LiveTranscript();
+
+        Assert.Empty(transcript.Accept("这句话没有句号", stableText: ""));
+        Assert.Equal(["这句话没有句号"], transcript.Accept("这句话没有句号", stableText: "这句话没有句号"));
+    }
+
+    [Fact]
+    public void A_whole_replayed_transcript_is_not_committed_again()
+    {
+        const string Block = "至少蹲三年。而且作为外国公民。会被遣返回国。";
+
+        var transcript = new LiveTranscript();
+        Assert.Equal(3, transcript.Accept(Block, stableText: Block, isFinal: true).Count);
+
+        // A recycled session re-sends the block from the start.
+        Assert.Empty(transcript.Accept(Block, stableText: Block));
+        Assert.Empty(transcript.Accept(Block, stableText: Block, isFinal: true));
+
+        // Only what follows the replay is new.
+        Assert.Equal(["缺钱了。"], transcript.Accept(Block + "缺钱了。", stableText: Block + "缺钱了。", isFinal: true));
+    }
+
+    [Fact]
+    public void A_stable_prefix_that_ends_mid_sentence_does_not_cut_a_word()
+    {
+        // The service can settle a segment without punctuation. It is a finished sentence, not half of
+        // the next one, and the live line starts after it.
+        var transcript = new LiveTranscript();
+
+        var committed = transcript.Accept("今天天气不错我们", stableText: "今天天气不错");
+
+        Assert.Equal(["今天天气不错"], committed);
+        Assert.Equal("我们", transcript.Pending);
     }
 }
