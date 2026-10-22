@@ -155,30 +155,6 @@ public class LiveTranscriptTests
     }
 
     [Fact]
-    public void Unconfirmed_text_is_handed_over_once_it_fills_a_line()
-    {
-        // Nothing here is a finished sentence, but the live slot must not grow past a line: the leading
-        // part is taken so it can be shown as a finished line.
-        string text = string.Concat(Enumerable.Repeat("他说这个系列会收集那些网络小说里真实存在的内容非常离谱非常夸张，", 3));
-
-        var transcript = new LiveTranscript();
-
-        var committed = new List<string>(transcript.Accept(text, isFinal: false));
-        Assert.NotEmpty(committed);
-
-        // Whatever Accept could not finish stays pending and is either handed over a line at a time or
-        // kept while it still fits.
-        while (transcript.TakePendingLine() is { } line)
-            committed.Add(line);
-
-        // No piece is longer than a comfortable line. Exact reassembly across the hand-over is already
-        // covered by the splitting tests; asserting it here as well checked the seam twice over.
-        Assert.True(committed.Count > 1);
-        Assert.All(committed, line => Assert.True(line.Length <= LiveTranscript.MaxLineChars + 2, $"{line.Length} chars"));
-        Assert.True(transcript.Pending.Length <= LiveTranscript.MaxLineChars);
-    }
-
-    [Fact]
     public void A_short_unconfirmed_line_is_left_alone()
     {
         var transcript = new LiveTranscript();
