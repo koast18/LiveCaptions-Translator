@@ -10,6 +10,10 @@
     mc:Ignorable="d">
 
     <Grid Margin="4,4,4,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
         <Grid.Resources>
             <!--  A local Style replaces the implicit one, so Foreground has to be set here or the
                   previous lines fall back to black and vanish on a dark background.  -->
@@ -20,10 +24,32 @@
             </Style>
         </Grid.Resources>
 
+        <!--  What the app itself has to say (an error, "paused", a fallback warning). It has its
+              own row so it is never mistaken for a caption and never scrolls away with them.  -->
+        <TextBlock
+            Grid.Row="0"
+            Margin="6,0,6,2"
+            FontSize="12"
+            Opacity="0.75"
+            Text="{Binding Notice}"
+            TextWrapping="Wrap">
+            <TextBlock.Style>
+                <Style BasedOn="{StaticResource CaptionBlockStyle}" TargetType="TextBlock">
+                    <Setter Property="VerticalAlignment" Value="Top" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasNotice}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+
         <!--  Rolling, lyrics-style view: the line being spoken is highlighted, the previous ones
               fade out, and the list scrolls so the newest line is always at the bottom.  -->
         <ScrollViewer
             x:Name="RollingScroll"
+            Grid.Row="1"
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Hidden">
             <StackPanel>
@@ -56,14 +82,25 @@
             </ItemsControl>
 
                 <!--  Live recognition, in its own slot: it changes with every chunk and must never
-                      push a translated sentence out of the way.  -->
+                      push a translated sentence out of the way. Hidden while nothing is being heard.  -->
                 <TextBlock
                     Margin="6,2,6,2"
                     FontSize="17"
                     FontWeight="SemiBold"
                     Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
                     Text="{Binding InterimText}"
-                    TextWrapping="Wrap" />
+                    TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style BasedOn="{StaticResource CaptionBlockStyle}" TargetType="TextBlock">
+                            <Setter Property="VerticalAlignment" Value="Top" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding InterimText}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </StackPanel>
         </ScrollViewer>
     </Grid>

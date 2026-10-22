@@ -9,7 +9,8 @@ using LiveCaptionsTranslator.Localization;
 namespace LiveCaptionsTranslator.models
 {
     /// <summary>One line in the rolling caption view, lyrics style.</summary>
-    public sealed record CaptionLine(string Text, bool IsLatest);
+    /// <param name="Source">The recognised sentence the line was produced from, so a correction can find it.</param>
+    public sealed record CaptionLine(string Text, bool IsLatest, string? Source = null);
 
     public class Caption : INotifyPropertyChanged
     {
@@ -18,7 +19,6 @@ namespace LiveCaptionsTranslator.models
         private static Caption? instance = null;
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        private string displayOriginalCaption = string.Empty;
         private string displayTranslatedCaption = string.Empty;
         private bool translationRedundant;
 
@@ -39,7 +39,7 @@ namespace LiveCaptionsTranslator.models
 
         private const int MaxRecentLines = 200;
 
-        public void AddRecentLine(string? text)
+        public void AddRecentLine(string? text, string? source = null)
         {
             if (string.IsNullOrWhiteSpace(text))
                 return;
@@ -47,32 +47,35 @@ namespace LiveCaptionsTranslator.models
             string line = text.Trim();
 
             lock (recentLock)
-                AddRecentLineCore(line);
+                AddRecentLineCore(line, source ?? line);
         }
 
-        private void AddRecentLineCore(string line)
+        private void AddRecentLineCore(string line, string source)
         {
-
-            // The same sentence can arrive twice when a backend re-reports its transcript, and a
-            // growing tail would otherwise stack near-identical copies on top of each other.
-            if (recent.Count > 0 && string.Equals(recent[^1].Text, line, StringComparison.Ordinal))
-                return;
-
-            if (recent.Count > 0 && line.Length > 20 && line.Contains(recent[^1].Text, StringComparison.Ordinal))
-                return;
-
-            // A replayed transcript repeats a whole block, not just the previous line. The window is the
-            // whole retained history: a genuine sentence repeated hundreds of lines later is rare, a
-            // replayed block is not.
-            for (int i = recent.Count - 1; i >= 0; i--)
-            {
-                if (string.Equals(recent[i].Text, line, StringComparison.Ordinal))
-                    return;
-            }
-
-            recent.Add(new CaptionLine(line, false));
+            recent.Add(new CaptionLine(line, false, source));
             while (recent.Count > MaxRecentLines)
                 recent.RemoveAt(0);
+        }
+
+        /// <summary>Drops a line a revision removed from the transcript. Returns false when it was not shown.</summary>
+        public bool RemoveRecentLineBySource(string? source)
+        {
+            if (string.IsNullOrWhiteSpace(source))
+                return false;
+
+            lock (recentLock)
+            {
+                for (int i = recent.Count - 1; i >= 0; i--)
+                {
+                    if (!string.Equals(recent[i].Source ?? recent[i].Text, source, StringComparison.Ordinal))
+                        continue;
+
+                    recent.RemoveAt(i);
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public void ClearRecentLines()
@@ -82,22 +85,53 @@ namespace LiveCaptionsTranslator.models
         }
 
         /// <summary>
-        /// Replaces a line that is already on screen. A recogniser can revise what it said, and the
-        /// corrected sentence belongs where the old one is - not appended below it.
+        /// Replaces the line a corrected sentence was shown on, wherever it is, and re-tags it with the
+        /// corrected wording so the translation that follows lands on the same line.
         /// </summary>
-        public bool UpdateRecentLine(string? was, string? now)
+        public bool ReviseRecentLine(string? was, string? now)
         {
-            if (string.IsNullOrWhiteSpace(was) || string.IsNullOrWhiteSpace(now) || was == now)
+            if (string.IsNullOrWhiteSpace(was) || string.IsNullOrWhiteSpace(now))
                 return false;
 
             lock (recentLock)
             {
                 for (int i = recent.Count - 1; i >= 0; i--)
                 {
-                    if (!string.Equals(recent[i].Text, was, StringComparison.Ordinal))
+                    if (!string.Equals(recent[i].Source ?? recent[i].Text, was, StringComparison.Ordinal))
                         continue;
 
-                    recent[i] = new CaptionLine(now.Trim(), false);
+                    recent[i] = recent[i] with { Text = now.Trim(), Source = now };
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>True when a finished sentence is still in the history, i.e. its translation still belongs there.</summary>
+        public bool HasRecentLineSource(string? source)
+        {
+            if (string.IsNullOrWhiteSpace(source))
+                return false;
+
+            lock (recentLock)
+                return recent.Any(line => string.Equals(line.Source ?? line.Text, source, StringComparison.Ordinal));
+        }
+
+        /// <summary>Puts the translation on the line of the sentence it came from.</summary>
+        public bool SetRecentLineText(string? source, string? text)
+        {
+            if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(text))
+                return false;
+
+            lock (recentLock)
+            {
+                for (int i = recent.Count - 1; i >= 0; i--)
+                {
+                    if (!string.Equals(recent[i].Source ?? recent[i].Text, source, StringComparison.Ordinal))
+                        continue;
+
+                    recent[i] = recent[i] with { Text = text.Trim() };
                     return true;
                 }
             }
@@ -146,15 +180,30 @@ namespace LiveCaptionsTranslator.models
         public IEnumerable<TranslationHistoryEntry> DisplayLogCards =>
             GetPreviousContexts(Translator.Setting.DisplaySentences).Reverse();
 
-        public string DisplayOriginalCaption
+        /// <summary>
+        /// Text the app itself has to show - a connection error, a fallback warning, "paused". It has
+        /// its own slot so it can never be mistaken for a caption, and never ends up in the rolling
+        /// history the way a status written into the caption field used to.
+        /// </summary>
+        public string Notice
         {
-            get => displayOriginalCaption;
+            get => notice;
             set
             {
-                displayOriginalCaption = value;
-                OnPropertyChanged("DisplayOriginalCaption");
+                value ??= string.Empty;
+                if (notice == value)
+                    return;
+
+                notice = value;
+                OnPropertyChanged(nameof(Notice));
+                OnPropertyChanged(nameof(HasNotice));
             }
         }
+
+        public bool HasNotice => notice.Length > 0;
+
+        private string notice = string.Empty;
+
         /// <summary>
         /// True when the translation adds nothing - the source was already Simplified Chinese, so the
         /// policy skipped the API and the two lines would read identically. The UI hides the second
@@ -303,9 +352,10 @@ namespace LiveCaptionsTranslator.models
 
         private List<CaptionLine> BuildRollingLines(int previousCount)
         {
-            // The finalized line only. Interim recognition lives in its own slot so it can never
-            // overwrite a translated sentence that is already on screen.
-            string current = translationRedundant ? DisplayOriginalCaption : DisplayTranslatedCaption;
+            // The finished line only. The sentence being spoken lives in its own slot (InterimText) so
+            // it can never appear here as well - that duplication was visible whenever the translation
+            // was skipped because the source was already in the target language.
+            string current = DisplayTranslatedCaption;
 
             // Everything that has finished goes in; the ScrollViewer decides how much of it is visible.
             List<CaptionLine> snapshot;

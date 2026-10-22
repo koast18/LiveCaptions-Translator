@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: ["*"]
+    # `*` does not match a branch name containing "/", so pushes to topic branches silently
+    # skipped CI until this was `**`.
+    branches: ["**"]
   pull_request:
   workflow_dispatch:
 
@@ -101,6 +103,14 @@ jobs:
       # Advisory: the second endpoint answers 50700000 ("service discovery failure") for whole
       # stretches of time from cloud IPs, which is their outage, not a regression here. It still
       # runs and reports, it just cannot block a build.
+      - name: Integration tests (the secondary provider, advisory)
+        continue-on-error: true
+        run: >
+          dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj
+          -c Release --filter "Category=Secondary" --logger "console;verbosity=detailed"
+
+      # After both steps: the secondary run is the one that records the Doubao stream, and an
+      # artifact uploaded before it ran was always missing that capture.
       - name: Upload the recorded transcript stream
         if: always()
         uses: actions/upload-artifact@v4
@@ -108,12 +118,6 @@ jobs:
           name: transcript-capture
           path: tests/LiveCaptionsTranslator.Integration.Tests/bin/**/capture/*.txt
           if-no-files-found: warn
-
-      - name: Integration tests (the secondary provider, advisory)
-        continue-on-error: true
-        run: >
-          dotnet test tests/LiveCaptionsTranslator.Integration.Tests/LiveCaptionsTranslator.Integration.Tests.csproj
-          -c Release --filter "Category=Secondary" --logger "console;verbosity=detailed"
 
   # Runs the real application in both Windows themes on an ephemeral runner, checks the brushes it
   # resolved, and measures the pixels it actually drew. This is the only automated coverage for

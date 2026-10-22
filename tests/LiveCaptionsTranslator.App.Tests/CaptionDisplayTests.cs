@@ -1,11 +1,11 @@
-﻿using LiveCaptionsTranslator.models;
+using LiveCaptionsTranslator.models;
 
 namespace LiveCaptionsTranslator.App.Tests;
 
 /// <summary>
 /// The caption list is plain data - a list of finished lines plus the sentence on screen - so it can be
 /// driven without a window. These tests cover what the page actually renders: the order, which line is
-/// highlighted, the de-duplication and the line-length splitting.
+/// highlighted, corrections, repetitions and the line-length splitting.
 /// </summary>
 public class CaptionDisplayTests
 {
@@ -15,8 +15,10 @@ public class CaptionDisplayTests
         caption.ClearRecentLines();
         caption.InterimText = null;
         caption.DisplayTranslatedCaption = string.Empty;
-        caption.DisplayOriginalCaption = string.Empty;
+        caption.OriginalCaption = string.Empty;
+        caption.TranslatedCaption = string.Empty;
         caption.TranslationRedundant = false;
+        caption.Notice = string.Empty;
         caption.RebuildRollingLines(0);
         return caption;
     }
@@ -53,16 +55,18 @@ public class CaptionDisplayTests
     }
 
     [Fact]
-    public void A_line_that_repeats_an_earlier_one_is_refused()
+    public void A_line_that_repeats_an_earlier_one_is_kept()
     {
         var caption = Fresh();
 
+        // The recogniser's replays are filtered before they get here. By this point a repeat is what
+        // the speaker actually said, so dropping it would lose a subtitle.
         caption.AddRecentLine("说了一句。");
         caption.AddRecentLine("又说一句。");
         caption.AddRecentLine("说了一句。");
         caption.RebuildRollingLines(0);
 
-        Assert.Equal(["说了一句。", "又说一句。"], caption.RollingLines.Select(line => line.Text));
+        Assert.Equal(["说了一句。", "又说一句。", "说了一句。"], caption.RollingLines.Select(line => line.Text));
     }
 
     [Fact]
@@ -70,13 +74,12 @@ public class CaptionDisplayTests
     {
         var caption = Fresh();
 
-        // Legitimate repetition: the speaker really did say it twice.
         caption.AddRecentLine("为啥呀？");
         caption.AddRecentLine("为啥呀？");
         caption.RebuildRollingLines(0);
 
-        Assert.Single(caption.RollingLines);
-        Assert.Equal("为啥呀？", caption.RollingLines[0].Text);
+        Assert.Equal(2, caption.RollingLines.Count);
+        Assert.All(caption.RollingLines, line => Assert.Equal("为啥呀？", line.Text));
     }
 
     [Fact]
@@ -97,21 +100,6 @@ public class CaptionDisplayTests
     }
 
     [Fact]
-    public void When_the_translation_repeats_the_source_only_one_line_is_shown()
-    {
-        var caption = Fresh();
-
-        caption.TranslationRedundant = true;
-        caption.DisplayOriginalCaption = "今天天气不错。";
-        caption.DisplayTranslatedCaption = "今天天气不错。";
-        caption.RebuildRollingLines(0);
-
-        Assert.Single(caption.RollingLines);
-        Assert.Equal("今天天气不错。", caption.RollingLines[0].Text);
-        Assert.True(caption.RollingLines[0].IsLatest);
-    }
-
-    [Fact]
     public void Only_a_bounded_number_of_lines_is_retained()
     {
         var caption = Fresh();
@@ -126,17 +114,45 @@ public class CaptionDisplayTests
     }
 
     [Fact]
-    public void A_line_can_be_replaced_where_it_was()
+    public void A_corrected_sentence_replaces_its_line_instead_of_adding_another()
     {
         var caption = Fresh();
 
-        caption.AddRecentLine("原来的句子。");
-        Assert.True(caption.UpdateRecentLine("原来的句子。", "修正后的句子。"));
+        caption.AddRecentLine("原来的句子。", source: "原来的句子。");
+        Assert.True(caption.ReviseRecentLine("原来的句子。", "修正后的句子。"));
 
         caption.RebuildRollingLines(0);
 
         Assert.Equal(["修正后的句子。"], caption.RollingLines.Select(line => line.Text));
-        Assert.False(caption.UpdateRecentLine("不存在的句子。", "随便。"));
+    }
+
+    [Fact]
+    public void A_translation_lands_on_the_line_its_sentence_is_on()
+    {
+        var caption = Fresh();
+
+        // The sentence was shown while its translation was in flight, then moved into the history.
+        caption.AddRecentLine("今天天气不错。", source: "今天天气不错。");
+        caption.DisplayTranslatedCaption = "第二句。";
+
+        Assert.True(caption.SetRecentLineText("今天天气不错。", "The weather is nice."));
+        caption.RebuildRollingLines(0);
+
+        Assert.Equal(["The weather is nice.", "第二句。"], caption.RollingLines.Select(line => line.Text));
+    }
+
+    [Fact]
+    public void A_retracted_sentence_leaves_the_screen()
+    {
+        var caption = Fresh();
+
+        caption.AddRecentLine("第一句。", source: "第一句。");
+        caption.AddRecentLine("第二句。", source: "第二句。");
+
+        Assert.True(caption.RemoveRecentLineBySource("第二句。"));
+        caption.RebuildRollingLines(0);
+
+        Assert.Equal(["第一句。"], caption.RollingLines.Select(line => line.Text));
     }
 
     [Fact]
@@ -151,5 +167,18 @@ public class CaptionDisplayTests
         // It is already the last finished line, so it is highlighted there instead of being added again.
         Assert.Single(caption.RollingLines);
         Assert.True(caption.RollingLines[0].IsLatest);
+    }
+
+    [Fact]
+    public void A_notice_is_shown_separately_and_never_becomes_a_caption_line()
+    {
+        var caption = Fresh();
+
+        caption.Notice = "[ERROR] 连接中断";
+        caption.AddRecentLine("一句正常的字幕。");
+        caption.RebuildRollingLines(0);
+
+        Assert.True(caption.HasNotice);
+        Assert.DoesNotContain(caption.RollingLines, line => line.Text.Contains("连接中断"));
     }
 }
