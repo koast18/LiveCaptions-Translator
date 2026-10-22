@@ -153,4 +153,33 @@ public class LiveTranscriptTests
 
         Assert.Empty(replay);
     }
+
+    [Fact]
+    public void Unconfirmed_text_is_handed_over_once_it_fills_a_line()
+    {
+        // Nothing here is a finished sentence, but the live slot must not grow past a line: the leading
+        // part is taken so it can be shown as a finished line.
+        string text = string.Concat(Enumerable.Repeat("他说这个系列会收集那些网络小说里真实存在的内容非常离谱非常夸张，", 3));
+
+        var transcript = new LiveTranscript();
+        Assert.Empty(transcript.Accept(text, isFinal: false));
+
+        string? first = transcript.TakePendingLine();
+        Assert.NotNull(first);
+        Assert.True(first!.Length <= LiveTranscript.MaxLineChars + 2, $"{first.Length} chars");
+        Assert.True(transcript.Pending.Length < text.Length);
+
+        // Nothing is lost: the taken part plus what is pending is the original text.
+        Assert.Equal(text, first + transcript.Pending);
+    }
+
+    [Fact]
+    public void A_short_unconfirmed_line_is_left_alone()
+    {
+        var transcript = new LiveTranscript();
+        transcript.Accept("还在说", isFinal: false);
+
+        Assert.Null(transcript.TakePendingLine());
+        Assert.Equal("还在说", transcript.Pending);
+    }
 }

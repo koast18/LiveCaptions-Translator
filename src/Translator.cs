@@ -321,6 +321,12 @@ namespace LiveCaptionsTranslator
                 lock (pendingLock)
                     pendingTextQueue.Enqueue((sentence, false));
 
+            // Unconfirmed text that has filled more than a line becomes a finished line instead of
+            // growing in place, so earlier content is never covered by it.
+            while (transcript.TakePendingLine() is { } overflow)
+                lock (pendingLock)
+                    pendingTextQueue.Enqueue((overflow, false));
+
             // The live line is the sentence being spoken. OriginalCaption stays what it always meant -
             // the sentence being translated - so the "translation repeats the source" check is not
             // comparing a finished translation with a half-heard sentence.

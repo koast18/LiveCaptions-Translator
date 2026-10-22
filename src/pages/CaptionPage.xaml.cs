@@ -24,6 +24,7 @@ namespace LiveCaptionsTranslator
 
             RollingScroll.SizeChanged += (s, e) => ScrollToLatest();
             RollingScroll.ScrollChanged += RollingScroll_ScrollChanged;
+            Translator.Caption.LinesRebuilt += ScrollToLatest;
 
             Loaded += (s, e) =>
             {
@@ -34,6 +35,7 @@ namespace LiveCaptionsTranslator
             Unloaded += (s, e) =>
             {
                 Translator.Caption.RollingLines.CollectionChanged -= OnRollingLinesChanged;
+                Translator.Caption.LinesRebuilt -= ScrollToLatest;
                 (App.Current.MainWindow as MainWindow).CaptionLogButton.Visibility = Visibility.Collapsed;
             };
 

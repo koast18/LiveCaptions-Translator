@@ -135,4 +135,18 @@ public class CaptionDisplayTests
         Assert.Equal(["修正后的句子。"], caption.RollingLines.Select(line => line.Text));
         Assert.False(caption.UpdateRecentLine("不存在的句子。", "随便。"));
     }
+
+    [Fact]
+    public void The_sentence_on_screen_is_not_listed_twice()
+    {
+        var caption = Fresh();
+
+        caption.AddRecentLine("同一句。");
+        caption.DisplayTranslatedCaption = "同一句。";
+        caption.RebuildRollingLines(0);
+
+        // It is already the last finished line, so it is highlighted there instead of being added again.
+        Assert.Single(caption.RollingLines);
+        Assert.True(caption.RollingLines[0].IsLatest);
+    }
 }

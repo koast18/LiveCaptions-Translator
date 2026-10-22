@@ -25,6 +25,9 @@ namespace LiveCaptionsTranslator.models
         /// <summary>The rolling view: previous lines dimmed, the newest one highlighted.</summary>
         public ObservableCollection<CaptionLine> RollingLines { get; } = [];
 
+        /// <summary>Raised after the list was replaced, so the page can keep the newest line in view.</summary>
+        public event Action? LinesRebuilt;
+
         /// <summary>
         /// Sentences that have finished, newest last. More are kept than any window can show so the
         /// visible count follows the window height instead of a setting.
@@ -312,11 +315,18 @@ namespace LiveCaptionsTranslator.models
                     lines.Add(new CaptionLine(part, false));
             }
 
-            if (!string.IsNullOrWhiteSpace(current))
+            if (!string.IsNullOrWhiteSpace(current) &&
+                (lines.Count == 0 || lines[^1].Text != current.Trim()))
             {
                 var parts = SplitForDisplay(current, DisplayLineChars);
                 for (int i = 0; i < parts.Count; i++)
                     lines.Add(new CaptionLine(parts[i], i == parts.Count - 1));
+            }
+            else if (lines.Count > 0)
+            {
+                // The sentence on screen is already the last finished line: highlight it instead of
+                // listing it a second time.
+                lines[^1] = lines[^1] with { IsLatest = true };
             }
 
             return lines;
@@ -367,6 +377,8 @@ namespace LiveCaptionsTranslator.models
             RollingLines.Clear();
             foreach (var line in lines)
                 RollingLines.Add(line);
+
+            LinesRebuilt?.Invoke();
         }
 
         /// <summary>One text per entry, so a skipped translation is never shown twice.</summary>

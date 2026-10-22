@@ -106,6 +106,29 @@ public sealed class LiveTranscript
         }
     }
 
+    /// <summary>
+    /// Takes the leading part of the sentence still being spoken once it has filled more than a line, so
+    /// the live slot never grows past what a line can show. Returns null while it still fits.
+    /// </summary>
+    public string? TakePendingLine()
+    {
+        if (buffer.Length <= MaxLineChars)
+            return null;
+
+        int cut = buffer.LastIndexOfAny(Pauses, MaxLineChars - 1, MaxLineChars);
+        if (cut < MaxLineChars / 3)
+        {
+            cut = buffer.IndexOfAny(Pauses, MaxLineChars);
+            if (cut < 0)
+                return null;
+        }
+
+        string part = buffer[..(cut + 1)].Trim();
+        buffer = buffer[(cut + 1)..].TrimStart();
+
+        return part.Length > 0 ? part : null;
+    }
+
     public void Reset()
     {
         consumed = string.Empty;
