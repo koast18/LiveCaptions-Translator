@@ -1,6 +1,11 @@
 name: Bilibili probe
 
 on:
+  # A hosted runner cannot be dispatched a workflow that is not on the default branch, so this
+  # experimental probe runs on a push to itself instead.
+  push:
+    paths:
+      - ".github/workflows/bili-probe.yml"
   workflow_dispatch:
 
 jobs:
