@@ -341,7 +341,11 @@ public sealed class LiveTranscript
             if (at + 1 >= text.Length)
                 return complete ? at : -1;
 
-            if (char.IsWhiteSpace(text[at + 1]))
+            char next = text[at + 1];
+
+            // English recognition often runs sentences together without a space ("loved.Except"),
+            // while a decimal or an initial ("3.5", "U.S.A") is followed by a letter or digit.
+            if (char.IsWhiteSpace(next) || char.IsUpper(next))
                 return at;
 
             from = at + 1;
