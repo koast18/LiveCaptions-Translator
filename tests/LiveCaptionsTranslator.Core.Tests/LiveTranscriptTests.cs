@@ -272,6 +272,28 @@ public class LiveTranscriptTests
     }
 
     [Fact]
+    public void An_english_sentence_ends_at_a_period_but_a_decimal_does_not()
+    {
+        // English recognition has no full-width stops; without the ASCII period it was one endless
+        // sentence. A period inside a number must not split it.
+        var transcript = new LiveTranscript();
+
+        Assert.Equal(
+            ["It costs 3.5 dollars.", "One more question!"],
+            Texts(transcript.Accept("It costs 3.5 dollars. One more question!", isFinal: true)));
+    }
+
+    [Fact]
+    public void A_trailing_period_waits_for_the_next_chunk()
+    {
+        var transcript = new LiveTranscript();
+
+        Assert.Empty(transcript.Accept("It costs 3."));
+        Assert.Empty(transcript.Accept("It costs 3.5"));
+        Assert.Equal(["It costs 3.5 dollars."], Texts(transcript.Accept("It costs 3.5 dollars. ")));
+    }
+
+    [Fact]
     public void A_settled_sentence_extended_by_the_next_pass_replaces_itself()
     {
         // Recorded behaviour: a segment is finalised mid-sentence, then the accurate pass appends the
