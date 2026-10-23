@@ -331,6 +331,18 @@ public class LiveTranscriptTests
     }
 
     [Fact]
+    public void A_fresh_session_after_a_rewrite_keeps_the_lines_already_shown()
+    {
+        var transcript = new LiveTranscript();
+
+        transcript.Accept("今天天气不错。", stableText: "今天天气不错。", isFinal: true);
+        var updates = transcript.Accept("我们开始吧。", stableText: "我们开始吧。", isFinal: true);
+
+        Assert.Null(updates[0].Replaces);
+        Assert.Equal(["我们开始吧。"], Texts(updates));
+    }
+
+    [Fact]
     public void A_stable_prefix_that_ends_mid_sentence_does_not_cut_a_word()
     {
         // The service can settle a segment without punctuation. It is a finished sentence, not half of
