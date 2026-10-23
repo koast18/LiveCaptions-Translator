@@ -34,7 +34,7 @@
 
 	<ItemGroup>
 		<!-- Recorded recognition streams, replayed by the pipeline tests. -->
-		<None Include="..\..\fixtures\*.txt"
+		<None Include="..\fixtures\*.txt"
 		      Link="fixtures\%(Filename)%(Extension)"
 		      CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
