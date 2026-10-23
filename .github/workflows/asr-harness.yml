@@ -11,6 +11,8 @@ on:
       - ".github/workflows/asr-harness.yml"
   workflow_dispatch:
 
+# Long captures need the provider to survive a 50700000 burst; see Program.cs.
+
 jobs:
   publish:
     runs-on: windows-latest
