@@ -247,7 +247,7 @@ namespace LiveCaptionsTranslator.Core.Doubao
             return overlap > 0 ? text[overlap..] : text;
         }
 
-        private static readonly char[] SentenceEnds = ['。', '！', '？', '；', '…', '!', '?', ';'];
+        private static readonly char[] SentenceEnds = ['。', '！', '？', '；', '…', '!', '?', ';', '.'];
 
         /// <summary>Longest suffix of <paramref name="sofar"/> that is a prefix of <paramref name="text"/>.</summary>
         private static int Overlap(string sofar, string text)
