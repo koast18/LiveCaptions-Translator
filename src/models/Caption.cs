@@ -63,6 +63,30 @@ namespace LiveCaptionsTranslator.models
                 recent.Clear();
         }
 
+        /// <summary>
+        /// Replaces the line a corrected sentence was shown on, wherever it is, and re-tags it with the
+        /// corrected wording so the translation that follows lands on the same line.
+        /// </summary>
+        public bool ReviseRecentLine(string? was, string? now)
+        {
+            if (string.IsNullOrWhiteSpace(was) || string.IsNullOrWhiteSpace(now))
+                return false;
+
+            lock (recentLock)
+            {
+                for (int i = recent.Count - 1; i >= 0; i--)
+                {
+                    if (!string.Equals(recent[i].Source ?? recent[i].Text, was, StringComparison.Ordinal))
+                        continue;
+
+                    recent[i] = recent[i] with { Text = now.Trim(), Source = now };
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>True when a finished sentence is still in the history, i.e. its translation still belongs there.</summary>
         public bool HasRecentLineSource(string? source)
         {
