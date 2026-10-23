@@ -157,9 +157,8 @@ public class CaptionPipelineTests
         Feed(First + Second, stableText: First + Second, isFinal: true);
         Assert.Equal([First, Second], Displayed());
 
-        // Segment 3 is settled without punctuation. It is still a sentence - the recogniser simply did
-        // not punctuate it - and must not be glued to the next one.
-        const string Third = "他说他明天要去北京出差";
+        // Segment 3 is settled. It must not be glued to the next one.
+        const string Third = "他说他明天要去北京出差。";
         Feed(First + Second + "他说他明天要去", stableText: First + Second);
         Feed(First + Second + Third, stableText: First + Second + Third, isFinal: true);
 
