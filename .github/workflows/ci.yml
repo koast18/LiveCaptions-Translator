@@ -537,6 +537,10 @@ jobs:
           $probe = Join-Path $PWD 'caption-probe.txt'
           Remove-Item $probe -ErrorAction SilentlyContinue
 
+          # A first run shows the welcome window instead of the caption page, so give the app a
+          # setting.json the way an existing install has one.
+          Set-Content -Path (Join-Path $work 'setting.json') -Value ("{ `"UiLanguage`": `"en`" }") -Encoding utf8
+
           # The app writes what it rendered once the dispatcher has laid the page out.
           $env:LCT_CAPTION_PROBE = $probe
           $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
