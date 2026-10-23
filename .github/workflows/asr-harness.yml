@@ -1,0 +1,30 @@
+name: ASR harness
+
+# Bilibili cannot be reached from a hosted runner (HTTP 412) and the Doubao endpoint cannot be
+# reached from every home network, so the machine that can fetch the audio uses this artifact to
+# record a stream locally. No .NET install is needed where it runs: it is self-contained.
+on:
+  push:
+    paths:
+      - "tools/AsrCapture/**"
+      - ".github/workflows/asr-harness.yml"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish (self-contained)
+        run: >-
+          dotnet publish tools/AsrCapture/AsrCapture.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
+          -o ./publish/asr-capture
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: asr-capture-win-x64
+          path: ./publish/asr-capture
+          if-no-files-found: error

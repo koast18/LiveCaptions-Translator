@@ -88,6 +88,11 @@ internal static class Program
                 Sink = sink,
                 Options = new AsrOptions(),
                 AudioSource = source,
+                // Surface the provider's reason instead of its resource key: the transport and the
+                // session handshake report different failures and only the message tells them apart.
+                Localize = (key, arguments) => arguments.Length == 0
+                    ? key
+                    : key + ": " + string.Join(" | ", arguments.Select(value => value?.ToString())),
             });
 
             await source.EmitAllAsync();
@@ -230,8 +235,14 @@ internal sealed class RecordingSink : IAsrSink
     public void OnNotice(string message)
     {
         lock (gate)
-            if (!string.IsNullOrWhiteSpace(message))
-                Notices.Add(message);
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            Notices.Add(message);
+        }
+
+        Console.Error.WriteLine("notice: " + message);
     }
 
     public void OnError(Exception error)
