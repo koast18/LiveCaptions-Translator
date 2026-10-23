@@ -20,6 +20,13 @@ namespace LiveCaptionsTranslator
         private static readonly Queue<string> pendingTextQueue = new();
         private static readonly object pendingLock = new();
 
+        /// <summary>
+        /// Serialises everything that owns the finished line. The recogniser commits on its own thread
+        /// while the display loop applies translations, and an interleaving would otherwise put a
+        /// translation on the wrong line (or rebuild the list from an older snapshot).
+        /// </summary>
+        private static readonly object displayLock = new();
+
         /// <summary>Decides when a sentence is finished; it remembers what it has already consumed.</summary>
         private static readonly Core.Text.LiveTranscript transcript = new();
         private static readonly TranslationTaskQueue translationTaskQueue = new();
@@ -317,28 +324,28 @@ namespace LiveCaptionsTranslator
             fullText = PreprocessCaptionText(fullText);
             string? stable = stableText is null ? null : PreprocessCaptionText(stableText);
 
-            // The recogniser reports the whole transcript on every callback, so the splitter works on
-            // what is new. It decides when a sentence is finished; nothing here re-slices the full
-            // text, which is what used to commit the same sentence again and again.
-            var updates = transcript.Accept(fullText, stable, isFinal);
-
-            foreach (string sentence in updates)
+            lock (displayLock)
             {
-                CommitLine(sentence);
+                // The recogniser reports the whole transcript on every callback, so the splitter works
+                // on what is new. It decides when a sentence is finished; nothing here re-slices the
+                // full text, which is what used to commit the same sentence again and again.
+                var updates = transcript.Accept(fullText, stable, isFinal);
 
-                lock (pendingLock)
-                    pendingTextQueue.Enqueue(sentence);
+                foreach (string sentence in updates)
+                {
+                    CommitLine(sentence);
+
+                    lock (pendingLock)
+                        pendingTextQueue.Enqueue(sentence);
+                }
+
+                // The live line is written here too, so the page never sees the live slot newer than
+                // the list it belongs to.
+                string live = transcript.Pending;
+                Caption.InterimText = live.Length > 0 ? live : null;
+
+                Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
             }
-
-            // Deliberately not committing a pause-split of the unconfirmed text: doing that produced a
-            // prefix line now and the whole sentence again a moment later.
-
-            // The live line is the sentence being spoken. It has its own slot in the page, so it can
-            // never be mistaken for - or duplicate - a finished sentence.
-            string live = transcript.Pending;
-            Caption.InterimText = live.Length > 0 ? live : null;
-
-            Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
         }
 
         /// <summary>
@@ -392,13 +399,16 @@ namespace LiveCaptionsTranslator
         /// </summary>
         public static void ResetTranscription()
         {
-            transcript.Reset();
+            lock (displayLock)
+            {
+                transcript.Reset();
 
-            lock (pendingLock)
-                pendingTextQueue.Clear();
+                lock (pendingLock)
+                    pendingTextQueue.Clear();
 
-            if (Caption is not null)
-                Caption.InterimText = null;
+                if (Caption is not null)
+                    Caption.InterimText = null;
+            }
         }
 
         /// <summary>Kept deliberately tiny: the loops only need somewhere to report a broken frame.</summary>
@@ -498,6 +508,12 @@ namespace LiveCaptionsTranslator
         /// text, so results arriving out of order cannot overwrite each other.
         /// </summary>
         private static void ApplyTranslation(TranslationResult result)
+        {
+            lock (displayLock)
+                ApplyTranslationCore(result);
+        }
+
+        private static void ApplyTranslationCore(TranslationResult result)
         {
             string sourceText = result.SourceText;
             string translatedText = result.TranslatedText;
@@ -675,20 +691,32 @@ namespace LiveCaptionsTranslator
 
         public static void ClearContexts()
         {
-            ResetTranscription();
-            Caption?.ClearRecentLines();
-            Caption?.Contexts.Clear();
-            if (Caption is not null)
+            lock (displayLock)
             {
-                Caption.DisplayTranslatedCaption = string.Empty;
-                Caption.OriginalCaption = string.Empty;
-                Caption.TranslatedCaption = string.Empty;
-                Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
-            }
+                transcript.Reset();
 
-            Caption?.OnPropertyChanged("DisplayLogCards");
-            Caption?.OnPropertyChanged("OverlayPreviousTranslation");
+                lock (pendingLock)
+                    pendingTextQueue.Clear();
+
+                Caption?.ClearRecentLines();
+                Caption?.Contexts.Clear();
+
+                if (Caption is not null)
+                {
+                    Caption.InterimText = null;
+                    Caption.DisplayTranslatedCaption = string.Empty;
+                    Caption.OriginalCaption = string.Empty;
+                    Caption.TranslatedCaption = string.Empty;
+                    RebuildRollingLinesSetting();
+                }
+
+                Caption?.OnPropertyChanged("DisplayLogCards");
+                Caption?.OnPropertyChanged("OverlayPreviousTranslation");
+            }
         }
+
+        private static void RebuildRollingLinesSetting() =>
+            Caption?.RebuildRollingLines(Setting?.NumContexts ?? 0);
 
         // If this text is too similar to the last one, overwrite it when logging. An identical
         // sentence is a genuine repetition (somebody said it twice), not a correction, and both
