@@ -23,9 +23,13 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        if (args.Length == 2 && args[0] == "--replay")
+            return Replay(args[1]);
+
         if (args.Length < 2)
         {
-            Console.Error.WriteLine("usage: AsrCapture <input.wav> <capture.txt> [--seconds N]");
+            Console.Error.WriteLine("usage: AsrCapture <input.wav> <capture.txt> [--seconds N] [--vad MS]");
+            Console.Error.WriteLine("       AsrCapture --replay <capture.txt>");
             return 2;
         }
 
@@ -33,10 +37,13 @@ internal static class Program
         string output = args[1];
 
         double seconds = 0;
+        int vad = 600;
         for (int i = 2; i + 1 < args.Length; i++)
         {
             if (args[i] == "--seconds" && double.TryParse(args[i + 1], out double value))
                 seconds = value;
+            if (args[i] == "--vad" && int.TryParse(args[i + 1], out int window))
+                vad = window;
         }
 
         var audio = WavFile.Read(input);
@@ -86,7 +93,15 @@ internal static class Program
             await provider.StartAsync(new AsrContext
             {
                 Sink = sink,
-                Options = new AsrOptions(),
+                Options = new AsrOptions
+                {
+                    // The window the app ships with; a larger one gives the recogniser the pauses a
+                    // person makes instead of cutting at every breath.
+                    Settings = new Dictionary<string, string>
+                    {
+                        [DoubaoSettingKeys.VadWindowMs] = vad.ToString(),
+                    },
+                },
                 AudioSource = source,
                 // Surface the provider's reason instead of its resource key: the transport and the
                 // session handshake report different failures and only the message tells them apart.
@@ -115,6 +130,26 @@ internal static class Program
         return 1;
     }
 
+    /// <summary>Re-runs a recording through the splitter without touching the network.</summary>
+    private static int Replay(string capturePath)
+    {
+        var events = new List<(string Kind, long At, string Text)>();
+
+        foreach (string line in File.ReadAllLines(capturePath))
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            string[] parts = line.Split('	');
+            if (parts.Length < 3)
+                continue;
+
+            events.Add((parts[0], long.TryParse(parts[1], out long at) ? at : 0, parts[^1]));
+        }
+
+        return PrintReplay(events) ? 0 : 1;
+    }
+
     private static string Render(IEnumerable<(string Kind, long At, string Text)> events)
     {
         var text = new StringBuilder();
@@ -126,7 +161,7 @@ internal static class Program
     }
 
     /// <summary>Runs the capture through the same splitter the app uses, so a regression is visible here.</summary>
-    private static void PrintReplay(IReadOnlyList<(string Kind, long At, string Text)> events)
+    private static bool PrintReplay(IReadOnlyList<(string Kind, long At, string Text)> events)
     {
         var transcript = new LiveTranscript();
         var committed = new List<string>();
@@ -151,12 +186,19 @@ internal static class Program
         bool duplicated = committed.Count != committed.Distinct().Count();
         bool nested = committed.Zip(committed.Skip(1)).Any(pair =>
             pair.Second.StartsWith(pair.First, StringComparison.Ordinal));
+        bool liveLeft = transcript.Pending.Length > 0;
 
         Console.WriteLine();
         Console.WriteLine($"assembles final transcript: {assembles}");
         Console.WriteLine($"duplicate sentence: {duplicated}");
         Console.WriteLine($"line begins with previous: {nested}");
         Console.WriteLine($"live text left: '{transcript.Pending}'");
+
+        string linesPath = System.IO.Path.ChangeExtension(capturePath, ".lines.txt");
+        File.WriteAllLines(linesPath, committed, new UTF8Encoding(false));
+        Console.WriteLine($"lines -> {linesPath}");
+
+        return assembles && !duplicated && !nested && !liveLeft;
     }
 }
 
