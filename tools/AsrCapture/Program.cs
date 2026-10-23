@@ -28,7 +28,7 @@ internal static class Program
 
         if (args.Length < 2)
         {
-            Console.Error.WriteLine("usage: AsrCapture <input.wav> <capture.txt> [--seconds N] [--vad MS]");
+            Console.Error.WriteLine("usage: AsrCapture <input.wav> <capture.txt> [--seconds N] [--vad MS] [--speed X]");
             Console.Error.WriteLine("       AsrCapture --replay <capture.txt>");
             return 2;
         }
@@ -38,12 +38,15 @@ internal static class Program
 
         double seconds = 0;
         int vad = 600;
+        double speed = 1;
         for (int i = 2; i + 1 < args.Length; i++)
         {
             if (args[i] == "--seconds" && double.TryParse(args[i + 1], out double value))
                 seconds = value;
             if (args[i] == "--vad" && int.TryParse(args[i + 1], out int window))
                 vad = window;
+            if (args[i] == "--speed" && double.TryParse(args[i + 1], out double rate) && rate > 0)
+                speed = rate;
         }
 
         var audio = WavFile.Read(input);
@@ -83,7 +86,7 @@ internal static class Program
         for (int attempt = 1; attempt <= attempts; attempt++)
         {
             var sink = new RecordingSink();
-            var source = new WavAudioSource(pcm);
+            var source = new WavAudioSource(pcm, speed);
 
             var wire = new WireLog(wirePath);
 
@@ -173,57 +176,114 @@ internal static class Program
     /// <summary>Runs the capture through the same splitter the app uses, so a regression is visible here.</summary>
     private static bool PrintReplay(IReadOnlyList<(string Kind, long At, string Text)> events, string capturePath)
     {
-        var transcript = new LiveTranscript();
         var committed = new List<string>();
-        string stable = string.Empty;
+        var sessions = new List<(int Lines, int Finals, bool Assembles)>();
+        var session = new SessionState();
 
         foreach (var (kind, _, text) in events)
         {
-            string stableNow = kind == "final" ? text : stable;
+            if (kind == "notice")
+            {
+                // A recycled or reconnected session starts a fresh transcript; the display keeps the
+                // lines it already showed. Compare each session with its own final transcript.
+                CloseSession(session, sessions);
+                session = new SessionState();
+                continue;
+            }
 
-            foreach (var update in transcript.Accept(text, stableNow, kind == "final"))
+            if (kind is not ("partial" or "final"))
+                continue;
+
+            string stableNow = kind == "final" ? text : session.Stable;
+
+            foreach (var update in session.Transcript.Accept(text, stableNow, kind == "final"))
             {
                 if (update.Replaces is not null)
                 {
-                    int at = committed.LastIndexOf(update.Replaces);
+                    int at = session.Lines.LastIndexOf(update.Replaces);
                     if (at >= 0)
-                        committed[at] = update.Text;
+                        session.Lines[at] = update.Text;
+                    else
+                        session.Lines.Add(update.Text);
+
+                    int index = committed.LastIndexOf(update.Replaces);
+                    if (index >= 0)
+                        committed[index] = update.Text;
                     else
                         committed.Add(update.Text);
                 }
                 else
                 {
+                    session.Lines.Add(update.Text);
                     committed.Add(update.Text);
                 }
             }
 
             if (kind == "final")
-                stable = text;
+            {
+                session.Stable = text;
+                session.Settled = text;
+                session.Finals++;
+            }
+        }
+
+        CloseSession(session, sessions);
+
+        bool duplicated = committed.Where(line => line.Length > 4).GroupBy(line => line).Any(group => group.Count() > 1);
+        bool nested = committed.Zip(committed.Skip(1)).Any(pair =>
+            pair.Second.Length > pair.First.Length &&
+            pair.Second.StartsWith(pair.First, StringComparison.Ordinal) &&
+            pair.First.Length >= 4);
+        bool liveLeft = session.Transcript.Pending.Length > 0;
+        bool assembles = sessions.All(item => item.Assembles);
+
+        if (committed.Count <= 80)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"committed {committed.Count} sentences:");
+            foreach (string sentence in committed)
+                Console.WriteLine($"  {sentence}");
         }
 
         Console.WriteLine();
-        Console.WriteLine($"committed {committed.Count} sentences:");
-        foreach (string sentence in committed)
-            Console.WriteLine($"  {sentence}");
+        Console.WriteLine($"sessions: {sessions.Count}, lines: {committed.Count}");
+        for (int i = 0; i < sessions.Count; i++)
+            Console.WriteLine($"  session {i + 1}: {sessions[i].Lines} lines, {sessions[i].Finals} finals, assembles={sessions[i].Assembles}");
 
-        string final = events.LastOrDefault(e => e.Kind == "final").Text ?? string.Empty;
-        bool assembles = WithoutWhitespace(string.Concat(committed)) == WithoutWhitespace(final);
-        bool duplicated = committed.Count != committed.Distinct().Count();
-        bool nested = committed.Zip(committed.Skip(1)).Any(pair =>
-            pair.Second.StartsWith(pair.First, StringComparison.Ordinal));
-        bool liveLeft = transcript.Pending.Length > 0;
-
-        Console.WriteLine();
-        Console.WriteLine($"assembles final transcript: {assembles}");
-        Console.WriteLine($"duplicate sentence: {duplicated}");
+        Console.WriteLine($"each session assembles its transcript: {assembles}");
+        Console.WriteLine($"duplicate long sentence: {duplicated}");
         Console.WriteLine($"line begins with previous: {nested}");
-        Console.WriteLine($"live text left: '{transcript.Pending}'");
+        Console.WriteLine($"live text left: '{session.Transcript.Pending}'");
 
         string linesPath = Path.ChangeExtension(capturePath, ".lines.txt");
         File.WriteAllLines(linesPath, committed, new UTF8Encoding(false));
         Console.WriteLine($"lines -> {linesPath}");
 
         return assembles && !duplicated && !nested && !liveLeft;
+    }
+
+    private static void CloseSession(SessionState session, List<(int Lines, int Finals, bool Assembles)> sessions)
+    {
+        if (session.Finals == 0 && session.Lines.Count == 0)
+            return;
+
+        bool assembles = session.Finals == 0 ||
+                         WithoutWhitespace(string.Concat(session.Lines)) == WithoutWhitespace(session.Settled);
+
+        sessions.Add((session.Lines.Count, session.Finals, assembles));
+    }
+
+    private sealed class SessionState
+    {
+        public LiveTranscript Transcript { get; } = new();
+
+        public List<string> Lines { get; } = [];
+
+        public string Stable { get; set; } = string.Empty;
+
+        public string Settled { get; set; } = string.Empty;
+
+        public int Finals { get; set; }
     }
 }
 
@@ -296,8 +356,13 @@ internal sealed class LoggingTransport : IDoubaoTransport
 internal sealed class WavAudioSource : IAudioSource
 {
     private readonly byte[] pcm;
+    private readonly double speed;
 
-    public WavAudioSource(byte[] pcm) => this.pcm = pcm;
+    public WavAudioSource(byte[] pcm, double speed = 1)
+    {
+        this.pcm = pcm;
+        this.speed = speed <= 0 ? 1 : speed;
+    }
 
     public string Id => "wav-file";
 
@@ -334,7 +399,9 @@ internal sealed class WavAudioSource : IAudioSource
             FrameAvailable?.Invoke(this, new AudioFrameEventArgs(chunk));
 
             // Real time, so the service's VAD sees the same pauses a microphone would produce.
-            double dueMs = (offset + count) * 1000.0 / (AudioFormat.SampleRate * 2);
+            // A speed above 1 is only for long recordings; the timestamps the provider sends still
+            // advance at real time, so the service sees the same audio, just delivered faster.
+            double dueMs = (offset + count) * 1000.0 / (AudioFormat.SampleRate * 2) / speed;
             int wait = (int)Math.Round(dueMs - clock.Elapsed.TotalMilliseconds);
             if (wait > 0)
                 await Task.Delay(wait, cancellationToken);
@@ -372,6 +439,7 @@ internal sealed class RecordingSink : IAsrSink
                 return;
 
             Notices.Add(message);
+            Events.Add(("notice", clock.ElapsedMilliseconds, message));
         }
 
         Console.Error.WriteLine("notice: " + message);
