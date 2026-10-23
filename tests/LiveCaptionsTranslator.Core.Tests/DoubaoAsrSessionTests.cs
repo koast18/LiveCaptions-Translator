@@ -508,6 +508,76 @@ public class DoubaoTranscriptBuilderTests
 
         Assert.Equal("乙", builder.Text);
     }
+
+    [Fact]
+    public void A_segment_whose_start_time_jitters_stays_one_segment()
+    {
+        // Recorded from the real endpoint while one long answer was being decoded: the second/third
+        // pass re-aligns the start of the same segment by a few hundred milliseconds on every result.
+        var builder = new DoubaoTranscriptBuilder();
+        (string Text, double Start)[] results =
+        [
+            ("会助长", 65.79),
+            ("会助长，对", 66.11),
+            ("会助长对方的变", 65.87),
+            ("会助长对方的变本", 66.18),
+            ("会助长对方的变本加厉，而且大", 65.98),
+            ("会助长对方的变本加厉，而且大多数时候你的忍让更是会造成自己的无限内耗。", 65.58),
+        ];
+
+        foreach (var (text, start) in results)
+            builder.Append(Interim(text, start));
+
+        // The exact jitter used to append the growing prefix again and again.
+        Assert.Equal(results[^1].Text, builder.Text);
+        Assert.Equal(string.Empty, builder.Committed);
+    }
+
+    [Fact]
+    public void A_final_pass_that_re_decodes_the_previous_segment_does_not_repeat_it()
+    {
+        // What the real stream does: the next segment is first reported as its own words, then its
+        // final re-decodes a window that begins inside the previous sentence.
+        var builder = new DoubaoTranscriptBuilder();
+
+        builder.Append(Interim("…我觉得他是不是太懦弱了？", 35.99));
+        builder.Append(Interim("会助长", 65.79));
+
+        Assert.Equal("…我觉得他是不是太懦弱了？会助长", builder.Text);
+
+        // The final carries the whole window again, from the start of the previous sentence.
+        var (text, isFinal) = builder.Append(Final("…我觉得他是不是太懦弱了？会助长对方的变本加厉。", 65.62));
+
+        Assert.True(isFinal);
+        Assert.Equal("…我觉得他是不是太懦弱了？会助长对方的变本加厉。", text);
+        Assert.Single(text.Split('…', StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    [Fact]
+    public void A_late_revision_of_an_already_handed_over_segment_is_ignored()
+    {
+        var builder = new DoubaoTranscriptBuilder();
+
+        builder.Append(Final("第一句话。", 0));
+        builder.Append(Interim("第二句话", 6.0));
+
+        // A stale result for the first segment arrives out of order.
+        builder.Append(Interim("第一句话改了。", 0));
+
+        Assert.Equal("第一句话。第二句话", builder.Text);
+    }
+
+    [Fact]
+    public void Short_consecutive_segments_are_each_committed_once()
+    {
+        var builder = new DoubaoTranscriptBuilder();
+
+        builder.Append(Final("然后", 12.15));
+        builder.Append(Final("那个", 13.57));
+
+        Assert.Equal("然后那个", builder.Text);
+        Assert.Equal("然后那个", builder.Committed);
+    }
 }
 
 public class DoubaoProviderStreamingTests
