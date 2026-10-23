@@ -156,6 +156,10 @@ internal static class Program
         return PrintReplay(events, capturePath) ? 0 : 1;
     }
 
+    /// <summary>The display puts each sentence on its own line, so joining spaces are not significant.</summary>
+    private static string WithoutWhitespace(string text) =>
+        string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
+
     private static string Render(IEnumerable<(string Kind, long At, string Text)> events)
     {
         var text = new StringBuilder();
@@ -203,7 +207,7 @@ internal static class Program
             Console.WriteLine($"  {sentence}");
 
         string final = events.LastOrDefault(e => e.Kind == "final").Text ?? string.Empty;
-        bool assembles = string.Concat(committed) == final;
+        bool assembles = WithoutWhitespace(string.Concat(committed)) == WithoutWhitespace(final);
         bool duplicated = committed.Count != committed.Distinct().Count();
         bool nested = committed.Zip(committed.Skip(1)).Any(pair =>
             pair.Second.StartsWith(pair.First, StringComparison.Ordinal));
