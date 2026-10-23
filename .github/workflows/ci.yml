@@ -487,3 +487,147 @@ jobs:
           name: settings-screenshot
           path: settings-*.png
           if-no-files-found: warn
+
+  # Opens the real window on a throwaway runner, feeds it a Doubao-shaped recognition stream, and
+  # reads back the TextBlocks the caption page actually rendered. The model is covered by unit tests;
+  # this is the only check that the list, the highlight and the live slot reach the screen - the
+  # place every duplicate-line report came from.
+  caption-view:
+    name: Caption view (rendered)
+    runs-on: windows-latest
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Publish
+        run: >-
+          dotnet publish LiveCaptionsTranslator.csproj
+          -c Release -r win-x64 --self-contained false
+          -p:PublishSingleFile=true
+          -o ./publish/caption
+
+      - name: The page renders each sentence once, with the live line in its own slot
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          Add-Type -AssemblyName System.Drawing
+          Add-Type @"
+          using System;
+          using System.Runtime.InteropServices;
+          public class CapShot {
+              [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+              [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+              [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint f);
+              [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+          }
+          "@
+
+          $exe = Join-Path $PWD 'publish/caption/LiveCaptionsTranslator.exe'
+          $work = Join-Path $PWD 'publish/caption'
+          $probe = Join-Path $PWD 'caption-probe.txt'
+          Remove-Item $probe -ErrorAction SilentlyContinue
+
+          # The app writes what it rendered once the dispatcher has laid the page out.
+          $env:LCT_CAPTION_PROBE = $probe
+          $p = Start-Process -FilePath $exe -WorkingDirectory $work -PassThru
+
+          for ($wait = 0; $wait -lt 120; $wait++) {
+            if (Test-Path $probe) { break }
+            if ($p.HasExited) { throw "the app exited before writing its caption probe (code $($p.ExitCode))" }
+            Start-Sleep -Milliseconds 500
+          }
+
+          if (-not (Test-Path $probe)) { throw 'the app never wrote its caption probe' }
+
+          $rows = Get-Content $probe
+          $rows | ForEach-Object { Write-Output $_ }
+
+          $lines = @()
+          $live = $null
+          foreach ($row in $rows) {
+            $parts = $row.Split("`t")
+            switch ($parts[0]) {
+              'line' { $lines += [pscustomobject]@{ Text = $parts[1]; Size = [double]$parts[2]; Weight = $parts[3]; Visibility = $parts[4] } }
+              'live' { $live = $parts[1] }
+              'error' { throw "the caption probe failed: $($parts[1])" }
+            }
+          }
+
+          $expected = @(
+            '今天天气不错。',
+            '我们一起去公园散步吧。',
+            '这个项目的字幕不能重复。',
+            '颜值要尽量小。',
+            '他说他明天。',
+            '要去北京出差。',
+            '大概 3 天。',
+            '以后回来。'
+          )
+
+          # Screenshot before failing, so the artifact shows the page in the failing state.
+          $h = [IntPtr]::Zero
+          for ($attempt = 0; $attempt -lt 40; $attempt++) {
+            $p.Refresh()
+            if ($p.HasExited) { break }
+            if ($p.MainWindowHandle -ne [IntPtr]::Zero) { $h = $p.MainWindowHandle; break }
+            Start-Sleep -Milliseconds 500
+          }
+
+          if ($h -ne [IntPtr]::Zero) {
+            [void][CapShot]::SetForegroundWindow($h)
+            $r = New-Object CapShot+RECT
+            [void][CapShot]::GetWindowRect($h, [ref]$r)
+            $bmp = New-Object System.Drawing.Bitmap ($r.Right - $r.Left), ($r.Bottom - $r.Top)
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $dc = $g.GetHdc()
+            [void][CapShot]::PrintWindow($h, $dc, 2)
+            $g.ReleaseHdc($dc)
+            $g.Dispose()
+            $bmp.Save((Join-Path $PWD 'caption-view.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp.Dispose()
+          }
+
+          if (-not $p.HasExited) { $p.Kill() }
+
+          if ($lines.Count -ne $expected.Count) {
+            throw "the page shows $($lines.Count) caption lines, expected $($expected.Count)"
+          }
+
+          for ($i = 0; $i -lt $expected.Count; $i++) {
+            if ($lines[$i].Text -ne $expected[$i]) {
+              throw "line $i is '$($lines[$i].Text)', expected '$($expected[$i])'"
+            }
+          }
+
+          if (($lines | Select-Object -ExpandProperty Text | Select-Object -Unique).Count -ne $lines.Count) {
+            throw 'a caption line is shown twice'
+          }
+
+          $latest = @($lines | Where-Object { $_.Size -ge 18 })
+          if ($latest.Count -ne 1) { throw "expected exactly one highlighted line, found $($latest.Count)" }
+          if ($latest[0].Text -ne $expected[$expected.Count - 1]) { throw "the highlighted line is '$($latest[0].Text)'" }
+
+          if ($live -ne '我们') { throw "the live slot shows '$live', expected the sentence being spoken" }
+          if ($lines.Text -contains $live) { throw "the live line is also listed as a finished line" }
+
+          Write-Output "OK: $($lines.Count) rendered lines, one highlighted, live slot '$live'"
+
+      - name: Upload the caption screenshot and probe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: caption-view
+          path: |
+            caption-view.png
+            caption-probe.txt
+          if-no-files-found: warn
