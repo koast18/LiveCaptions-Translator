@@ -1,3 +1,4 @@
+﻿using System.IO;
 using LiveCaptionsTranslator.Core.Text;
 
 namespace LiveCaptionsTranslator.Core.Tests;
