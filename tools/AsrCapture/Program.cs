@@ -176,7 +176,22 @@ internal static class Program
         foreach (var (kind, _, text) in events)
         {
             string stableNow = kind == "final" ? text : stable;
-            committed.AddRange(transcript.Accept(text, stableNow, kind == "final"));
+
+            foreach (var update in transcript.Accept(text, stableNow, kind == "final"))
+            {
+                if (update.Replaces is not null)
+                {
+                    int at = committed.LastIndexOf(update.Replaces);
+                    if (at >= 0)
+                        committed[at] = update.Text;
+                    else
+                        committed.Add(update.Text);
+                }
+                else
+                {
+                    committed.Add(update.Text);
+                }
+            }
 
             if (kind == "final")
                 stable = text;
