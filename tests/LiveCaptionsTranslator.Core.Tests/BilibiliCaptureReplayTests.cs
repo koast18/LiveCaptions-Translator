@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.RegularExpressions;
 
 using LiveCaptionsTranslator.Core.Doubao;
@@ -74,10 +74,18 @@ public class BilibiliCaptureReplayTests
         // settled on (a display line is its own line, so whitespace between them is not significant).
         Assert.Equal(WithoutWhitespace(settled), WithoutWhitespace(string.Concat(lines)));
 
-        // A sentence may be repeated by the speaker ("那个", "那个"), but a long block repeated or a
-        // line that is the beginning of the next one is the duplicate that was reported.
-        var longLines = lines.Where(line => line.Length > 4).ToList();
-        Assert.Equal(longLines.Count, longLines.Distinct().Count());
+        // A sentence may be repeated by the speaker, even in a row ("有意思吧？有意思吧？"), but the
+        // same long line appearing again later, or a line that begins the next one, is the duplicate
+        // that was reported.
+        for (int i = 0; i < lines.Count; i++)
+        {
+            if (lines[i].Length <= 4)
+                continue;
+
+            int earlier = lines.IndexOf(lines[i]);
+            Assert.True(earlier == i || earlier == i - 1,
+                $"line {i} repeats a line from position {earlier}: '{lines[i]}'");
+        }
 
         for (int i = 1; i < lines.Count; i++)
         {
