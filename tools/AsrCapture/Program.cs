@@ -67,6 +67,9 @@ internal static class Program
 
         Console.WriteLine($"audio: {pcm.Length / (AudioFormat.SampleRate * 2.0):0.0} s");
 
+        string wirePath = Path.ChangeExtension(output, ".wire.txt");
+        File.WriteAllText(wirePath, string.Empty, new UTF8Encoding(false));
+
         var credentials = await new DoubaoDeviceRegistrar().RegisterAsync();
         if (!credentials.IsComplete)
         {
@@ -82,8 +85,11 @@ internal static class Program
             var sink = new RecordingSink();
             var source = new WavAudioSource(pcm);
 
+            var wire = new WireLog(wirePath);
+
             await using var provider = new DoubaoAsrProvider(
                 credentials,
+                transportFactory: () => new LoggingTransport(new WebSocketDoubaoTransport(), wire),
                 streamOptions: new DoubaoStreamOptions
                 {
                     MaxConsecutiveFailures = 1,
@@ -200,6 +206,71 @@ internal static class Program
 
         return assembles && !duplicated && !nested && !liveLeft;
     }
+}
+
+/// <summary>Records every result entry the service sends, with its segment metadata.</summary>
+internal sealed class WireLog
+{
+    private readonly object gate = new();
+    private readonly string path;
+
+    public WireLog(string path) => this.path = path;
+
+    public void Write(string line)
+    {
+        lock (gate)
+            File.AppendAllText(path, line + Environment.NewLine, new UTF8Encoding(false));
+    }
+}
+
+internal sealed class LoggingTransport : IDoubaoTransport
+{
+    private readonly IDoubaoTransport inner;
+    private readonly WireLog wire;
+
+    public LoggingTransport(IDoubaoTransport inner, WireLog wire)
+    {
+        this.inner = inner;
+        this.wire = wire;
+    }
+
+    public bool IsOpen => inner.IsOpen;
+
+    public Task ConnectAsync(Uri uri, IReadOnlyDictionary<string, string> headers, CancellationToken cancellationToken) =>
+        inner.ConnectAsync(uri, headers, cancellationToken);
+
+    public Task SendAsync(ReadOnlyMemory<byte> payload, CancellationToken cancellationToken) =>
+        inner.SendAsync(payload, cancellationToken);
+
+    public async Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken)
+    {
+        byte[]? data = await inner.ReceiveAsync(cancellationToken);
+        if (data is null)
+        {
+            wire.Write("closed");
+            return null;
+        }
+
+        try
+        {
+            var response = DoubaoAsrResponse.Parse(data);
+            foreach (var segment in DoubaoResultParser.Parse(response.ResultJson))
+            {
+                wire.Write(
+                    $"{response.MessageType} start={segment.StartTime:0.###} end={segment.EndTime:0.###} " +
+                    $"interim={segment.IsInterim} vad={segment.IsVadFinished} force={segment.IsForceFinished} " +
+                    $"timeout={segment.IsVadTimeout} finish={segment.IsStreamFinish} text={segment.Text}");
+            }
+        }
+        catch (Exception exception)
+        {
+            wire.Write($"unparsed {data.Length} bytes ({exception.GetType().Name})");
+        }
+
+        return data;
+    }
+
+    public ValueTask DisposeAsync() => inner.DisposeAsync();
 }
 
 /// <summary>Plays a WAV buffer in 40 ms chunks, paced like a real capture device.</summary>
