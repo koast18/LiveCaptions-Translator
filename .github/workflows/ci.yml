@@ -69,6 +69,23 @@ jobs:
           path: ./publish/win-x64
           if-no-files-found: error
 
+      # Runs a local WAV through the real Doubao endpoint and records the callback stream, so a
+      # machine that can reach Bilibili (a hosted runner cannot) can produce replayable material
+      # without installing the SDK. Self-contained: no .NET install needed where it runs.
+      - name: Publish (ASR capture harness, self-contained)
+        run: >-
+          dotnet publish tools/AsrCapture/AsrCapture.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
+          -o ./publish/asr-capture
+
+      - name: Upload the ASR capture harness
+        uses: actions/upload-artifact@v4
+        with:
+          name: asr-capture-win-x64
+          path: ./publish/asr-capture
+          if-no-files-found: error
+
   # Talks to the live endpoint with a committed speech sample. This is the only job that
   # proves the hand-rolled protocol works end to end, so it is kept separate from the unit tests:
   # it needs the network and it is the job that fails first if the endpoint is unreachable from
