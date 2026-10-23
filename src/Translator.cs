@@ -331,12 +331,15 @@ namespace LiveCaptionsTranslator
                 // full text, which is what used to commit the same sentence again and again.
                 var updates = transcript.Accept(fullText, stable, isFinal);
 
-                foreach (string sentence in updates)
+                foreach (var update in updates)
                 {
-                    CommitLine(sentence);
+                    if (update.Replaces is not null)
+                        ReviseLine(update.Replaces, update.Text);
+                    else
+                        CommitLine(update.Text);
 
                     lock (pendingLock)
-                        pendingTextQueue.Enqueue(sentence);
+                        pendingTextQueue.Enqueue(update.Text);
                 }
 
                 // The live line is written here too, so the page never sees the live slot newer than
@@ -391,6 +394,30 @@ namespace LiveCaptionsTranslator
             captionStatus = null;
             overlayStatus = null;
             Caption.Notice = string.Empty;
+        }
+
+        /// <summary>
+        /// A settled sentence the recogniser then extended or corrected. The new wording takes the
+        /// place of the old line; it is never appended, which is what used to leave the wrong sentence
+        /// and its correction on screen.
+        /// </summary>
+        private static void ReviseLine(string was, string now)
+        {
+            if (string.IsNullOrWhiteSpace(now))
+                return;
+
+            if (string.Equals(Caption.OriginalCaption, was, StringComparison.Ordinal))
+            {
+                Caption.OriginalCaption = now;
+                Caption.TranslatedCaption = now;
+                Caption.DisplayTranslatedCaption = now;
+                Caption.TranslationRedundant = true;
+                Caption.OverlayOriginalCaption = now;
+                Caption.OverlayCurrentTranslation = now;
+                return;
+            }
+
+            Caption.ReviseRecentLine(was, now);
         }
 
         /// <summary>
