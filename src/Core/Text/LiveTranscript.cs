@@ -39,7 +39,11 @@ public sealed class LiveTranscript
     /// <summary>A settled sentence is only replaced by a revision close to the end of the transcript.</summary>
     public const int RevisionWindow = 4;
 
-    private static readonly char[] SentenceEnds = ['。', '！', '？', '；', '…', '!', '?', ';'];
+    /// <summary>
+    /// A sentence can end at an ASCII full stop too - English recognition was one endless sentence
+    /// without it - but a period inside a number ("3.5") or an abbreviation must not split the line.
+    /// </summary>
+    private static readonly char[] SentenceEnds = ['。', '！', '？', '；', '…', '!', '?', ';', '.'];
 
     private static readonly char[] Pauses =
         [' ', '　', '，', '、', '：', ',', ':', '。', '！', '？', '；', '.', '!', '?', ';'];
@@ -305,7 +309,7 @@ public sealed class LiveTranscript
 
         while (start < text.Length)
         {
-            int index = text.IndexOfAny(SentenceEnds, start);
+            int index = FindSentenceEnd(text, start, complete: true);
             int stop = index < 0 ? text.Length : index + 1;
             string candidate = text[start..stop].Trim();
 
@@ -314,6 +318,36 @@ public sealed class LiveTranscript
 
             start = stop;
         }
+    }
+
+    /// <summary>
+    /// First usable sentence end at or after <paramref name="start"/>. A period counts only when it is
+    /// followed by whitespace or the end of the text, so "3.5" and "U.S." stay in one piece. In a
+    /// streaming buffer a trailing period is not usable yet: the next chunk may be the fraction.
+    /// </summary>
+    private static int FindSentenceEnd(string text, int start, bool complete)
+    {
+        int from = start;
+
+        while (from < text.Length)
+        {
+            int at = text.IndexOfAny(SentenceEnds, from);
+            if (at < 0)
+                return -1;
+
+            if (text[at] != '.')
+                return at;
+
+            if (at + 1 >= text.Length)
+                return complete ? at : -1;
+
+            if (char.IsWhiteSpace(text[at + 1]))
+                return at;
+
+            from = at + 1;
+        }
+
+        return -1;
     }
 
     /// <summary>
@@ -357,7 +391,7 @@ public sealed class LiveTranscript
         // instead of being returned as an empty sentence.
         while (true)
         {
-            int end = buffer.IndexOfAny(SentenceEnds);
+            int end = FindSentenceEnd(buffer, 0, complete: false);
             if (end < 0)
                 break;
 
