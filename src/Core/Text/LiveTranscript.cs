@@ -113,11 +113,18 @@ public sealed class LiveTranscript
         if (stableConsumed.Length > 0 && !cumulative.StartsWith(stableConsumed, StringComparison.Ordinal))
         {
             // The transcript was rewritten - a recycled session, or a final pass that re-decoded a
-            // window reaching back past the last sentence. If it shares nothing at the start, it is a
-            // fresh session and the new sentences simply follow the ones already shown.
+            // window reaching back past the last sentence. If it shares nothing at the start, it is
+            // either a fresh session (the new sentences simply follow the ones already shown) or a
+            // rewrite of the one sentence that was on screen (that line must be replaced).
             int matched = CommittedPrefixCount(cumulative);
             if (matched == 0 && Overlap(stableConsumed, cumulative) == 0)
-                sentences.Clear();
+            {
+                string? first = FirstSentence(cumulative, stableLimit);
+                bool revision = sentences.Count > 0 && first is not null &&
+                                IsRevision(sentences[^1], first, nearTail: true);
+                if (!revision)
+                    sentences.Clear();
+            }
         }
 
         stableConsumed = cumulative;
@@ -160,6 +167,18 @@ public sealed class LiveTranscript
 
         buffer = cumulative[stableLimit..];
         return updates;
+    }
+
+    /// <summary>The first settled sentence of the transcript, if there is one.</summary>
+    private static string? FirstSentence(string text, int limit)
+    {
+        foreach (string sentence in SplitSentences(text[..limit]))
+        {
+            if (!string.IsNullOrWhiteSpace(sentence))
+                return sentence;
+        }
+
+        return null;
     }
 
     /// <summary>True when <paramref name="now"/> is the recogniser's revised form of <paramref name="was"/>.</summary>
