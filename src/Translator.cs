@@ -17,8 +17,15 @@ namespace LiveCaptionsTranslator
         private static Setting? setting = null;
 
         /// <summary>Written by the recogniser thread, read by the translate loop: guarded.</summary>
-        private static readonly Queue<(string Text, bool Interim)> pendingTextQueue = new();
+        private static readonly Queue<string> pendingTextQueue = new();
         private static readonly object pendingLock = new();
+
+        /// <summary>
+        /// Serialises everything that owns the finished line. The recogniser commits on its own thread
+        /// while the display loop applies translations, and an interleaving would otherwise put a
+        /// translation on the wrong line (or rebuild the list from an older snapshot).
+        /// </summary>
+        private static readonly object displayLock = new();
 
         /// <summary>Decides when a sentence is finished; it remembers what it has already consumed.</summary>
         private static readonly Core.Text.LiveTranscript transcript = new();
@@ -152,7 +159,7 @@ namespace LiveCaptionsTranslator
             if (Caption is null)
                 return;
 
-            Caption.DisplayTranslatedCaption = caption();
+            Caption.Notice = caption();
             if (overlay is not null)
                 Caption.OverlayNoticePrefix = overlay();
         }
@@ -163,7 +170,7 @@ namespace LiveCaptionsTranslator
                 return;
 
             if (captionStatus is not null)
-                Caption.DisplayTranslatedCaption = captionStatus();
+                Caption.Notice = captionStatus();
             if (overlayStatus is not null)
                 Caption.OverlayNoticePrefix = overlayStatus();
         }
@@ -187,6 +194,10 @@ namespace LiveCaptionsTranslator
             var provider = ActiveAsrProvider;
             if (provider == null)
                 return;
+
+            // A new backend starts a new transcript: text from the previous one must not be treated
+            // as a replay of it, and a half-heard line from it must not stay on screen.
+            ResetTranscription();
 
             IAudioSource? audioSource = null;
             if (provider.RequiresAudioSource)
@@ -259,22 +270,25 @@ namespace LiveCaptionsTranslator
             // final when the whole stream ends.
             // One path only: HandleCaptionText owns the live line, so the page cannot be written by two
             // different pieces of logic at once.
-            public void OnPartial(string text) => HandleCaptionText(text);
+            public void OnPartial(string text, string? stableText = null) =>
+                HandleCaptionText(text, isFinal: false, stableText: stableText);
 
-            public void OnFinal(string text)
+            public void OnFinal(string text, string? stableText = null)
             {
                 Caption!.InterimText = null;
-                HandleCaptionText(text);
+                HandleCaptionText(text, isFinal: true, stableText: stableText);
             }
 
             public void OnNotice(string message) => SetNotice(message);
 
             public void OnError(Exception error) => SetNotice(LocalizationManager.T("Status_Error", error.Message));
 
+            // A notice is not a caption: it goes to its own slot so it can never be committed to the
+            // rolling history, and never overwrites a sentence that is on screen.
             private static void SetNotice(string message)
             {
                 if (Caption != null)
-                    Caption.DisplayTranslatedCaption = message;
+                    Caption.Notice = message;
             }
         }
 
@@ -302,41 +316,130 @@ namespace LiveCaptionsTranslator
         /// when the service did not punctuate it, and without a closing mark the splitter would glue
         /// it to the next one - the "several sentences run together" complaint.
         /// </param>
-        public static void HandleCaptionText(string fullText, bool isFinal = false)
+        public static void HandleCaptionText(string fullText, bool isFinal = false, string? stableText = null)
         {
             if (string.IsNullOrEmpty(fullText))
                 return;
 
-            // Preprocess for display and translation quality (unchanged upstream rules).
-            fullText = RegexPatterns.Acronym().Replace(fullText, "$1$2");
-            fullText = RegexPatterns.AcronymWithWords().Replace(fullText, "$1 $2");
-            fullText = RegexPatterns.PunctuationSpace().Replace(fullText, "$1 ");
-            fullText = RegexPatterns.CJPunctuationSpace().Replace(fullText, "$1");
-            fullText = TextUtil.ReplaceNewlines(fullText, TextUtil.MEDIUM_THRESHOLD);
+            fullText = PreprocessCaptionText(fullText);
+            string? stable = stableText is null ? null : PreprocessCaptionText(stableText);
 
-            // The recogniser reports the whole segment on every callback, so the splitter works on the
-            // difference. It decides when a sentence is finished; nothing here re-slices the full text,
-            // which is what used to commit the same sentence again and again.
-            foreach (string sentence in transcript.Accept(fullText, isFinal))
+            lock (displayLock)
+            {
+                // The recogniser reports the whole transcript on every callback, so the splitter works
+                // on what is new. It decides when a sentence is finished; nothing here re-slices the
+                // full text, which is what used to commit the same sentence again and again.
+                var updates = transcript.Accept(fullText, stable, isFinal);
+
+                foreach (var update in updates)
+                {
+                    if (update.Replaces is not null)
+                        ReviseLine(update.Replaces, update.Text);
+                    else
+                        CommitLine(update.Text);
+
+                    lock (pendingLock)
+                        pendingTextQueue.Enqueue(update.Text);
+                }
+
+                // The live line is written here too, so the page never sees the live slot newer than
+                // the list it belongs to.
+                string live = transcript.Pending;
+                Caption.InterimText = live.Length > 0 ? live : null;
+
+                Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
+            }
+        }
+
+        /// <summary>
+        /// The upstream clean-up rules, applied to both the transcript and its stable prefix so the
+        /// stable offsets stay valid.
+        /// </summary>
+        private static string PreprocessCaptionText(string text)
+        {
+            text = RegexPatterns.Acronym().Replace(text, "$1$2");
+            text = RegexPatterns.AcronymWithWords().Replace(text, "$1 $2");
+            text = RegexPatterns.PunctuationSpace().Replace(text, "$1 ");
+            text = RegexPatterns.CJPunctuationSpace().Replace(text, "$1");
+            return TextUtil.ReplaceNewlines(text, TextUtil.MEDIUM_THRESHOLD);
+        }
+
+        /// <summary>
+        /// Shows a finished sentence at once and hands it to the translator. The recognised text is
+        /// what the user sees while the translation is in flight; when it arrives it replaces this same
+        /// line. That is what keeps the subtitles continuous instead of blank between two round trips.
+        /// </summary>
+        private static void CommitLine(string source)
+        {
+            if (string.IsNullOrWhiteSpace(source))
+                return;
+
+            // The sentence that was on screen becomes history, exactly once.
+            if (!string.IsNullOrWhiteSpace(Caption.DisplayTranslatedCaption))
+                Caption.AddRecentLine(Caption.DisplayTranslatedCaption, Caption.OriginalCaption);
+
+            Caption.OriginalCaption = source;
+            Caption.TranslatedCaption = source;
+            Caption.DisplayTranslatedCaption = source;
+
+            // Until a translation arrives the line is the source text, so the overlay must not show
+            // it a second time as the "translation".
+            Caption.TranslationRedundant = true;
+
+            Caption.OverlayOriginalCaption = source;
+            Caption.OverlayCurrentTranslation = source;
+            Caption.OverlayNoticePrefix = string.Empty;
+
+            // Captions are flowing again: whatever the app reported last is no longer current.
+            captionStatus = null;
+            overlayStatus = null;
+            Caption.Notice = string.Empty;
+        }
+
+        /// <summary>
+        /// A settled sentence the recogniser then extended or corrected. The new wording takes the
+        /// place of the old line; it is never appended, which is what used to leave the wrong sentence
+        /// and its correction on screen.
+        /// </summary>
+        private static void ReviseLine(string was, string now)
+        {
+            if (string.IsNullOrWhiteSpace(now))
+                return;
+
+            if (string.Equals(Caption.OriginalCaption, was, StringComparison.Ordinal))
+            {
+                Caption.OriginalCaption = now;
+                Caption.TranslatedCaption = now;
+                Caption.DisplayTranslatedCaption = now;
+                Caption.TranslationRedundant = true;
+                Caption.OverlayOriginalCaption = now;
+                Caption.OverlayCurrentTranslation = now;
+                return;
+            }
+
+            Caption.ReviseRecentLine(was, now);
+        }
+
+        /// <summary>
+        /// Forgets what has been transcribed so far. Called when the backend or its language changes,
+        /// and when the user clears the captions.
+        /// </summary>
+        public static void ResetTranscription()
+        {
+            lock (displayLock)
+            {
+                transcript.Reset();
+
                 lock (pendingLock)
-                    pendingTextQueue.Enqueue((sentence, false));
+                    pendingTextQueue.Clear();
 
-            // Deliberately not committing a pause-split of the unconfirmed text: doing that produced a
-            // prefix line now and the whole sentence again a moment later.
-
-            // The live line is the sentence being spoken. OriginalCaption stays what it always meant -
-            // the sentence being translated - so the "translation repeats the source" check is not
-            // comparing a finished translation with a half-heard sentence.
-            string live = transcript.Pending;
-            Caption.InterimText = live.Length > 0 ? live : null;
-            if (live.Length > 0)
-                Caption.DisplayOriginalCaption = live;
-
-            Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
+                if (Caption is not null)
+                    Caption.InterimText = null;
+            }
         }
 
         /// <summary>Kept deliberately tiny: the loops only need somewhere to report a broken frame.</summary>
-        private static void Log(string message)
+        private static void LogError(string message)
         {
             try { Console.Error.WriteLine(message); }
             catch (Exception) { /* nowhere to report it to */ }
@@ -352,7 +455,7 @@ namespace LiveCaptionsTranslator
                 }
                 catch (Exception exception)
                 {
-                    Log($"[ERROR] translate: {exception.Message}");
+                    LogError($"[ERROR] translate: {exception.Message}");
                     await Task.Delay(200);
                 }
             }
@@ -360,35 +463,32 @@ namespace LiveCaptionsTranslator
 
         private static async Task TranslateOnce()
         {
-            // Translate
-            (string Text, bool Interim) next;
+            string originalText;
             lock (pendingLock)
-            {
-                if (pendingTextQueue.Count == 0)
-                    next = (string.Empty, false);
-                else
-                    next = pendingTextQueue.Dequeue();
-            }
+                originalText = pendingTextQueue.Count == 0 ? string.Empty : pendingTextQueue.Dequeue();
 
-            if (next.Text.Length > 0)
+            if (originalText.Length > 0)
             {
-                var (originalSnapshot, interim) = next;
-
                 if (LogOnlyFlag)
                 {
-                    bool isOverwrite = await IsOverwrite(originalSnapshot);
-                    await LogOnly(originalSnapshot, isOverwrite);
+                    // Recognition still runs and is logged; only the translation is paused.
+                    SetCaptionStatus(
+                        () => LocalizationManager.T("Caption_Paused"),
+                        () => LocalizationManager.T("Caption_Paused"));
+
+                    bool isOverwrite = await IsOverwrite(originalText);
+                    await LogOnly(originalText, isOverwrite);
                 }
                 else
                 {
                     translationTaskQueue.Enqueue(
-                        token => Task.Run(() => Translate(originalSnapshot, token), token),
-                        originalSnapshot,
-                        interim);
+                        token => Task.Run(() => Translate(originalText, token), token),
+                        originalText);
                 }
             }
 
-            await Task.Delay(20);
+            // Short enough that a finished sentence never waits on this loop in any visible way.
+            await Task.Delay(10);
         }
 
         public static async Task DisplayLoop()
@@ -404,7 +504,7 @@ namespace LiveCaptionsTranslator
                     // One bad frame must not stop captions for the rest of the session: before this,
                     // a single exception took the loop down and the page stayed blank while the
                     // history, written on another path, kept filling.
-                    Log($"[ERROR] display: {exception.Message}");
+                    LogError($"[ERROR] display: {exception.Message}");
                     await Task.Delay(200);
                 }
             }
@@ -413,70 +513,78 @@ namespace LiveCaptionsTranslator
         private static async Task DisplayOnce()
         {
             // Wait for a result instead of spinning: the queue releases this the moment a translation
-            // completes.
-            if (!translationTaskQueue.WaitForResult(250))
+            // completes. Every completed result is applied - a single output slot used to overwrite a
+            // result that had not been read yet, which silently dropped a whole sentence.
+            if (!translationTaskQueue.TryTake(out var first))
+            {
+                if (!translationTaskQueue.WaitForResult(250))
+                    return;
+
+                if (!translationTaskQueue.TryTake(out first))
+                    return;
+            }
+
+            ApplyTranslation(first);
+            while (translationTaskQueue.TryTake(out var next))
+                ApplyTranslation(next);
+        }
+
+        /// <summary>
+        /// Puts a translation on the line its source sentence is already on. The line may still be the
+        /// one on screen or it may have moved into the history; either way it is found by the source
+        /// text, so results arriving out of order cannot overwrite each other.
+        /// </summary>
+        private static void ApplyTranslation(TranslationResult result)
+        {
+            lock (displayLock)
+                ApplyTranslationCore(result);
+        }
+
+        private static void ApplyTranslationCore(TranslationResult result)
+        {
+            string sourceText = result.SourceText;
+            string translatedText = result.TranslatedText;
+
+            if (string.IsNullOrWhiteSpace(translatedText))
                 return;
 
-            var (translatedText, isChoke, isInterim, sourceText) = translationTaskQueue.Output;
-
-            if (isInterim)
+            bool isCurrent = string.Equals(Caption.OriginalCaption, sourceText, StringComparison.Ordinal);
+            if (!isCurrent && !Caption.HasRecentLineSource(sourceText))
             {
-                // A preview is not shown: writing it into the live line made the text flip between the
-                // source and a translation on every callback. The live line stays the recognised text
-                // and the sentence becomes history once it is translated for real.
+                // The recogniser revised or removed this sentence while the translation was in flight;
+                // showing it now would put stale text back on screen.
                 return;
             }
 
-            // The live line belonged to the sentence that just finished, so it goes away with it.
-            Caption.InterimText = null;
+            if (StatusText.IsStatus(translatedText))
+            {
+                // An error is not a translation: it must not replace the sentence, and must never be
+                // committed to the rolling history as if it were one.
+                Caption.Notice = translatedText;
+                Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
+                return;
+            }
 
-                if (LogOnlyFlag)
-                {
-                    Caption.TranslatedCaption = string.Empty;
-                    SetCaptionStatus(
-                        () => LocalizationManager.T("Caption_Paused"),
-                        () => LocalizationManager.T("Caption_Paused"));
-                    Caption.OverlayCurrentTranslation = string.Empty;
-                }
-                else if (!string.IsNullOrEmpty(RegexPatterns.NoticePrefix().Replace(
-                             translatedText, string.Empty).Trim()) &&
-                         string.CompareOrdinal(Caption.TranslatedCaption, translatedText) != 0)
-                {
-                    // Main page: the sentence that was on screen becomes history, once.
-                    Caption.InterimText = null;
-                    Caption.AddRecentLine(Caption.DisplayTranslatedCaption);
+            bool redundant = IsTranslationRedundant(sourceText, translatedText);
 
-                    // The source text travels with the translation, so "the translation repeats the
-                    // source" is judged against the sentence this text actually came from - not against
-                    // whatever the live line happens to hold now.
-                    Caption.OriginalCaption = sourceText;
-                    Caption.TranslatedCaption = translatedText;
+            if (isCurrent)
+            {
+                Caption.TranslatedCaption = translatedText;
+                Caption.DisplayTranslatedCaption = translatedText;
+                Caption.TranslationRedundant = redundant;
 
-                    // Nothing to show twice when the translation is the source text.
-                    Caption.TranslationRedundant = IsTranslationRedundant(sourceText, Caption.TranslatedCaption);
+                // Overlay window: the notice prefix is stripped so it renders in its own font.
+                Caption.OverlayOriginalCaption = sourceText;
+                var match = RegexPatterns.NoticePrefixAndTranslation().Match(translatedText);
+                Caption.OverlayNoticePrefix = match.Groups[1].Value.Trim();
+                Caption.OverlayCurrentTranslation = match.Groups[2].Value.Trim();
+            }
+            else
+            {
+                Caption.SetRecentLineText(sourceText, translatedText);
+            }
 
-                    // Order matters: the rolling view starts from DisplayTranslatedCaption, so the
-                    // new sentence has to be assigned before the view is rebuilt - otherwise it always
-                    // renders the previous line, and nothing at all for the first one.
-                    Caption.DisplayTranslatedCaption =
-                        TextUtil.ShortenDisplaySentence(Caption.TranslatedCaption, TextUtil.VERYLONG_THRESHOLD);
-                    Caption.RebuildRollingLines(Setting.NumContexts);
-
-                    // Overlay window
-                    if (StatusText.IsStatus(Caption.TranslatedCaption))
-                        Caption.OverlayCurrentTranslation = Caption.TranslatedCaption;
-                    else
-                    {
-                        var match = RegexPatterns.NoticePrefixAndTranslation().Match(Caption.TranslatedCaption);
-                        Caption.OverlayNoticePrefix = match.Groups[1].Value.Trim();
-                        Caption.OverlayCurrentTranslation = match.Groups[2].Value.Trim();
-                    }
-                }
-
-            // No choke. It used to hold the next sentence back for 720 ms "for a better visual
-            // experience", which is a long time when the point is live captions: the interim line
-            // already keeps the page moving while the next sentence is translated.
-            _ = isChoke;
+            Caption.RebuildRollingLines(Setting?.NumContexts ?? 0);
         }
 
         public static async Task<(string, bool)> Translate(string text, CancellationToken token = default)
@@ -610,18 +718,43 @@ namespace LiveCaptionsTranslator
 
         public static void ClearContexts()
         {
-            Caption?.ClearRecentLines();
-            Caption?.Contexts.Clear();
+            lock (displayLock)
+            {
+                transcript.Reset();
 
-            Caption?.OnPropertyChanged("DisplayLogCards");
-            Caption?.OnPropertyChanged("OverlayPreviousTranslation");
+                lock (pendingLock)
+                    pendingTextQueue.Clear();
+
+                Caption?.ClearRecentLines();
+                Caption?.Contexts.Clear();
+
+                if (Caption is not null)
+                {
+                    Caption.InterimText = null;
+                    Caption.DisplayTranslatedCaption = string.Empty;
+                    Caption.OriginalCaption = string.Empty;
+                    Caption.TranslatedCaption = string.Empty;
+                    RebuildRollingLinesSetting();
+                }
+
+                Caption?.OnPropertyChanged("DisplayLogCards");
+                Caption?.OnPropertyChanged("OverlayPreviousTranslation");
+            }
         }
 
-        // If this text is too similar to the last one, overwrite it when logging.
+        private static void RebuildRollingLinesSetting() =>
+            Caption?.RebuildRollingLines(Setting?.NumContexts ?? 0);
+
+        // If this text is too similar to the last one, overwrite it when logging. An identical
+        // sentence is a genuine repetition (somebody said it twice), not a correction, and both
+        // rows belong in the history.
         public static async Task<bool> IsOverwrite(string originalText, CancellationToken token = default)
         {
             string lastOriginalText = await SQLiteHistoryLogger.LoadLastSourceText(token);
             if (lastOriginalText == null)
+                return false;
+
+            if (string.Equals(originalText, lastOriginalText, StringComparison.Ordinal))
                 return false;
 
             int minLen = Math.Min(originalText.Length, lastOriginalText.Length);

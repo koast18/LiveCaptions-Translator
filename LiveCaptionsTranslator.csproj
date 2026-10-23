@@ -31,9 +31,12 @@
 		<Compile Remove="src\Core\**" />
 		<Compile Remove="src\Platform.Windows\**" />
 		<Compile Remove="tests\**" />
+		<!-- tools/ holds console utilities built on their own, not part of the window app. -->
+		<Compile Remove="tools\**" />
 		<None Remove="src\Core\**" />
 		<None Remove="src\Platform.Windows\**" />
 		<None Remove="tests\**" />
+		<None Remove="tools\**" />
 		<!-- The app project sits at the repository root, so the WPF page glob would otherwise
 		     compile XAML that test output copied under tests/**/bin into the real assembly. -->
 		<Page Remove="tests\**" />

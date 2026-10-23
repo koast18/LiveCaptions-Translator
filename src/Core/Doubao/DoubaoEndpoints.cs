@@ -136,14 +136,36 @@ namespace LiveCaptionsTranslator.Core.Doubao
 
     /// <summary>
     /// Turns the service's per-segment stream into the accumulated transcript the caption pipeline
-    /// expects. A result revises the current segment; a result with a different <c>start_time</c>
-    /// starts a new one and commits the previous text.
+    /// expects. A result revises the current segment; a result with a later <c>start_time</c> starts
+    /// a new one and commits the previous text.
+    /// <para>
+    /// The start time of one segment is re-aligned by the service's second/third pass and its reported
+    /// value <em>jitters</em> (0.02-0.4 s between consecutive results, recorded in
+    /// tests/fixtures/bili-roundtable.wire.txt). Comparing it exactly treated every wobble as a new
+    /// segment, so the growing text was appended again and again - the repeated, nested subtitle
+    /// blocks users reported. Results are grouped by proximity instead: consecutive segments in the
+    /// recordings are at least 1.0 s apart, while one segment never moves more than ~0.5 s per
+    /// result.
+    /// </para>
     /// </summary>
     public sealed class DoubaoTranscriptBuilder
     {
+        /// <summary>How far a segment's reported start may move between two results.</summary>
+        public const double StartToleranceSeconds = 0.8;
+
+        /// <summary>
+        /// The service's final pass can re-decode a window that reaches back into the previous
+        /// segment, so the new text starts with what was already committed. Below this many
+        /// characters an overlap is a coincidence (a repeated word), not a re-decoded window.
+        /// </summary>
+        public const int MinimumOverlapChars = 8;
+
+        /// <summary>Longest overlap searched for; a re-decoded window is a few hundred characters.</summary>
+        public const int MaximumOverlapChars = 600;
+
         private readonly System.Text.StringBuilder committed = new();
         private string current = string.Empty;
-        private double currentStart = -1;
+        private double lastStart = -1;
 
         /// <summary>Text already committed, i.e. segments that will not be revised again.</summary>
         public string Committed => committed.ToString();
@@ -159,25 +181,102 @@ namespace LiveCaptionsTranslator.Core.Doubao
         {
             ArgumentNullException.ThrowIfNull(segment);
 
-            if (currentStart >= 0 && segment.StartTime > currentStart + 1e-6)
+            bool sameSegment = lastStart >= 0 &&
+                               Math.Abs(segment.StartTime - lastStart) <= StartToleranceSeconds;
+            bool olderSegment = lastStart >= 0 &&
+                                segment.StartTime < lastStart - StartToleranceSeconds;
+
+            if (olderSegment)
             {
-                committed.Append(current);
+                // A late revision of a segment that has already been handed over: its text is part of
+                // the transcript already, so appending it would duplicate that sentence.
+                return (committed + current, segment.IsFinal);
+            }
+
+            if (!sameSegment && lastStart >= 0)
+            {
+                // A later segment has started; what the previous one reported so far is all of it.
+                Commit(current);
                 current = string.Empty;
             }
 
             if (segment.IsFinal)
             {
-                committed.Append(segment.Text);
+                Commit(segment.Text);
                 current = string.Empty;
-                currentStart = -1;
+                lastStart = -1;
 
                 return (committed.ToString(), true);
             }
 
-            currentStart = segment.StartTime;
-            current = segment.Text;
+            lastStart = segment.StartTime;
+
+            // The live text must not repeat what the finished line already shows when the service
+            // re-decodes a window that reaches back into it.
+            current = WithoutOverlap(committed.ToString(), segment.Text);
 
             return (committed + current, false);
+        }
+
+        /// <summary>
+        /// Appends a segment, replacing the tail it re-decodes instead of repeating it. The final pass
+        /// re-covers earlier audio, so without this the same words appear as two sentences.
+        /// </summary>
+        private void Commit(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return;
+
+            string sofar = committed.ToString();
+            int overlap = Overlap(sofar, text);
+
+            if (overlap > 0)
+            {
+                // Replace only the re-decoded tail; everything before it stays.
+                committed.Clear();
+                committed.Append(sofar[..^overlap]);
+            }
+
+            committed.Append(text);
+        }
+
+        /// <summary>The segment text with a re-decoded prefix removed, so the live line only shows new words.</summary>
+        private static string WithoutOverlap(string sofar, string text)
+        {
+            int overlap = Overlap(sofar, text);
+            return overlap > 0 ? text[overlap..] : text;
+        }
+
+        private static readonly char[] SentenceEnds = ['。', '！', '？', '；', '…', '!', '?', ';', '.'];
+
+        /// <summary>Longest suffix of <paramref name="sofar"/> that is a prefix of <paramref name="text"/>.</summary>
+        private static int Overlap(string sofar, string text)
+        {
+            int max = Math.Min(Math.Min(sofar.Length, text.Length), MaximumOverlapChars);
+
+            for (int length = max; length >= MinimumOverlapChars; length--)
+            {
+                if (sofar.AsSpan(sofar.Length - length).SequenceEqual(text.AsSpan(0, length)))
+                    return length;
+            }
+
+            // A short, unpunctuated tail is a fragment the recogniser cut in half: "…侵犯了。中国" is
+            // continued by "中国国民的利益。". Keeping both shows "中国" twice.
+            int fragment = TrailingFragment(sofar);
+            if (fragment > 0 && text.Length > fragment &&
+                text.StartsWith(sofar[^fragment..], StringComparison.Ordinal))
+            {
+                return fragment;
+            }
+
+            return 0;
+        }
+
+        /// <summary>Length of the text after the last full stop, when it is short enough to be a cut word.</summary>
+        private static int TrailingFragment(string sofar)
+        {
+            int length = sofar.Length - (sofar.LastIndexOfAny(SentenceEnds) + 1);
+            return length is >= 1 and <= 3 ? length : 0;
         }
     }
 

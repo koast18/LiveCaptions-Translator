@@ -8,10 +8,15 @@ namespace LiveCaptionsTranslator.Core.Asr
         /// <summary>
         /// A provisional result that may still be corrected or replaced by a later call.
         /// </summary>
-        void OnPartial(string text);
+        /// <param name="text">The whole transcript reported so far.</param>
+        /// <param name="stableText">
+        /// The part of <paramref name="text"/> the provider will not revise any more, when it can tell.
+        /// <c>null</c> for providers that only have a growing transcript.
+        /// </param>
+        void OnPartial(string text, string? stableText = null);
 
         /// <summary>A finalized segment that will no longer change.</summary>
-        void OnFinal(string text);
+        void OnFinal(string text, string? stableText = null);
 
         /// <summary>
         /// Non-fatal status text the host may surface to the user (reconnects, restarts, ...).
