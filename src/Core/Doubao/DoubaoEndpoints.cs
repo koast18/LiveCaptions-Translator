@@ -247,6 +247,8 @@ namespace LiveCaptionsTranslator.Core.Doubao
             return overlap > 0 ? text[overlap..] : text;
         }
 
+        private static readonly char[] SentenceEnds = ['。', '！', '？', '；', '…', '!', '?', ';'];
+
         /// <summary>Longest suffix of <paramref name="sofar"/> that is a prefix of <paramref name="text"/>.</summary>
         private static int Overlap(string sofar, string text)
         {
@@ -258,7 +260,23 @@ namespace LiveCaptionsTranslator.Core.Doubao
                     return length;
             }
 
+            // A short, unpunctuated tail is a fragment the recogniser cut in half: "…侵犯了。中国" is
+            // continued by "中国国民的利益。". Keeping both shows "中国" twice.
+            int fragment = TrailingFragment(sofar);
+            if (fragment > 0 && text.Length > fragment &&
+                text.StartsWith(sofar[^fragment..], StringComparison.Ordinal))
+            {
+                return fragment;
+            }
+
             return 0;
+        }
+
+        /// <summary>Length of the text after the last full stop, when it is short enough to be a cut word.</summary>
+        private static int TrailingFragment(string sofar)
+        {
+            int length = sofar.Length - (sofar.LastIndexOfAny(SentenceEnds) + 1);
+            return length is >= 1 and <= 3 ? length : 0;
         }
     }
 
