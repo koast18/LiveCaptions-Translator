@@ -39,7 +39,7 @@ public class DoubaoCaptureReplayTests
         foreach (var (kind, text) in Capture())
         {
             string stableNow = kind == "final" ? text : stable;
-            committed.AddRange(transcript.Accept(text, stableNow, kind == "final"));
+            committed.AddRange(transcript.Accept(text, stableNow, kind == "final").Select(update => update.Text));
 
             if (kind == "final")
                 stable = text;
@@ -74,7 +74,8 @@ public class DoubaoCaptureReplayTests
         Assert.Empty(transcript.Accept("今天", stableText: ""));
         Assert.Equal("今天", transcript.Pending);
 
-        var committed = transcript.Accept("今天天气不错。", stableText: "今天天气不错。", isFinal: true);
+        var committed = transcript.Accept("今天天气不错。", stableText: "今天天气不错。", isFinal: true)
+            .Select(update => update.Text);
 
         Assert.Equal(["今天天气不错。"], committed);
         Assert.DoesNotContain("今天", transcript.Committed);
