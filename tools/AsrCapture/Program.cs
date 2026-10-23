@@ -28,7 +28,7 @@ internal static class Program
 
         if (args.Length < 2)
         {
-            Console.Error.WriteLine("usage: AsrCapture <input.wav> <capture.txt> [--seconds N] [--vad MS] [--speed X]");
+            Console.Error.WriteLine("usage: AsrCapture <input.wav> <capture.txt> [--seconds N] [--vad MS] [--speed X] [--attempts N]");
             Console.Error.WriteLine("       AsrCapture --replay <capture.txt>");
             return 2;
         }
@@ -39,6 +39,7 @@ internal static class Program
         double seconds = 0;
         int vad = 600;
         double speed = 1;
+        int attempts = 6;
         for (int i = 2; i + 1 < args.Length; i++)
         {
             if (args[i] == "--seconds" && double.TryParse(args[i + 1], out double value))
@@ -47,6 +48,8 @@ internal static class Program
                 vad = window;
             if (args[i] == "--speed" && double.TryParse(args[i + 1], out double rate) && rate > 0)
                 speed = rate;
+            if (args[i] == "--attempts" && int.TryParse(args[i + 1], out int count) && count > 0)
+                attempts = count;
         }
 
         var audio = WavFile.Read(input);
@@ -80,8 +83,8 @@ internal static class Program
             return 1;
         }
 
-        // The endpoint rejects a freshly opened session now and then (50700000, service discovery).
-        const int attempts = 6;
+        // The endpoint rejects a freshly opened session now and then (50700000, service discovery),
+        // sometimes for minutes at a time.
 
         for (int attempt = 1; attempt <= attempts; attempt++)
         {
