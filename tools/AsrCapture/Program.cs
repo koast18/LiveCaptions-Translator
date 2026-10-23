@@ -234,7 +234,12 @@ internal static class Program
 
         CloseSession(session, sessions);
 
-        bool duplicated = committed.Where(line => line.Length > 4).GroupBy(line => line).Any(group => group.Count() > 1);
+        // A speaker can say the same sentence twice in a row; that is speech, not a duplicated line.
+        bool duplicated = committed
+            .Select((line, index) => (line, index))
+            .Where(item => item.line.Length > 4)
+            .GroupBy(item => item.line)
+            .Any(group => group.Select(item => item.index).Max() - group.Select(item => item.index).Min() > 1);
         bool nested = committed.Zip(committed.Skip(1)).Any(pair =>
             pair.Second.Length > pair.First.Length &&
             pair.Second.StartsWith(pair.First, StringComparison.Ordinal) &&
