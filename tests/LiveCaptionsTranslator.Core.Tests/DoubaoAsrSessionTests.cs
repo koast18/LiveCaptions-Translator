@@ -568,6 +568,31 @@ public class DoubaoTranscriptBuilderTests
     }
 
     [Fact]
+    public void A_short_tail_cut_in_half_is_continued_instead_of_repeated()
+    {
+        // The recogniser finalised "中国" and the next segment carried on from it.
+        var builder = new DoubaoTranscriptBuilder();
+
+        builder.Append(Final("如果外国人在国外侵犯了。中国", 0));
+        builder.Append(Final("中国国民的利益。", 1.5));
+
+        Assert.Equal("如果外国人在国外侵犯了。中国国民的利益。", builder.Text);
+        Assert.DoesNotContain("中国中国", builder.Text);
+    }
+
+    [Fact]
+    public void A_full_sentence_that_repeats_a_word_is_not_merged()
+    {
+        // A complete sentence boundary is never treated as a cut word, so a real repetition stays.
+        var builder = new DoubaoTranscriptBuilder();
+
+        builder.Append(Final("谢谢你。", 0));
+        builder.Append(Final("谢谢大家。", 1.5));
+
+        Assert.Equal("谢谢你。谢谢大家。", builder.Text);
+    }
+
+    [Fact]
     public void Two_final_segments_accumulate_instead_of_replacing_each_other()
     {
         var builder = new DoubaoTranscriptBuilder();
