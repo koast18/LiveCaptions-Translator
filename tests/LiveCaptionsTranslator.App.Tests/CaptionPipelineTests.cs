@@ -8,8 +8,8 @@ namespace LiveCaptionsTranslator.App.Tests;
 /// <summary>
 /// Drives the real caption pipeline - <see cref="Translator.HandleCaptionText"/> through the
 /// translation queue to the rolling list - with the stream the Doubao backend produces: a segment
-/// that is revised while it is being recognised, a final that corrects it, and a growing stable
-/// prefix. What the page must show is the corrected sentence, once, immediately.
+/// that is revised while it is being recognised, finals that settle it, and a growing stable prefix
+/// (tests/fixtures/doubao-partials.txt is a recording of the real endpoint).
 /// <para>
 /// The tests share one process-wide <see cref="Caption"/>, so this class is the only writer and the
 /// test assembly runs its classes sequentially (see AssemblyInfo.cs).
@@ -19,8 +19,14 @@ public class CaptionPipelineTests
 {
     private const string EchoId = "TestEcho";
 
+    /// <summary>
+    /// Holds every translation until the test releases it, so the recognised text can be observed
+    /// exactly as the page shows it before a translation lands.
+    /// </summary>
+    private static readonly SemaphoreSlim Gate = new(0, int.MaxValue);
+
     /// <summary>Stands in for a translation engine: the sentence with a marker, so a translation is unmistakable.</summary>
-    private sealed class EchoProvider : ITranslationProvider
+    private sealed class GatedEchoProvider : ITranslationProvider
     {
         public string Id => EchoId;
 
@@ -30,24 +36,27 @@ public class CaptionPipelineTests
 
         public bool IsLlmBased => false;
 
-        public Task<string> TranslateAsync(TranslationRequest request, CancellationToken cancellationToken = default) =>
-            Task.FromResult("T:" + request.Text);
+        public async Task<string> TranslateAsync(TranslationRequest request, CancellationToken cancellationToken = default)
+        {
+            await Gate.WaitAsync(cancellationToken);
+            return "T:" + request.Text;
+        }
     }
 
-    private static bool prepared;
+    private static bool registered;
     private static bool loopsStarted;
 
     private static Caption Caption => Translator.Caption!;
 
     private static void Prepare()
     {
-        if (prepared)
-            return;
+        if (!registered)
+        {
+            registered = true;
 
-        prepared = true;
-
-        if (!Translator.TranslationProviders.IsRegistered(EchoId))
-            Translator.TranslationProviders.Register(EchoId, () => new EchoProvider());
+            if (!Translator.TranslationProviders.IsRegistered(EchoId))
+                Translator.TranslationProviders.Register(EchoId, () => new GatedEchoProvider());
+        }
 
         Translator.Setting!.ApiName = EchoId;
         Translator.Setting.TargetLanguage = "en";
@@ -100,11 +109,23 @@ public class CaptionPipelineTests
         return condition();
     }
 
+    private static void AssertNoDuplicateLines(IReadOnlyList<string> shown)
+    {
+        Assert.Equal(shown.Count, shown.Distinct().Count());
+
+        for (int i = 1; i < shown.Count; i++)
+        {
+            Assert.False(shown[i].StartsWith(shown[i - 1], StringComparison.Ordinal),
+                $"line {i} repeats the beginning of the previous one: '{shown[i - 1]}' -> '{shown[i]}'");
+        }
+    }
+
     [Fact]
     public async Task The_doubao_stream_is_shown_once_in_order_and_without_waiting()
     {
         Prepare();
         ResetDisplay();
+        StartLoops();
 
         // Segment 1 is being recognised: it can still change, so nothing is finished yet.
         // The recogniser first hears 汽, which its final pass will correct to 气.
@@ -147,19 +168,11 @@ public class CaptionPipelineTests
         Feed(First + Second + Third, stableText: First + Second + Third, isFinal: true);
         Assert.Equal([First, Second, Third], Displayed());
 
-        // The reported bugs, as invariants: no line is repeated, and no line is the beginning of the
-        // next one (the "prefix line now, whole sentence later" duplicate).
-        var shown = Displayed();
-        Assert.Equal(shown.Count, shown.Distinct().Count());
-        for (int i = 1; i < shown.Count; i++)
-            Assert.False(shown[i].StartsWith(shown[i - 1], StringComparison.Ordinal),
-                $"line {i} repeats the beginning of the previous one: '{shown[i - 1]}' -> '{shown[i]}'");
+        AssertNoDuplicateLines(Displayed());
+        Assert.DoesNotContain(Displayed(), line => line == Caption.InterimText);
 
-        // The live line has its own slot: it is never also listed as a finished sentence.
-        Assert.DoesNotContain(shown, line => line == Caption.InterimText);
-
-        // Now let the translations run. Each one must land on its own line, in place, in order.
-        StartLoops();
+        // Let the translations run. Each one must land on its own line, in place, in order.
+        Gate.Release(3);
 
         Assert.True(
             await WaitUntilAsync(() => Displayed().Count == 3 && Displayed().All(line => line.StartsWith("T:", StringComparison.Ordinal))),
@@ -183,7 +196,77 @@ public class CaptionPipelineTests
         Assert.Equal(4, after.Count);
         Assert.Equal("T:" + Third, after[2]);
         Assert.Equal(Fourth, after[3]);
-        Assert.Equal(after.Count, after.Distinct().Count());
+        AssertNoDuplicateLines(after);
         Assert.DoesNotContain(after, line => line == Caption.InterimText);
+    }
+
+    /// <summary>
+    /// Replays the recording of the real endpoint. The expected lines are the sentences the service
+    /// finalised, in order: no line may be missing, repeated, or be the beginning of the next one.
+    /// </summary>
+    [Fact]
+    public async Task The_recorded_doubao_stream_is_shown_exactly_once()
+    {
+        Prepare();
+        ResetDisplay();
+        StartLoops();
+
+        string[] expected =
+        [
+            "今天天气不错。",
+            "我们一起去公园散步吧。",
+            "这个项目的字幕不能重复。",
+            "颜值要尽量小。",
+            "他说他明天。",
+            "要去北京出差。",
+            "大概 3 天。",
+            "以后回来。",
+        ];
+
+        string stable = string.Empty;
+
+        foreach (var (kind, text) in ReadCapture())
+        {
+            // The builder commits a segment when its final arrives, so for a final the settled text is
+            // the transcript itself; for a partial it is the last final.
+            string stableNow = kind == "final" ? text : stable;
+
+            Feed(text, stableNow, isFinal: kind == "final");
+
+            if (kind == "final")
+                stable = text;
+
+            Assert.DoesNotContain(Caption.RollingLines, line => line.Text == Caption.InterimText);
+        }
+
+        Assert.Null(Caption.InterimText);
+        Assert.Equal(expected, Displayed());
+        AssertNoDuplicateLines(Displayed());
+
+        Gate.Release(expected.Length);
+
+        Assert.True(
+            await WaitUntilAsync(() => Displayed().Count == expected.Length &&
+                                       Displayed().All(line => line.StartsWith("T:", StringComparison.Ordinal))),
+            "the translations never all arrived: " + string.Join(" | ", Displayed()));
+
+        Assert.Equal(expected.Select(line => "T:" + line), Displayed());
+    }
+
+    /// <summary>Reads the capture written by the integration job, one <c>kind \t at \t text</c> per line.</summary>
+    private static IEnumerable<(string Kind, string Text)> ReadCapture()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "fixtures", "doubao-partials.txt");
+
+        foreach (string line in File.ReadAllLines(path))
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            string[] parts = line.Split('\t');
+
+            Assert.True(parts.Length >= 3, $"unexpected capture line: {line}");
+            yield return (parts[0], parts[^1]);
+        }
     }
 }
