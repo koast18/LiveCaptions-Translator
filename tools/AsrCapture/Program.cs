@@ -117,7 +117,7 @@ internal static class Program
             {
                 File.WriteAllText(output, Render(sink.Events), new UTF8Encoding(false));
                 Console.WriteLine($"captured {sink.Events.Count} callbacks -> {output}");
-                PrintReplay(sink.Events);
+                PrintReplay(sink.Events, output);
                 return 0;
             }
 
@@ -147,7 +147,7 @@ internal static class Program
             events.Add((parts[0], long.TryParse(parts[1], out long at) ? at : 0, parts[^1]));
         }
 
-        return PrintReplay(events) ? 0 : 1;
+        return PrintReplay(events, capturePath) ? 0 : 1;
     }
 
     private static string Render(IEnumerable<(string Kind, long At, string Text)> events)
@@ -161,7 +161,7 @@ internal static class Program
     }
 
     /// <summary>Runs the capture through the same splitter the app uses, so a regression is visible here.</summary>
-    private static bool PrintReplay(IReadOnlyList<(string Kind, long At, string Text)> events)
+    private static bool PrintReplay(IReadOnlyList<(string Kind, long At, string Text)> events, string capturePath)
     {
         var transcript = new LiveTranscript();
         var committed = new List<string>();
@@ -194,7 +194,7 @@ internal static class Program
         Console.WriteLine($"line begins with previous: {nested}");
         Console.WriteLine($"live text left: '{transcript.Pending}'");
 
-        string linesPath = System.IO.Path.ChangeExtension(capturePath, ".lines.txt");
+        string linesPath = Path.ChangeExtension(capturePath, ".lines.txt");
         File.WriteAllLines(linesPath, committed, new UTF8Encoding(false));
         Console.WriteLine($"lines -> {linesPath}");
 
