@@ -568,6 +568,18 @@ public class DoubaoTranscriptBuilderTests
     }
 
     [Fact]
+    public void Two_final_segments_accumulate_instead_of_replacing_each_other()
+    {
+        var builder = new DoubaoTranscriptBuilder();
+
+        builder.Append(Final("第一句话。", 0));
+        builder.Append(Final("第二句话。", 1.5));
+
+        Assert.Equal("第一句话。第二句话。", builder.Text);
+        Assert.Equal("第一句话。第二句话。", builder.Committed);
+    }
+
+    [Fact]
     public void Short_consecutive_segments_are_each_committed_once()
     {
         var builder = new DoubaoTranscriptBuilder();

@@ -230,9 +230,12 @@ namespace LiveCaptionsTranslator.Core.Doubao
             string sofar = committed.ToString();
             int overlap = Overlap(sofar, text);
 
-            committed.Clear();
             if (overlap > 0)
+            {
+                // Replace only the re-decoded tail; everything before it stays.
+                committed.Clear();
                 committed.Append(sofar[..^overlap]);
+            }
 
             committed.Append(text);
         }
