@@ -1,0 +1,121 @@
+ start=0 end=1.339 interim=True vad=False force=False timeout=False finish=False text=This.
+ start=0 end=1.979 interim=True vad=False force=False timeout=False finish=False text=About this? I thought it.
+ start=0 end=2.619 interim=True vad=False force=False timeout=False finish=False text=About this? I. I thought it.
+ start=0 end=3.259 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting.
+ start=0 end=3.899 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting. And.
+ start=0 end=5.18 interim=True vad=False force=False timeout=False finish=False text=About this? I. I thought it was interesting and.
+ start=0 end=5.82 interim=True vad=False force=False timeout=False finish=False text=About this? I. I thought it was interesting and surprising and it.
+ start=0 end=6.46 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting, and it pushed me to.
+ start=0 end=7.1 interim=True vad=False force=False timeout=False finish=False text=About this. I. I thought it was interesting and surprising, and it pushed me to.
+ start=0 end=7.74 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting and surprising. It pushed me to consider what screens were.
+ start=0 end=8.38 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting and surprising, and it pushed me to consider what screens were.
+ start=0 end=9.02 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting and it pushed me to consider what screens were doing to me.
+ start=0 end=9.66 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting and surprising, and it pushed me to consider what screens were doing to.
+ start=0 end=10.3 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting and surprising, and it pushed me to consider what screens were doing to me to.
+ start=0 end=10.94 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting and surprising, and it pushed me to consider what screens were doing to me and to.
+ start=0 end=11.58 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting and surprising, and it pushed me to consider what screens were doing to me and to my family.
+ start=0 end=12.22 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting and surprising, and it pushed me to consider what screens were doing to me and to my family. And.
+ start=0 end=12.86 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting and it pushed me to consider what screens were doing to me and to my family and the people I loved.
+ start=0 end=13.5 interim=True vad=False force=False timeout=False finish=False text=About this. I thought it was interesting and it pushed me to consider what screens were doing to me and to my family and the people I loved and the.
+ start=0 end=13.75 interim=False vad=True force=False timeout=False finish=False text=About this. I thought it was interesting and it pushed me to consider what screens were doing to me and to my family and the people I loved. And the people I loved.
+ start=13.75 end=15.1 interim=True vad=False force=False timeout=False finish=False text=Except.
+ start=13.75 end=15.74 interim=True vad=False force=False timeout=False finish=False text=Except for?
+ start=13.75 end=16.38 interim=True vad=False force=False timeout=False finish=False text=Except for the.
+ start=13.75 end=17.02 interim=True vad=False force=False timeout=False finish=False text=Except for the last.
+ start=13.75 end=17.66 interim=True vad=False force=False timeout=False finish=False text=Except for the last five years.
+ start=13.75 end=18.3 interim=True vad=False force=False timeout=False finish=False text=Except for the last five years as a.
+ start=13.75 end=18.94 interim=True vad=False force=False timeout=False finish=False text=Except for the last five years as a professor.
+ start=13.75 end=19.58 interim=True vad=False force=False timeout=False finish=False text=Except for the last five years as a professor in.
+ start=13.75 end=20.22 interim=True vad=False force=False timeout=False finish=False text=Except for the last five years as a professor of business.
+ start=13.75 end=20.86 interim=True vad=False force=False timeout=False finish=False text=Except for the last five years as a professor of business and psychology, I.
+ start=13.75 end=21.5 interim=True vad=False force=False timeout=False finish=False text=Except for the last five years as a professor of business and psychology, I've.
+ start=13.75 end=22.14 interim=True vad=False force=False timeout=False finish=False text=Except for the last five years as a professor of business and psychology, I've been studying.
+ start=13.75 end=22.78 interim=True vad=False force=False timeout=False finish=False text=Except for the last five years as a professor of business and psychology, I've been studying the effective.
+ start=13.75 end=23.18 interim=False vad=True force=False timeout=False finish=False text=Except for the last five years as a professor of business and psychology, I've been studying the effect of screens.
+ start=24.67 end=26.02 interim=True vad=False force=False timeout=False finish=False text=And.
+ start=24.67 end=26.66 interim=True vad=False force=False timeout=False finish=False text=And I.
+ start=24.67 end=27.3 interim=True vad=False force=False timeout=False finish=False text=And I want.
+ start=24.67 end=27.94 interim=True vad=False force=False timeout=False finish=False text=And I wanna stop by.
+ start=24.67 end=28.58 interim=True vad=False force=False timeout=False finish=False text=And I wanna stop by just focusing.
+ start=24.67 end=29.22 interim=True vad=False force=False timeout=False finish=False text=And I want to stop by just focusing on.
+ start=24.67 end=29.86 interim=True vad=False force=False timeout=False finish=False text=And I want to start by just focusing on how much.
+ start=24.67 end=30.5 interim=True vad=False force=False timeout=False finish=False text=And I want to start by just focusing on how much time.
+ start=24.67 end=31.14 interim=True vad=False force=False timeout=False finish=False text=And I wanna stop by just focusing on how much time they take from us.
+ start=24.67 end=31.42 interim=False vad=True force=False timeout=False finish=False text=And I wanna stop by just focusing on how much time they take from us.
+ start=31.42 end=32.119 interim=True vad=False force=False timeout=False finish=False text=And.
+ start=31.42 end=32.759 interim=True vad=False force=False timeout=False finish=False text=We can talk about.
+ start=31.42 end=33.399 interim=True vad=False force=False timeout=False finish=False text=And then we can talk about what.
+ start=31.42 end=34.039 interim=True vad=False force=False timeout=False finish=False text=And then we can talk about what that time.
+ start=31.42 end=34.65 interim=False vad=True force=False timeout=False finish=False text=And then we can talk about what that time looks like.
+ start=34.66 end=35.359 interim=True vad=False force=False timeout=False finish=False text=So
+ start=34.66 end=35.999 interim=True vad=False force=False timeout=False finish=False text=So what i'.
+ start=34.66 end=36.639 interim=True vad=False force=False timeout=False finish=False text=So what I'm showing you.
+ start=34.66 end=37.279 interim=True vad=False force=False timeout=False finish=False text=So what I'm showing you here is.
+ start=34.66 end=37.919 interim=True vad=False force=False timeout=False finish=False text=So what I'm showing you here is the average.
+ start=34.66 end=38.559 interim=True vad=False force=False timeout=False finish=False text=So what I'm showing you here is the average 24.
+ start=34.66 end=39.199 interim=True vad=False force=False timeout=False finish=False text=So what I'm showing you here is the average 24 hour.
+ start=34.66 end=39.839 interim=True vad=False force=False timeout=False finish=False text=So what I'm showing you here is the average 24 hour work that.
+ start=34.66 end=40.479 interim=True vad=False force=False timeout=False finish=False text=So what I'm showing you here is the average 24 hour work that's.
+ start=34.66 end=41.119 interim=True vad=False force=False timeout=False finish=False text=So what I'm showing you here is the average 24 hour work that is three different.
+ start=34.66 end=41.758 interim=True vad=False force=False timeout=False finish=False text=So what I'm showing you here is the average 24 hour work that is three different points.
+ start=34.66 end=42.03 interim=False vad=True force=False timeout=False finish=False text=So what I'm showing you here is the average 24 hour work. That's three different points in history.
+ start=42.58 end=43.919 interim=True vad=False force=False timeout=False finish=False text=2
+ start=42.58 end=44.559 interim=True vad=False force=False timeout=False finish=False text=2000.
+ start=42.58 end=45.199 interim=True vad=False force=False timeout=False finish=False text=2007.
+ start=42.58 end=45.839 interim=True vad=False force=False timeout=False finish=False text=2007, 10 years.
+ start=42.58 end=46.479 interim=True vad=False force=False timeout=False finish=False text=2007, 10 years ago.
+ start=42.58 end=47.119 interim=True vad=False force=False timeout=False finish=False text=2007, 10 years ago, 2000.
+ start=42.58 end=47.71 interim=False vad=True force=False timeout=False finish=False text=2007, 10 Years ago, 2,015.
+ start=47.89 end=49.239 interim=True vad=False force=False timeout=False finish=False text=I
+ start=47.89 end=49.879 interim=True vad=False force=False timeout=False finish=False text=I
+ start=47.89 end=51.159 interim=True vad=False force=False timeout=False finish=False text=Im
+ start=47.89 end=51.799 interim=True vad=False force=False timeout=False finish=False text=I'm going to.
+ start=47.89 end=52.21 interim=False vad=True force=False timeout=False finish=False text=I mean, I don't like actually.
+ start=52.51 end=53.859 interim=True vad=False force=False timeout=False finish=False text=Im
+ start=52.51 end=54.499 interim=True vad=False force=False timeout=False finish=False text=I'm a lot of things.
+ start=52.51 end=55.139 interim=True vad=False force=False timeout=False finish=False text=I'm a lot of things haven.
+ start=52.51 end=55.779 interim=True vad=False force=False timeout=False finish=False text=I'm a lot of things haven't.
+ start=52.51 end=56.22 interim=False vad=True force=False timeout=False finish=False text=I'm a lot of things haven't changed all that much.
+ start=57.77 end=59.759 interim=True vad=False force=False timeout=False finish=False text=So we.
+ start=57.77 end=60.399 interim=True vad=False force=False timeout=False finish=False text=So we've.
+ start=57.77 end=61.039 interim=True vad=False force=False timeout=False finish=False text=So we've slipped.
+ start=57.77 end=61.679 interim=True vad=False force=False timeout=False finish=False text=So we've slipped rough.
+ start=57.77 end=62.319 interim=True vad=False force=False timeout=False finish=False text=So we sleep roughly several and a half.
+ start=57.77 end=62.959 interim=True vad=False force=False timeout=False finish=False text=So we've sleep roughly seven and a/2.
+ start=57.77 end=63.599 interim=True vad=False force=False timeout=False finish=False text=So we've sleep roughly seven and a half, eight hours a.
+ start=57.77 end=64.239 interim=True vad=False force=False timeout=False finish=False text=So we've sleep roughly seven and a half, eight hours a day. Some.
+ start=57.77 end=64.879 interim=True vad=False force=False timeout=False finish=False text=So we sleep roughly several and a half, eight hours a day. Some people say that the.
+ start=57.77 end=65.519 interim=True vad=False force=False timeout=False finish=False text=So we've sleep roughly seven and a half, eight hours a day. Some people say that the.
+ start=57.77 end=66.159 interim=True vad=False force=False timeout=False finish=False text=So we've sleep roughly seven and a half, eight hours a day. Some people say that the client's sleep.
+ start=57.77 end=66.799 interim=True vad=False force=False timeout=False finish=False text=So we've sleep roughly seven and a half, eight hours a day. Some people say that the crime slightly better hasn.
+ start=57.77 end=67.439 interim=True vad=False force=False timeout=False finish=False text=So we've sleep roughly seven and a half, eight hours a day. Some people say that the crime slightly better hasn'.
+ start=57.77 end=67.47 interim=False vad=True force=False timeout=False finish=False text=So we've sleep roughly seven and a half, eight hours a day. Some people say that the crime slightly better hasn't changed much.
+ start=67.75 end=69.1 interim=True vad=False force=False timeout=False finish=False text=We
+ start=67.75 end=70.38 interim=True vad=False force=False timeout=False finish=False text=We work.
+ start=67.75 end=71.02 interim=True vad=False force=False timeout=False finish=False text=We work at.
+ start=67.75 end=71.66 interim=True vad=False force=False timeout=False finish=False text=We work at half the.
+ start=67.75 end=72.3 interim=True vad=False force=False timeout=False finish=False text=We work at half an hour.
+ start=67.75 end=72.36 interim=False vad=True force=False timeout=False finish=False text=We work at half an hour a day.
+ start=72.8 end=74.14 interim=True vad=False force=False timeout=False finish=False text=回
+ start=72.8 end=74.78 interim=True vad=False force=False timeout=False finish=False text=不应
+ start=72.8 end=76.06 interim=True vad=False force=False timeout=False finish=False text=不应该
+ start=72.8 end=76.7 interim=True vad=False force=False timeout=False finish=False text=不应该就是
+ start=72.8 end=77.34 interim=True vad=False force=False timeout=False finish=False text=不应该就是这个
+ start=72.8 end=77.981 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities is the
+ start=72.8 end=78.621 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like
+ start=72.8 end=79.261 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and ba
+ start=72.8 end=79.901 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and baking
+ start=72.8 end=81.181 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and baking and ba
+ start=72.8 end=81.821 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and baking and baking about
+ start=72.8 end=82.461 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and baking and baking about three hours
+ start=72.8 end=83.102 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and baking and baking about three hours a day
+ start=72.8 end=83.742 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and baking and baking about three hours a day i
+ start=72.8 end=84.382 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and baking and baking about three hours a day i might
+ start=72.8 end=85.022 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and baking and baking about three hours a day i might leave this white
+ start=72.8 end=85.662 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and baking and baking about three hours a day i might leave this white space
+ start=72.8 end=86.302 interim=True vad=False force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and baking and baking about three hours a day i might leave this white space that
+ start=72.8 end=86.6 interim=False vad=True force=False timeout=False finish=False text=不应该是 survival activities these are things like eating and baking and baking about three hours a day i might leave this white space that's how。
+ start=86.77 end=88.12 interim=True vad=False force=False timeout=False finish=False text=That.
+ start=86.77 end=88.76 interim=True vad=False force=False timeout=False finish=False text=That space.
+ start=86.77 end=89.4 interim=True vad=False force=False timeout=False finish=False text=That space is.
+ start=86.77 end=89.76 interim=False vad=True force=False timeout=False finish=False text=That space is incredibly.
