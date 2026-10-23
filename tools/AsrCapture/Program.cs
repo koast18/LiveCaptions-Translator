@@ -122,7 +122,9 @@ internal static class Program
             await source.EmitAllAsync();
             await provider.StopAsync();
 
-            if (sink.Events.Count > 0)
+            // A run that only produced notices (the endpoint answered 50700000 for the whole
+            // window) is not evidence; retry it.
+            if (sink.Events.Any(item => item.Kind is "partial" or "final"))
             {
                 File.WriteAllText(output, Render(sink.Events), new UTF8Encoding(false));
                 Console.WriteLine($"captured {sink.Events.Count} callbacks -> {output}");
